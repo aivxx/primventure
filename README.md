@@ -1,62 +1,66 @@
-# Learn OpenUSD
+# Primventure
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
-[Learn OpenUSD](https://docs.nvidia.com/learn-openusd/latest/index.html) is a full learning path to prepare developers for the OpenUSD Development Certification. This open source repository is open to contributions to improve the learning experience for everyone and so that teachers and trainers can take it and adapt it for their audiences.
+The 3D production world has collapsed into **the Composition**. You are Contestant
+#USD-01, an underqualified Primwright recapturing it one authored opinion at a
+time.
 
-If you just want to access the learning content, visit the rendered [Learn OpenUSD website](https://docs.nvidia.com/learn-openusd/latest/index.html).
+Primventure is a local, PG-13 OpenUSD dungeon crawl built around the complete
+NVIDIA Learn OpenUSD curriculum. Combat is authoring: write Python or USDA,
+submit it to real `usd-core` validators, defeat broken layer stacks, and grow a
+real USD city in [`world/`](world/). Your persistent city is also your portfolio.
 
-## Configuration
+## Enter the Composition
 
-### uv
-This repository uses [uv](https://docs.astral.sh/uv/) for dependency management. If you're new to uv, you don't need to know much more than the commands we use in the [build instructions](#How-to-Build). We recommend [installing uv](https://docs.astral.sh/uv/getting-started/installation/).
+Requirements: Python 3.12+, [uv](https://docs.astral.sh/uv/), Node.js 20+, npm,
+and Git LFS.
 
-### Git LFS
-This repository uses Git Large File Storage to store images, videos, and USD content. To ensure a frictionless process, make sure you have it installed before cloning the repository.
-
-**Install:** 
-
-*(You only need to do this once per machine)*
-```
+```bash
 git lfs install
-```
-
-If you cloned this repo before installing LFS, you can download all LFS to properly configure your repo.
-
-**Download LFS files:** 
-
-*(You only need to do this once for this repo)* 
-```
 git lfs pull
+uv sync
+uv run primventure
 ```
 
-## How to Build the Docs
-1. `uv run sphinx-build -M html docs/ docs/_build/`
+The command starts the local API and Vite UI, then opens
+`http://127.0.0.1:5173`. Submitted Python executes on your machine, so the arena
+binds to localhost and should not be exposed as a public service.
 
-### Build System Details
+## The crawl
 
-The build process:
-1. MyST-NB executes Python code cells
-2. Sphinx processes directives and cross-references
-3. Custom extensions copy assets and create exercise ZIPs
-4. Glossary is extracted for interactive graph
-5. HTML is generated with custom theme
+- **Floors 0–9** cover orientation, stage authoring, schemas, composition,
+  advanced data modeling, composition arcs, asset structure, data exchange,
+  instancing, and certification recap.
+- **Rooms and bosses** use `pxr` assertions and original exam-task questions.
+  The System takes XP for a missed boss answer; it never wipes a study run.
+- **Progression** persists in `game/save.json`: XP, crawler level, domain stats,
+  loot, Opinion Points, kiosk upgrades, achievements, and glossary Recipes.
+- **The Cookbook** is the original curriculum in [`docs/`](docs/). Quest links
+  take you directly to the lesson relevant to the fight.
+- **The city** composes from successful submissions under [`world/`](world/).
+  Open `world/root.usda` in usdview at any time.
 
-## How to Preview the Docs
-1. `uv run python -m http.server 8000 -d docs/_build/html/`
-1. In a web browser, open `http://localhost:8000`
+Run only the API with `uv run primventure --api-only`. API documentation is at
+`http://127.0.0.1:8000/docs`.
 
-## How to Run the Notebooks
-1. `rm -rf docs/_build/`
-1. Run the [How to Build the Docs](#how-to-build-the-docs) instructions above
-1. `uv run launch_notebooks`
+## Build the Cookbook
 
+```bash
+uv run sphinx-build -M html docs/ docs/_build/
+```
 
+The Cookbook is based on
+[NVIDIA Learn OpenUSD](https://docs.nvidia.com/learn-openusd/latest/index.html),
+an open-source learning path for the OpenUSD Development Certification. Existing
+lesson text, examples, and assets retain their NVIDIA copyright notices and
+Apache-2.0/SPDX attribution. Primventure's dungeon, System voice, and progression
+are original and do not reproduce characters or plot from other works.
 
-## Have an Idea for a New Example or New Content?
-Ideas for new content that can help other developers are always welcome. Please [create a new issue](https://github.com/NVIDIA-Omniverse/LearnOpenUSD/issues) describing the type of new content you are requesting and put [New Request] at the end of your title. Someone from the NVIDIA team or OpenUSD community will pick it up. If you can contribute it yourself, even better!
+## Develop and test
 
-## Find a Typo or an Error?
-Please let us know if you find any mistakes or non-working examples or exercises. [File an issue](https://github.com/NVIDIA-Omniverse/LearnOpenUSD/issues) with a comment that this is a bug.
+```bash
+uv run pytest game/server/tests
+npm --prefix game/web run build
+```
 
-## Contributing
-Contributions are welcome! If you would like to contribute, please read our [Contributing Guidelines](./CONTRIBUTING.md) to understand how to contribute.
+See [CONTRIBUTING.md](CONTRIBUTING.md) for contribution guidance.

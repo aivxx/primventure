@@ -1,0 +1,84 @@
+floor: 0
+floor_name: Threshold Station
+quests:
+  - id: f0_first_prim
+    title: Knock on the Scenegraph
+    floor: 0
+    floor_name: Threshold Station
+    neighborhood: Arrival Hall
+    kind: room
+    prerequisites: []
+    level_required: 1
+    exam_tasks: [create_prim, inspect_stage]
+    stats: {craft: 1, insight: 1}
+    brief: "SYSTEM: The city is blank. Give it one address."
+    starter: |
+      from pxr import Usd
+      stage = Usd.Stage.CreateNew(STAGE_PATH)
+      # Define /City as a typed Xform, then save.
+    language: python
+    validator:
+      assertions:
+        - prim_exists: /City
+        - prim_type: {path: /City, value: Xform}
+    cookbook: docs/stage-setting/prims.md
+    xp: 50
+    reward: Copper Scene Key
+    world_target: /City
+    recipes: [Usd.Stage.CreateNew, Usd.Stage.DefinePrim, Sdf.Layer.Save]
+
+  - id: f0_nameplate
+    title: Etch the City Nameplate
+    floor: 0
+    floor_name: Threshold Station
+    neighborhood: Arrival Hall
+    kind: room
+    prerequisites: [f0_first_prim]
+    level_required: 1
+    exam_tasks: [author_attribute, author_metadata]
+    stats: {craft: 1, lore: 1}
+    brief: "SYSTEM: A nameless city cannot persist. Author its identity."
+    starter: |
+      from pxr import Sdf, Usd
+      stage = Usd.Stage.Open(STAGE_PATH)
+      city = stage.GetPrimAtPath("/City")
+      # Create string attribute cityName = "Primventure" and set documentation metadata.
+      stage.GetRootLayer().Save()
+    language: python
+    validator:
+      assertions:
+        - attribute_equals: {path: /City.cityName, value: Primventure}
+        - metadata_equals: {path: /City, key: documentation, value: "The persistent city portfolio."}
+    cookbook: docs/stage-setting/properties/attributes.md
+    xp: 60
+    reward: Archivist's Stylus
+    world_target: /City
+    recipes: [Usd.Prim.CreateAttribute, Usd.Attribute.Set, Usd.Object.SetMetadata]
+
+  - id: f0_gatekeeper
+    title: Gatekeeper of the Root
+    floor: 0
+    floor_name: Threshold Station
+    neighborhood: Departure Gate
+    kind: floor_boss
+    prerequisites: [f0_nameplate]
+    level_required: 2
+    exam_tasks: [set_default_prim, configure_stage]
+    stats: {resolve: 2, insight: 1}
+    brief: "SYSTEM: The Gatekeeper accepts only a stage with a clear entrance."
+    starter: |
+      from pxr import Usd, UsdGeom
+      stage = Usd.Stage.Open(STAGE_PATH)
+      city = stage.GetPrimAtPath("/City")
+      # Set /City as default prim and choose Y as the up axis.
+      stage.GetRootLayer().Save()
+    language: python
+    validator:
+      assertions:
+        - default_prim: /City
+        - up_axis: Y
+    cookbook: docs/stage-setting/stage.md
+    xp: 100
+    reward: Threshold Transit Pass
+    world_target: /
+    recipes: [Usd.Stage.SetDefaultPrim, UsdGeom.SetStageUpAxis]

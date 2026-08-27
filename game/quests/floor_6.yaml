@@ -1,0 +1,87 @@
+floor: 6
+floor_name: Model Heights
+quests:
+  - id: f6_component_house
+    title: Zone the Component House
+    floor: 6
+    floor_name: Model Heights
+    neighborhood: Component Terrace
+    kind: room
+    prerequisites: [f5_dockyard_leviathan]
+    level_required: 12
+    exam_tasks: [author_model_kind, create_component]
+    stats: {lore: 3, craft: 4}
+    brief: "SYSTEM: The Heights enforce hierarchy. Register this house as a component."
+    starter: |
+      from pxr import Kind, Usd, UsdGeom
+      stage = Usd.Stage.Open(STAGE_PATH)
+      house = UsdGeom.Xform.Define(stage, "/City/ModelHeights/House").GetPrim()
+      # Set House kind to component and give it assetName metadata "Townhouse".
+      stage.GetRootLayer().Save()
+    language: python
+    validator:
+      assertions:
+        - metadata_equals: {path: /City/ModelHeights/House, key: kind, value: component}
+        - metadata_equals: {path: /City/ModelHeights/House, key: assetInfo, field: name, value: Townhouse}
+    cookbook: docs/asset-structure/model-hierarchy/exercise-components.md
+    xp: 330
+    reward: Component Deed
+    world_target: /City/ModelHeights/House
+    recipes: [Usd.ModelAPI.SetKind, Usd.ModelAPI.SetAssetName]
+
+  - id: f6_assembly_block
+    title: Assemble the Skyline Block
+    floor: 6
+    floor_name: Model Heights
+    neighborhood: Assembly Rise
+    kind: neighborhood_boss
+    prerequisites: [f6_component_house]
+    level_required: 13
+    exam_tasks: [author_assembly, organize_models]
+    stats: {craft: 4, insight: 4}
+    brief: "SYSTEM: Loose components clog the skyline. Gather them under an assembly."
+    starter: |
+      from pxr import Kind, Usd, UsdGeom
+      stage = Usd.Stage.Open(STAGE_PATH)
+      block = UsdGeom.Xform.Define(stage, "/City/ModelHeights/SkylineBlock").GetPrim()
+      # Mark SkylineBlock as assembly and reference sign.usda beneath it as SignA.
+      stage.GetRootLayer().Save()
+    language: python
+    validator:
+      assertions:
+        - metadata_equals: {path: /City/ModelHeights/SkylineBlock, key: kind, value: assembly}
+        - has_reference: {path: /City/ModelHeights/SkylineBlock/SignA, asset: assets/sign.usda}
+    cookbook: docs/asset-structure/model-hierarchy/exercise-assemblies.md
+    xp: 390
+    reward: Skyline Surveyor Badge
+    world_target: /City/ModelHeights/SkylineBlock
+    recipes: [Usd.ModelAPI.SetKind, Usd.References.AddReference]
+
+  - id: f6_zoning_golem
+    title: Reorder the Zoning Golem
+    floor: 6
+    floor_name: Model Heights
+    neighborhood: Hierarchy Hall
+    kind: floor_boss
+    prerequisites: [f6_assembly_block]
+    level_required: 14
+    exam_tasks: [enforce_model_hierarchy, author_group_kind]
+    stats: {lore: 4, resolve: 4}
+    brief: "SYSTEM: The Golem mistakes clutter for structure. Build a valid model hierarchy."
+    starter: |
+      from pxr import Kind, Usd, UsdGeom
+      stage = Usd.Stage.Open(STAGE_PATH)
+      district = stage.GetPrimAtPath("/City/ModelHeights")
+      # Set district kind=group; ensure SkylineBlock remains an assembly below it.
+      stage.GetRootLayer().Save()
+    language: python
+    validator:
+      assertions:
+        - metadata_equals: {path: /City/ModelHeights, key: kind, value: group}
+        - metadata_equals: {path: /City/ModelHeights/SkylineBlock, key: kind, value: assembly}
+        - metadata_equals: {path: /City/ModelHeights/House, key: kind, value: component}
+    cookbook: docs/asset-structure/model-hierarchy/model-hierarchy-considerations.md
+    xp: 470
+    reward: Golem's Zoning Core
+    world_target: /City/ModelHeights
+    recipes: [Usd.ModelAPI, Kind.Tokens.group, Kind.Tokens.assembly]

@@ -1,0 +1,97 @@
+floor: 9
+floor_name: Crown District
+quests:
+  - id: f9_portfolio_gate
+    title: Open the Portfolio Gate
+    floor: 9
+    floor_name: Crown District
+    neighborhood: Portfolio Promenade
+    kind: room
+    prerequisites: [f7_mirror_forge, f8_customs_engine]
+    level_required: 18
+    exam_tasks: [compose_portfolio, preserve_contracts]
+    stats: {craft: 5, lore: 5}
+    brief: "SYSTEM: The Crown admits builders, not tourists. Present a composed city."
+    starter: |
+      from pxr import Usd
+      stage = Usd.Stage.Open(STAGE_PATH)
+      crown = stage.DefinePrim("/City/CrownDistrict", "Xform")
+      # Add a payload to cargo.usda and documentation "Portfolio capstone district."
+      stage.GetRootLayer().Save()
+    language: python
+    validator:
+      assertions:
+        - has_payload: {path: /City/CrownDistrict, asset: assets/cargo.usda}
+        - metadata_equals: {path: /City/CrownDistrict, key: documentation, value: "Portfolio capstone district."}
+    cookbook: docs/asset-structure/asset-structure-principles/your-first-asset.md
+    xp: 550
+    reward: Portfolio Gate Writ
+    world_target: /City/CrownDistrict
+    recipes: [Usd.Payloads.AddPayload, Usd.Object.SetDocumentation]
+
+  - id: f9_archivist_prime
+    title: Answer Archivist Prime
+    floor: 9
+    floor_name: Crown District
+    neighborhood: Certification Archive
+    kind: city_boss
+    prerequisites: [f9_portfolio_gate]
+    level_required: 19
+    exam_tasks: [explain_composition, verify_authored_state]
+    stats: {lore: 6, insight: 5}
+    brief: "SYSTEM: Archivist Prime permits no memorized incantations. Explain what the stage resolves."
+    starter: |
+      from pxr import Usd
+      stage = Usd.Stage.Open(STAGE_PATH)
+      archive = stage.DefinePrim("/City/CrownDistrict/CertificationArchive", "Scope")
+      archive.SetDocumentation("Composition knowledge verified.")
+      stage.GetRootLayer().Save()
+    language: python
+    validator:
+      assertions:
+        - prim_type: {path: /City/CrownDistrict/CertificationArchive, value: Scope}
+        - metadata_equals: {path: /City/CrownDistrict/CertificationArchive, key: documentation, value: "Composition knowledge verified."}
+    cookbook: docs/creating-composition-arcs/prim-composition.md
+    xp: 650
+    reward: Archivist's Gold Index
+    world_target: /City/CrownDistrict/CertificationArchive
+    recipes: [Usd.Prim.GetPrimStack, Usd.Prim.GetMetadata]
+    questions:
+      - prompt: Which local opinion wins over a referenced opinion, and why?
+        answer_key: A local opinion wins because local opinions are stronger than references in LIVRPS.
+      - prompt: Why use a payload for heavy optional content?
+        answer_key: Payloads permit deferred and selective loading while preserving composition.
+
+  - id: f9_null_monarch
+    title: Reauthor the Null Monarch
+    floor: 9
+    floor_name: Crown District
+    neighborhood: Root Throne
+    kind: floor_boss
+    prerequisites: [f9_archivist_prime]
+    level_required: 20
+    exam_tasks: [capstone_stage_authoring, combine_composition_patterns]
+    stats: {craft: 6, insight: 6, resolve: 6}
+    brief: "SYSTEM: The Null Monarch deletes meaning, not matter. Reassert every city contract."
+    starter: |
+      from pxr import Usd, UsdGeom
+      stage = Usd.Stage.Open(STAGE_PATH)
+      city = stage.GetPrimAtPath("/City")
+      throne = stage.DefinePrim("/City/CrownDistrict/RootThrone", "Xform")
+      # Make the throne an instanceable reference to sign.usda; restore City defaults.
+      stage.GetRootLayer().Save()
+    language: python
+    validator:
+      assertions:
+        - prim_exists: /City/CrownDistrict/RootThrone
+        - has_reference: {path: /City/CrownDistrict/RootThrone, asset: assets/sign.usda}
+        - instanceable: {path: /City/CrownDistrict/RootThrone, value: true}
+        - default_prim: /City
+        - up_axis: Y
+        - start_time: 1
+        - end_time: 48
+    cookbook: docs/asset-structure/asset-structure-principles/index.md
+    xp: 1000
+    reward: Crown of Persistent Composition
+    world_target: /City
+    recipes: [Usd.References.AddReference, Usd.Prim.SetInstanceable, Usd.Stage.SetDefaultPrim, UsdGeom.SetStageUpAxis]

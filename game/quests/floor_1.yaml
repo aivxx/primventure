@@ -1,0 +1,86 @@
+floor: 1
+floor_name: Property Ward
+quests:
+  - id: f1_lamp_post
+    title: Relight Attribute Alley
+    floor: 1
+    floor_name: Property Ward
+    neighborhood: Attribute Alley
+    kind: room
+    prerequisites: [f0_gatekeeper]
+    level_required: 2
+    exam_tasks: [define_typed_prim, set_attribute]
+    stats: {craft: 2, insight: 1}
+    brief: "SYSTEM: One lamp remains dark. Give its light a measurable intensity."
+    starter: |
+      from pxr import Usd, UsdLux
+      stage = Usd.Stage.Open(STAGE_PATH)
+      # Define a SphereLight at /City/PropertyWard/Lamp and set intensity to 750.
+      stage.GetRootLayer().Save()
+    language: python
+    validator:
+      assertions:
+        - prim_type: {path: /City/PropertyWard/Lamp, value: SphereLight}
+        - attribute_equals: {path: "/City/PropertyWard/Lamp.inputs:intensity", value: 750.0}
+    cookbook: docs/stage-setting/properties/attributes.md
+    xp: 80
+    reward: Lumen Vial
+    world_target: /City/PropertyWard/Lamp
+    recipes: [UsdLux.SphereLight.Define, UsdLux.LightAPI.GetIntensityAttr]
+
+  - id: f1_civic_record
+    title: Repair the Civic Record
+    floor: 1
+    floor_name: Property Ward
+    neighborhood: Metadata Market
+    kind: neighborhood_boss
+    prerequisites: [f1_lamp_post]
+    level_required: 3
+    exam_tasks: [set_metadata, distinguish_metadata_attributes]
+    stats: {lore: 2, resolve: 1}
+    brief: "SYSTEM: The Registrar erased the district ledger. Restore the official record."
+    starter: |
+      from pxr import Usd
+      stage = Usd.Stage.Open(STAGE_PATH)
+      ward = stage.DefinePrim("/City/PropertyWard", "Xform")
+      # Set kind metadata to "group" and documentation to "Civic property district."
+      stage.GetRootLayer().Save()
+    language: python
+    validator:
+      assertions:
+        - metadata_equals: {path: /City/PropertyWard, key: kind, value: group}
+        - metadata_equals: {path: /City/PropertyWard, key: documentation, value: "Civic property district."}
+    cookbook: docs/stage-setting/metadata.md
+    xp: 120
+    reward: Registrar Seal
+    world_target: /City/PropertyWard
+    recipes: [Usd.Object.SetMetadata, Usd.ModelAPI.SetKind]
+
+  - id: f1_clockwork_crossing
+    title: Synchronize Clockwork Crossing
+    floor: 1
+    floor_name: Property Ward
+    neighborhood: Clockwork Crossing
+    kind: floor_boss
+    prerequisites: [f1_civic_record]
+    level_required: 4
+    exam_tasks: [configure_timeline, author_timesamples]
+    stats: {craft: 2, resolve: 2}
+    brief: "SYSTEM: The crossing loops outside time. Bind the city clock from 1 to 48."
+    starter: |
+      from pxr import Usd, UsdGeom
+      stage = Usd.Stage.Open(STAGE_PATH)
+      clock = UsdGeom.Xform.Define(stage, "/City/PropertyWard/Clock")
+      # Set stage time range 1-48 and author translate samples at both endpoints.
+      stage.GetRootLayer().Save()
+    language: python
+    validator:
+      assertions:
+        - start_time: 1
+        - end_time: 48
+        - attribute_equals: {path: "/City/PropertyWard/Clock.xformOp:translate", time: 48, value: [0.0, 4.0, 0.0]}
+    cookbook: docs/stage-setting/timecodes-timesamples.md
+    xp: 160
+    reward: Forty-Eight Tooth Gear
+    world_target: /City/PropertyWard/Clock
+    recipes: [Usd.Stage.SetStartTimeCode, Usd.Stage.SetEndTimeCode, Usd.Attribute.Set]

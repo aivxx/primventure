@@ -1,0 +1,85 @@
+floor: 5
+floor_name: Payload Docks
+quests:
+  - id: f5_sealed_crate
+    title: Manifest the Sealed Crate
+    floor: 5
+    floor_name: Payload Docks
+    neighborhood: Cargo Row
+    kind: room
+    prerequisites: [f4_hydra_of_choices]
+    level_required: 10
+    exam_tasks: [author_payload, inspect_load_state]
+    stats: {craft: 3, insight: 3}
+    brief: "SYSTEM: Heavy cargo should travel asleep. Attach it as a payload."
+    starter: |
+      from pxr import Usd
+      stage = Usd.Stage.Open(STAGE_PATH)
+      crate = stage.DefinePrim("/City/PayloadDocks/CargoCrate", "Xform")
+      # Add assets/cargo.usda as a payload.
+      stage.GetRootLayer().Save()
+    language: python
+    validator:
+      assertions:
+        - has_payload: {path: /City/PayloadDocks/CargoCrate, asset: assets/cargo.usda}
+    cookbook: docs/creating-composition-arcs/references-payloads/working-with-payloads.md
+    xp: 280
+    reward: Cargo Manifest
+    world_target: /City/PayloadDocks/CargoCrate
+    recipes: [Usd.Prim.GetPayloads, Usd.Payloads.AddPayload]
+
+  - id: f5_harbor_master
+    title: Outsmart the Harbor Master
+    floor: 5
+    floor_name: Payload Docks
+    neighborhood: Load Control
+    kind: city_boss
+    prerequisites: [f5_sealed_crate]
+    level_required: 11
+    exam_tasks: [selective_loading, retain_payload_arc]
+    stats: {insight: 4, resolve: 3}
+    brief: "SYSTEM: The Harbor Master loads everything at once. Prove restraint scales."
+    starter: |
+      from pxr import Usd
+      stage = Usd.Stage.Open(STAGE_PATH, load=Usd.Stage.LoadNone)
+      crate = stage.GetPrimAtPath("/City/PayloadDocks/CargoCrate")
+      # Load only CargoCrate and mark it with documentation "Loaded on demand."
+      stage.GetRootLayer().Save()
+    language: python
+    validator:
+      assertions:
+        - has_payload: {path: /City/PayloadDocks/CargoCrate, asset: assets/cargo.usda}
+        - metadata_equals: {path: /City/PayloadDocks/CargoCrate, key: documentation, value: "Loaded on demand."}
+    cookbook: docs/creating-composition-arcs/references-payloads/what-are-payloads.md
+    xp: 340
+    reward: Selective Load License
+    world_target: /City/PayloadDocks/CargoCrate
+    recipes: [Usd.Stage.LoadNone, Usd.Stage.Load, Usd.Prim.SetMetadata]
+
+  - id: f5_dockyard_leviathan
+    title: Unburden the Dockyard Leviathan
+    floor: 5
+    floor_name: Payload Docks
+    neighborhood: Deep Berth
+    kind: floor_boss
+    prerequisites: [f5_harbor_master]
+    level_required: 12
+    exam_tasks: [reference_payload_pattern, set_default_prim]
+    stats: {craft: 4, resolve: 4}
+    brief: "SYSTEM: The Leviathan carries interface and bulk together. Split its burden."
+    starter: |
+      from pxr import Usd
+      stage = Usd.Stage.Open(STAGE_PATH)
+      leviathan = stage.DefinePrim("/City/PayloadDocks/Leviathan", "Xform")
+      # Reference sign.usda for interface and payload cargo.usda for bulk.
+      stage.GetRootLayer().Save()
+    language: python
+    validator:
+      assertions:
+        - has_reference: {path: /City/PayloadDocks/Leviathan, asset: assets/sign.usda}
+        - has_payload: {path: /City/PayloadDocks/Leviathan, asset: assets/cargo.usda}
+    cookbook: docs/asset-structure/reference-payload-pattern/what-is-ref-payload-pattern.md
+    xp: 430
+    reward: Leviathan Loadstone
+    world_target: /City/PayloadDocks/Leviathan
+    recipes: [Usd.References.AddReference, Usd.Payloads.AddPayload]

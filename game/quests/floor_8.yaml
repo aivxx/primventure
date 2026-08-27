@@ -1,0 +1,87 @@
+floor: 7
+floor_name: Exchange Terminal
+quests:
+  - id: f8_import_depot
+    title: Stamp the Import Depot
+    floor: 7
+    floor_name: Exchange Terminal
+    neighborhood: Intake Platform
+    kind: room
+    prerequisites: [f6_zoning_golem]
+    level_required: 16
+    exam_tasks: [normalize_import, author_provenance]
+    stats: {lore: 4, craft: 5}
+    brief: "SYSTEM: Foreign geometry arrived without papers. Record its provenance."
+    starter: |
+      from pxr import Usd, UsdGeom
+      stage = Usd.Stage.Open(STAGE_PATH)
+      imported = UsdGeom.Xform.Define(stage, "/City/ExchangeTerminal/ImportedKiosk").GetPrim()
+      # Set customData sourceFormat="OBJ" and documentation="Normalized at intake."
+      stage.GetRootLayer().Save()
+    language: python
+    validator:
+      assertions:
+        - metadata_equals: {path: /City/ExchangeTerminal/ImportedKiosk, key: customData, field: sourceFormat, value: OBJ}
+        - metadata_equals: {path: /City/ExchangeTerminal/ImportedKiosk, key: documentation, value: "Normalized at intake."}
+    cookbook: docs/data-exchange/data-exchange/what-is-data-exchange.md
+    xp: 450
+    reward: Intake Customs Stamp
+    world_target: /City/ExchangeTerminal/ImportedKiosk
+    recipes: [Usd.Prim.SetCustomDataByKey, Usd.Object.SetDocumentation]
+
+  - id: f8_axis_switchyard
+    title: Align the Axis Switchyard
+    floor: 7
+    floor_name: Exchange Terminal
+    neighborhood: Transform Junction
+    kind: neighborhood_boss
+    prerequisites: [f8_import_depot]
+    level_required: 17
+    exam_tasks: [normalize_coordinates, preserve_hierarchy]
+    stats: {insight: 5, craft: 5}
+    brief: "SYSTEM: A sideways shipment blocks every line. Normalize the stage convention."
+    starter: |
+      from pxr import Usd, UsdGeom
+      stage = Usd.Stage.Open(STAGE_PATH)
+      # Set Y-up and translate ImportedKiosk to (10, 0, -4).
+      stage.GetRootLayer().Save()
+    language: python
+    validator:
+      assertions:
+        - up_axis: Y
+        - attribute_equals: {path: "/City/ExchangeTerminal/ImportedKiosk.xformOp:translate", value: [10.0, 0.0, -4.0]}
+    cookbook: docs/data-exchange/data-transformation/transformation-hierarchy.md
+    xp: 510
+    reward: Coordinate Compass
+    world_target: /City/ExchangeTerminal/ImportedKiosk
+    recipes: [UsdGeom.SetStageUpAxis, UsdGeom.Xformable.AddTranslateOp]
+
+  - id: f8_customs_engine
+    title: Audit the Customs Engine
+    floor: 7
+    floor_name: Exchange Terminal
+    neighborhood: Validation Concourse
+    kind: city_boss
+    prerequisites: [f8_axis_switchyard]
+    level_required: 18
+    exam_tasks: [validate_asset, repair_stage_contract]
+    stats: {insight: 5, resolve: 5}
+    brief: "SYSTEM: The Engine detects every shortcut. Make the portfolio pass inspection."
+    starter: |
+      from pxr import Usd, UsdGeom
+      stage = Usd.Stage.Open(STAGE_PATH)
+      city = stage.GetPrimAtPath("/City")
+      # Restore default prim /City, Y-up, and timeline 1-48.
+      stage.GetRootLayer().Save()
+    language: python
+    validator:
+      assertions:
+        - default_prim: /City
+        - up_axis: Y
+        - start_time: 1
+        - end_time: 48
+    cookbook: docs/data-exchange/asset-validation/exercise-asset-validation-testing.md
+    xp: 610
+    reward: Customs Engine Clearance
+    world_target: /
+    recipes: [Usd.Stage.SetDefaultPrim, UsdGeom.SetStageUpAxis, Usd.Stage.SetStartTimeCode, Usd.Stage.SetEndTimeCode]

@@ -1,0 +1,90 @@
+floor: 8
+floor_name: Instance Foundry
+quests:
+  - id: f7_repeat_benches
+    title: Cast the Repeat Benches
+    floor: 8
+    floor_name: Instance Foundry
+    neighborhood: Prototype Row
+    kind: room
+    prerequisites: [f6_zoning_golem]
+    level_required: 14
+    exam_tasks: [author_references, enable_instancing]
+    stats: {craft: 4, insight: 4}
+    brief: "SYSTEM: The Foundry bills memory by the copy. Forge instances instead."
+    starter: |
+      from pxr import Usd
+      stage = Usd.Stage.Open(STAGE_PATH)
+      for name in ("BenchA", "BenchB", "BenchC"):
+          bench = stage.DefinePrim(f"/City/InstanceFoundry/{name}", "Xform")
+          # Reference assets/bench.usda and make each prim instanceable.
+      stage.GetRootLayer().Save()
+    language: python
+    validator:
+      assertions:
+        - has_reference: {path: /City/InstanceFoundry/BenchA, asset: assets/bench.usda}
+        - instanceable: {path: /City/InstanceFoundry/BenchA, value: true}
+        - instanceable: {path: /City/InstanceFoundry/BenchB, value: true}
+        - instanceable: {path: /City/InstanceFoundry/BenchC, value: true}
+    cookbook: docs/asset-modularity-instancing/authoring-scenegraph-instancing/exercise-authoring-scenegraph-instancing.md
+    xp: 390
+    reward: Prototype Tongs
+    world_target: /City/InstanceFoundry
+    recipes: [Usd.References.AddReference, Usd.Prim.SetInstanceable]
+
+  - id: f7_prototype_sentinel
+    title: Pass the Prototype Sentinel
+    floor: 8
+    floor_name: Instance Foundry
+    neighborhood: Sentinel Line
+    kind: neighborhood_boss
+    prerequisites: [f7_repeat_benches]
+    level_required: 15
+    exam_tasks: [inspect_instances, preserve_shared_prototype]
+    stats: {insight: 5, resolve: 4}
+    brief: "SYSTEM: The Sentinel asks one question: which forms truly share?"
+    starter: |
+      from pxr import Usd
+      stage = Usd.Stage.Open(STAGE_PATH)
+      bench = stage.GetPrimAtPath("/City/InstanceFoundry/BenchB")
+      # Keep BenchB instanceable and set displayName to "Shared Foundry Bench".
+      stage.GetRootLayer().Save()
+    language: python
+    validator:
+      assertions:
+        - instanceable: {path: /City/InstanceFoundry/BenchB, value: true}
+        - metadata_equals: {path: /City/InstanceFoundry/BenchB, key: displayName, value: "Shared Foundry Bench"}
+    cookbook: docs/asset-modularity-instancing/authoring-scenegraph-instancing/scenegraph-instancing-intro.md
+    xp: 450
+    reward: Sentinel Memory Shard
+    world_target: /City/InstanceFoundry/BenchB
+    recipes: [Usd.Prim.IsInstance, Usd.Prim.GetPrototype, Usd.Prim.SetDisplayName]
+
+  - id: f7_mirror_forge
+    title: Break the Mirror Forge
+    floor: 8
+    floor_name: Instance Foundry
+    neighborhood: Mirror Furnace
+    kind: floor_boss
+    prerequisites: [f7_prototype_sentinel]
+    level_required: 16
+    exam_tasks: [nested_instancing, author_shared_assets]
+    stats: {craft: 5, resolve: 5}
+    brief: "SYSTEM: Mirrors inside mirrors flood the furnace. Nest the pattern deliberately."
+    starter: |
+      from pxr import Usd
+      stage = Usd.Stage.Open(STAGE_PATH)
+      row = stage.DefinePrim("/City/InstanceFoundry/BenchRow", "Xform")
+      row.GetReferences().AddReference("assets/bench_row.usda")
+      # Make BenchRow instanceable.
+      stage.GetRootLayer().Save()
+    language: python
+    validator:
+      assertions:
+        - has_reference: {path: /City/InstanceFoundry/BenchRow, asset: assets/bench_row.usda}
+        - instanceable: {path: /City/InstanceFoundry/BenchRow, value: true}
+    cookbook: docs/asset-modularity-instancing/authoring-scenegraph-instancing/nested-instancing.md
+    xp: 540
+    reward: Mirror Forge Quencher
+    world_target: /City/InstanceFoundry/BenchRow
+    recipes: [Usd.References.AddReference, Usd.Prim.SetInstanceable]

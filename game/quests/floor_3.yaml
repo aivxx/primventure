@@ -1,0 +1,551 @@
+floor: 3
+floor_name: Composition Quarter
+quests:
+  - id: f3_layer_registry
+    title: Register the District Layer
+    floor: 3
+    floor_name: Composition Quarter
+    neighborhood: Layer Lane
+    kind: room
+    prerequisites: [f2_schema_warden]
+    level_required: 6
+    exam_tasks: [create_layer, add_sublayer, inspect_layer_stack]
+    stats: {craft: 2, lore: 2}
+    brief: "SYSTEM: City Hall rejects monolithic files. Give the Quarter a weaker, inspectable voice."
+    starter: |
+      from pathlib import Path
+      from pxr import Sdf, Usd
+
+      stage = Usd.Stage.Open(STAGE_PATH)
+      support_path = Path(STAGE_PATH).parent / "district_registry.usda"
+      support = Usd.Stage.CreateNew(str(support_path))
+      district = support.DefinePrim("/City/CompositionQuarter", "Xform")
+      district.CreateAttribute("districtStatus", Sdf.ValueTypeNames.String).Set("registered")
+      support.GetRootLayer().Save()
+
+      # TODO: Add district_registry.usda to the root layer's subLayerPaths.
+      stage.GetRootLayer().Save()
+    language: python
+    validator:
+      assertions:
+        - prim_exists: /City/CompositionQuarter
+        - attribute_equals: {path: /City/CompositionQuarter.districtStatus, value: registered}
+        - sublayer_order: {layers: [district_registry.usda]}
+    cookbook: docs/composition-basics/layers.md
+    xp: 120
+    reward: Layer Clerk's Ribbon
+    world_target: /City/CompositionQuarter
+    recipes: [Layer, Layer Stack, Sublayer]
+
+  - id: f3_layer_stack_boss
+    title: Audit the Two-Faced Permit Desk
+    floor: 3
+    floor_name: Composition Quarter
+    neighborhood: Layer Lane
+    kind: neighborhood_boss
+    prerequisites: [f3_layer_registry]
+    level_required: 6
+    exam_tasks: [order_sublayers, resolve_local_opinions]
+    stats: {insight: 2, resolve: 3}
+    brief: "SYSTEM: Two departments issued opposite permits. Put the intended opinion on top. Bureaucracy is combat with stationery."
+    starter: |
+      from pathlib import Path
+      from pxr import Sdf, Usd
+
+      stage = Usd.Stage.Open(STAGE_PATH)
+      folder = Path(STAGE_PATH).parent
+      for filename, status in [("safety.usda", "closed"), ("commerce.usda", "open")]:
+          source = Usd.Stage.CreateNew(str(folder / filename))
+          desk = source.DefinePrim("/City/CompositionQuarter/PermitDesk", "Xform")
+          desk.CreateAttribute("permitStatus", Sdf.ValueTypeNames.String).Set(status)
+          source.GetRootLayer().Save()
+
+      # Wrong: the first sublayer is strongest, so Safety currently wins.
+      stage.GetRootLayer().subLayerPaths = ["safety.usda", "commerce.usda"]
+      # TODO: Reorder the sublayers so Commerce's "open" opinion wins.
+      stage.GetRootLayer().Save()
+    language: python
+    validator:
+      assertions:
+        - attribute_equals: {path: /City/CompositionQuarter/PermitDesk.permitStatus, value: open}
+        - attribute_source: {path: /City/CompositionQuarter/PermitDesk.permitStatus, layer: commerce.usda}
+        - sublayer_order: {layers: [commerce.usda, safety.usda]}
+    cookbook: docs/composition-basics/layers.md
+    xp: 180
+    reward: {opinion_points: 1, achievement: "New achievement! You won an argument by moving one string in a list."}
+    world_target: /City/CompositionQuarter/PermitDesk
+    recipes: [Opinions, Direct Opinion, Value Resolution]
+    questions:
+      - prompt: In a root layer's subLayerPaths, which listed layer is strongest?
+        choices: [The first layer, The last layer, Alphabetical order, The newest file]
+        answer: 0
+        explanation: Sublayers are ordered strongest to weakest.
+      - prompt: Does changing sublayer order modify either source layer?
+        choices: ["Yes", "No"]
+        answer: 1
+        explanation: The root layer changes composition without rewriting either source.
+
+  - id: f3_def_docket
+    title: Issue a Concrete Definition
+    floor: 3
+    floor_name: Composition Quarter
+    neighborhood: Specifier Court
+    kind: room
+    prerequisites: [f3_layer_stack_boss]
+    level_required: 7
+    exam_tasks: [author_def, understand_traversal]
+    stats: {craft: 2, insight: 1}
+    brief: "SYSTEM: The Court has opinions about a kiosk that does not legally exist. Give it a def before zoning notices become sentient."
+    starter: |
+      from pxr import Usd
+
+      stage = Usd.Stage.Open(STAGE_PATH)
+      # TODO: Define /City/CompositionQuarter/CourtKiosk as a Cube.
+      stage.GetRootLayer().Save()
+    language: python
+    validator:
+      assertions:
+        - prim_type: {path: /City/CompositionQuarter/CourtKiosk, value: Cube}
+        - specifier_equals: {path: /City/CompositionQuarter/CourtKiosk, value: def}
+        - traversal_contains: {paths: [/City/CompositionQuarter/CourtKiosk]}
+    cookbook: docs/composition-basics/specifiers.md
+    xp: 110
+    reward: Concrete Docket
+    world_target: /City/CompositionQuarter/CourtKiosk
+    recipes: [Def, Specifier]
+
+  - id: f3_over_case
+    title: Appeal Without Vandalism
+    floor: 3
+    floor_name: Composition Quarter
+    neighborhood: Specifier Court
+    kind: room
+    prerequisites: [f3_def_docket]
+    level_required: 7
+    exam_tasks: [author_over, inspect_prim_stack]
+    stats: {craft: 2, resolve: 2}
+    brief: "SYSTEM: The billboard is defined in evidence. Change its size locally without touching the exhibit."
+    starter: |
+      from pathlib import Path
+      from pxr import Sdf, Usd
+
+      stage = Usd.Stage.Open(STAGE_PATH)
+      base = Usd.Stage.CreateNew(str(Path(STAGE_PATH).parent / "billboard_base.usda"))
+      billboard = base.DefinePrim("/City/CompositionQuarter/Billboard", "Cube")
+      billboard.CreateAttribute("size", Sdf.ValueTypeNames.Double).Set(2.0)
+      base.GetRootLayer().Save()
+      stage.GetRootLayer().subLayerPaths.insert(0, "billboard_base.usda")
+
+      appeal = stage.OverridePrim("/City/CompositionQuarter/Billboard")
+      # TODO: Author a local size opinion of 8.0 on the appeal.
+      stage.GetRootLayer().Save()
+    language: python
+    validator:
+      assertions:
+        - attribute_equals: {path: /City/CompositionQuarter/Billboard.size, value: 8.0}
+        - attribute_source: {path: /City/CompositionQuarter/Billboard.size, layer: submission.usd}
+        - prim_stack: {path: /City/CompositionQuarter/Billboard, min: 2, specifiers: [over, def]}
+        - specifier_equals: {path: /City/CompositionQuarter/Billboard, value: def}
+    cookbook: docs/composition-basics/specifiers.md
+    xp: 130
+    reward: Non-Destructive Appeal
+    world_target: /City/CompositionQuarter/Billboard
+    recipes: [Over, Prim Stack]
+
+  - id: f3_specifier_boss
+    title: The Specifier That Wouldn't Def
+    floor: 3
+    floor_name: Composition Quarter
+    neighborhood: Specifier Court
+    kind: neighborhood_boss
+    prerequisites: [f3_over_case]
+    level_required: 7
+    exam_tasks: [distinguish_def_over_class, default_traversal]
+    stats: {insight: 3, resolve: 2}
+    brief: "SYSTEM: One blueprint, one concrete booth, and one traversal. Classify them before the abstract one demands a building permit."
+    starter: |
+      from pxr import Sdf, Usd
+
+      stage = Usd.Stage.Open(STAGE_PATH)
+      blueprint = stage.CreateClassPrim("/City/CompositionQuarter/_BoothBlueprint")
+      blueprint.CreateAttribute("department", Sdf.ValueTypeNames.String).Set("permits")
+      # TODO: Define /City/CompositionQuarter/PermitBooth as an Xform.
+      # TODO: Add an inherit arc from the booth to _BoothBlueprint.
+      stage.GetRootLayer().Save()
+    language: python
+    validator:
+      assertions:
+        - specifier_equals: {path: /City/CompositionQuarter/_BoothBlueprint, value: class}
+        - specifier_equals: {path: /City/CompositionQuarter/PermitBooth, value: def}
+        - has_inherit: {path: /City/CompositionQuarter/PermitBooth}
+        - attribute_equals: {path: /City/CompositionQuarter/PermitBooth.department, value: permits}
+        - traversal_contains:
+            paths: [/City/CompositionQuarter/PermitBooth]
+            excluded: [/City/CompositionQuarter/_BoothBlueprint]
+    cookbook: docs/composition-basics/specifiers.md
+    xp: 210
+    reward: {opinion_points: 1, achievement: "New achievement! You excluded an abstract class from polite traversal."}
+    world_target: /City/CompositionQuarter/PermitBooth
+    recipes: [Class, Inherit]
+    questions:
+      - prompt: Which specifier represents an abstract blueprint?
+        choices: [def, over, class]
+        answer: 2
+        explanation: A class prim is abstract and omitted from default traversal.
+      - prompt: If an over combines with a weaker def at the same path, what is the composed specifier?
+        choices: [def, over, class]
+        answer: 0
+        explanation: The over contributes opinions while the weaker def establishes existence.
+
+  - id: f3_reference_license
+    title: License an External Sign
+    floor: 3
+    floor_name: Composition Quarter
+    neighborhood: Reference Arcade
+    kind: room
+    prerequisites: [f3_specifier_boss]
+    level_required: 7
+    exam_tasks: [author_external_reference, reuse_asset]
+    stats: {craft: 2, lore: 2}
+    brief: "SYSTEM: Copying the sign geometry costs memory. Referencing it costs only your remaining self-respect."
+    starter: |
+      from pathlib import Path
+      from pxr import Sdf, Usd
+
+      stage = Usd.Stage.Open(STAGE_PATH)
+      asset = Usd.Stage.CreateNew(str(Path(STAGE_PATH).parent / "arcade_sign.usda"))
+      sign = asset.DefinePrim("/Sign", "Xform")
+      sign.CreateAttribute("signText", Sdf.ValueTypeNames.String).Set("REFERENCE ARCADE")
+      asset.SetDefaultPrim(sign)
+      asset.GetRootLayer().Save()
+
+      destination = stage.DefinePrim("/City/CompositionQuarter/ArcadeSign", "Xform")
+      # TODO: Add an external reference to arcade_sign.usda.
+      stage.GetRootLayer().Save()
+    language: python
+    validator:
+      assertions:
+        - has_reference: {path: /City/CompositionQuarter/ArcadeSign, asset: arcade_sign.usda}
+        - attribute_equals: {path: /City/CompositionQuarter/ArcadeSign.signText, value: "REFERENCE ARCADE"}
+    cookbook: docs/composition-basics/references.md
+    xp: 130
+    reward: Arc Engraver
+    world_target: /City/CompositionQuarter/ArcadeSign
+    recipes: [Reference, Composition Arcs]
+
+  - id: f3_default_gate
+    title: Name the Asset Entrance
+    floor: 3
+    floor_name: Composition Quarter
+    neighborhood: Reference Arcade
+    kind: room
+    prerequisites: [f3_reference_license]
+    level_required: 7
+    exam_tasks: [set_default_prim, reference_without_prim_path]
+    stats: {craft: 2, insight: 2}
+    brief: "SYSTEM: The asset has two roots and no front door. Set a default prim before the reference wanders into traffic."
+    starter: |
+      from pathlib import Path
+      from pxr import Sdf, Usd
+
+      stage = Usd.Stage.Open(STAGE_PATH)
+      asset = Usd.Stage.CreateNew(str(Path(STAGE_PATH).parent / "kiosk_asset.usda"))
+      kiosk = asset.DefinePrim("/Kiosk", "Xform")
+      kiosk.CreateAttribute("assetRole", Sdf.ValueTypeNames.String).Set("information")
+      asset.DefinePrim("/Scratch", "Scope")
+      # TODO: Set /Kiosk as the asset's default prim.
+      asset.GetRootLayer().Save()
+
+      instance = stage.DefinePrim("/City/CompositionQuarter/InfoKiosk", "Xform")
+      instance.GetReferences().AddReference("kiosk_asset.usda")
+      stage.GetRootLayer().Save()
+    language: python
+    validator:
+      assertions:
+        - has_reference: {path: /City/CompositionQuarter/InfoKiosk, asset: kiosk_asset.usda}
+        - attribute_equals: {path: /City/CompositionQuarter/InfoKiosk.assetRole, value: information}
+    cookbook: docs/composition-basics/default-prim.md
+    xp: 140
+    reward: Front Door Plaque
+    world_target: /City/CompositionQuarter/InfoKiosk
+    recipes: [Default Prim]
+
+  - id: f3_reference_arcade
+    title: Defeat the Duplicate Baron
+    floor: 3
+    floor_name: Composition Quarter
+    neighborhood: Reference Arcade
+    kind: neighborhood_boss
+    prerequisites: [f3_default_gate]
+    level_required: 7
+    exam_tasks: [reference_then_override, compare_authored_and_composed_values]
+    stats: {insight: 3, resolve: 3}
+    brief: "SYSTEM: The Baron insists referenced assets are immutable. Correct him locally and charge admission."
+    starter: |
+      from pathlib import Path
+      from pxr import Sdf, Usd
+
+      stage = Usd.Stage.Open(STAGE_PATH)
+      asset = Usd.Stage.CreateNew(str(Path(STAGE_PATH).parent / "baron_sign.usda"))
+      source = asset.DefinePrim("/BaronSign", "Xform")
+      source.CreateAttribute("marquee", Sdf.ValueTypeNames.String).Set("THE BARON OWNS THIS")
+      asset.SetDefaultPrim(source)
+      asset.GetRootLayer().Save()
+
+      sign = stage.DefinePrim("/City/CompositionQuarter/BaronSign", "Xform")
+      sign.GetReferences().AddReference("baron_sign.usda")
+      # TODO: Author a stronger local marquee: "THE CITY OWNS ITSELF".
+      stage.GetRootLayer().Save()
+    language: python
+    validator:
+      assertions:
+        - has_reference: {path: /City/CompositionQuarter/BaronSign, asset: baron_sign.usda}
+        - attribute_equals: {path: /City/CompositionQuarter/BaronSign.marquee, value: "THE CITY OWNS ITSELF"}
+        - attribute_source: {path: /City/CompositionQuarter/BaronSign.marquee, layer: submission.usd}
+        - prim_stack: {path: /City/CompositionQuarter/BaronSign, min: 2}
+    cookbook: docs/composition-basics/strength-ordering.md
+    xp: 230
+    reward: {opinion_points: 1, achievement: "New achievement! You overruled a Baron without editing his asset."}
+    world_target: /City/CompositionQuarter/BaronSign
+    recipes: [Local Opinion, LIVERPS Strength Ordering]
+    questions:
+      - prompt: In LIVRPS, which wins between a local opinion and a referenced opinion?
+        choices: [The reference, The local opinion, Whichever was saved last]
+        answer: 1
+        explanation: Local opinions are stronger than reference opinions.
+      - prompt: Where should a shot-specific sign change normally be authored?
+        choices: [Inside the reusable source asset, On the referencing prim's local layer]
+        answer: 1
+        explanation: A local override preserves the reusable source asset.
+
+  - id: f3_variant_switch
+    title: Install the Arcade Marquee Switch
+    floor: 3
+    floor_name: Composition Quarter
+    neighborhood: Variant Gallery
+    kind: room
+    prerequisites: [f3_reference_arcade]
+    level_required: 8
+    exam_tasks: [create_variant_set, author_variant_opinions]
+    stats: {craft: 3, lore: 2}
+    brief: "SYSTEM: Day and night are not separate assets. They are choices. Try to contain your astonishment."
+    starter: |
+      from pxr import Sdf, Usd
+
+      stage = Usd.Stage.Open(STAGE_PATH)
+      marquee = stage.DefinePrim("/City/CompositionQuarter/VariantMarquee", "Xform")
+      modes = marquee.GetVariantSets().AddVariantSet("lighting")
+      # TODO: Add "day" and "night" variants.
+      # TODO: In each variant edit context, author modeName to match its variant.
+      # TODO: Leave "night" selected.
+      stage.GetRootLayer().Save()
+    language: python
+    validator:
+      assertions:
+        - has_variant_set:
+            path: /City/CompositionQuarter/VariantMarquee
+            name: lighting
+            variants: [day, night]
+            selection: night
+        - attribute_equals: {path: /City/CompositionQuarter/VariantMarquee.modeName, value: night}
+    cookbook: docs/composition-basics/variant-sets.md
+    xp: 170
+    reward: Two-Position Switch
+    world_target: /City/CompositionQuarter/VariantMarquee
+    recipes: [Variant Set]
+
+  - id: f3_variant_boss
+    title: The Curator of False Choices
+    floor: 3
+    floor_name: Composition Quarter
+    neighborhood: Variant Gallery
+    kind: neighborhood_boss
+    prerequisites: [f3_variant_switch]
+    level_required: 8
+    exam_tasks: [change_variant_selection, preserve_variant_contents]
+    stats: {insight: 3, resolve: 3}
+    brief: "SYSTEM: The Curator offers red or blue, then secretly selects red. Author the requested selection. Free will sold separately."
+    starter: |
+      from pxr import Sdf, Usd
+
+      stage = Usd.Stage.Open(STAGE_PATH)
+      exhibit = stage.DefinePrim("/City/CompositionQuarter/ChoiceExhibit", "Xform")
+      colors = exhibit.GetVariantSets().AddVariantSet("color")
+      for name in ("red", "blue"):
+          colors.AddVariant(name)
+          colors.SetVariantSelection(name)
+          with colors.GetVariantEditContext():
+              exhibit.CreateAttribute("activeColor", Sdf.ValueTypeNames.String).Set(name)
+      colors.SetVariantSelection("red")
+      # TODO: Select blue without deleting either variant.
+      stage.GetRootLayer().Save()
+    language: python
+    validator:
+      assertions:
+        - has_variant_set:
+            path: /City/CompositionQuarter/ChoiceExhibit
+            name: color
+            variants: [red, blue]
+            selection: blue
+        - attribute_equals: {path: /City/CompositionQuarter/ChoiceExhibit.activeColor, value: blue}
+    cookbook: docs/composition-basics/variant-sets.md
+    xp: 220
+    reward: {opinion_points: 1, achievement: "New achievement! You selected blue. The focus group is inconsolable."}
+    world_target: /City/CompositionQuarter/ChoiceExhibit
+    recipes: [Variant Selection]
+    questions:
+      - prompt: Where must opinions unique to a variant be authored?
+        choices: [In a variant edit context, On the session layer, In customData]
+        answer: 0
+        explanation: GetVariantEditContext authors opinions inside the selected variant.
+      - prompt: Can separate references to one asset choose different variants?
+        choices: ["Yes", "No"]
+        answer: 0
+        explanation: Variant selections can be authored on each referencing prim.
+
+  - id: f3_city_block
+    title: Recapture Modular Market
+    floor: 3
+    floor_name: Composition Quarter
+    neighborhood: Modular Market
+    kind: city_boss
+    prerequisites: [f3_variant_boss]
+    level_required: 8
+    exam_tasks: [compose_reusable_assets, author_local_overrides, set_default_prim]
+    stats: {craft: 4, resolve: 3, lore: 2}
+    brief: "SYSTEM: Build a market block from one reusable stall. Three references, three addresses, zero duplicated geometry."
+    starter: |
+      from pathlib import Path
+      from pxr import Sdf, Usd
+
+      stage = Usd.Stage.Open(STAGE_PATH)
+      asset = Usd.Stage.CreateNew(str(Path(STAGE_PATH).parent / "market_stall.usda"))
+      stall = asset.DefinePrim("/MarketStall", "Xform")
+      stall.CreateAttribute("assetClass", Sdf.ValueTypeNames.String).Set("market_stall")
+      asset.SetDefaultPrim(stall)
+      asset.GetRootLayer().Save()
+
+      market = stage.DefinePrim("/City/CompositionQuarter/ModularMarket", "Xform")
+      # TODO: Define Stall_A, Stall_B, and Stall_C beneath market.
+      # TODO: Add a reference to market_stall.usda on each stall.
+      # TODO: Give each stall a local string attribute stallId matching A, B, or C.
+      stage.GetRootLayer().Save()
+    language: python
+    validator:
+      assertions:
+        - has_reference: {path: /City/CompositionQuarter/ModularMarket/Stall_A, asset: market_stall.usda}
+        - has_reference: {path: /City/CompositionQuarter/ModularMarket/Stall_B, asset: market_stall.usda}
+        - has_reference: {path: /City/CompositionQuarter/ModularMarket/Stall_C, asset: market_stall.usda}
+        - attribute_equals: {path: /City/CompositionQuarter/ModularMarket/Stall_A.stallId, value: A}
+        - attribute_equals: {path: /City/CompositionQuarter/ModularMarket/Stall_B.stallId, value: B}
+        - attribute_equals: {path: /City/CompositionQuarter/ModularMarket/Stall_C.stallId, value: C}
+        - attribute_equals: {path: /City/CompositionQuarter/ModularMarket/Stall_C.assetClass, value: market_stall}
+    cookbook: docs/composition-basics/references.md
+    xp: 300
+    reward: {opinion_points: 2, achievement: "District recaptured! Modular Market now contains 300% more stall and 0% more source asset."}
+    world_target: /City/CompositionQuarter/ModularMarket
+    recipes: [Asset, Assembly]
+    questions:
+      - prompt: Why use three references instead of copying the stall hierarchy three times?
+        choices: [Shared source and maintainability, References always render faster, USD forbids copied prims]
+        answer: 0
+        explanation: References preserve a shared, reusable source and allow local overrides.
+      - prompt: Which opinions should distinguish the three stalls?
+        choices: [Local opinions on each destination, Edits to the shared source]
+        answer: 0
+        explanation: Destination-local opinions specialize each use without changing the source.
+
+  - id: f3_opinion_colossus
+    title: Survive the LIVRPS Labyrinth
+    floor: 3
+    floor_name: Composition Quarter
+    neighborhood: LIVRPS Plaza
+    kind: floor_boss
+    prerequisites: [f3_city_block]
+    level_required: 8
+    exam_tasks: [resolve_liverps, inspect_prim_and_property_stacks, debug_composition]
+    stats: {insight: 5, resolve: 5, craft: 2}
+    brief: "SYSTEM: Six arcs enter. One opinion leaves. Author the strongest value and prove you know why it wins."
+    starter: |
+      from pathlib import Path
+      from pxr import Sdf, Usd
+
+      stage = Usd.Stage.Open(STAGE_PATH)
+      folder = Path(STAGE_PATH).parent
+
+      reference_stage = Usd.Stage.CreateNew(str(folder / "reference_threat.usda"))
+      reference_root = reference_stage.DefinePrim("/ThreatSource", "Xform")
+      reference_root.CreateAttribute("threatLevel", Sdf.ValueTypeNames.Int).Set(40)
+      reference_stage.SetDefaultPrim(reference_root)
+      reference_stage.GetRootLayer().Save()
+
+      payload_stage = Usd.Stage.CreateNew(str(folder / "payload_threat.usda"))
+      payload_root = payload_stage.DefinePrim("/PayloadSource", "Xform")
+      payload_root.CreateAttribute("threatLevel", Sdf.ValueTypeNames.Int).Set(30)
+      payload_stage.SetDefaultPrim(payload_root)
+      payload_stage.GetRootLayer().Save()
+
+      fallback = stage.CreateClassPrim("/City/CompositionQuarter/_FallbackThreat")
+      fallback.CreateAttribute("threatLevel", Sdf.ValueTypeNames.Int).Set(10)
+      inherited = stage.CreateClassPrim("/City/CompositionQuarter/_InheritedThreat")
+      inherited.CreateAttribute("threatLevel", Sdf.ValueTypeNames.Int).Set(20)
+
+      boss = stage.DefinePrim("/City/CompositionQuarter/OpinionColossus", "Xform")
+      boss.GetSpecializes().AddSpecialize(fallback.GetPath())
+      boss.GetPayloads().AddPayload("payload_threat.usda")
+      boss.GetReferences().AddReference("reference_threat.usda")
+      boss.GetInherits().AddInherit(inherited.GetPath())
+
+      modes = boss.GetVariantSets().AddVariantSet("threatMode")
+      for name, value in [("calm", 60), ("enraged", 80)]:
+          modes.AddVariant(name)
+          modes.SetVariantSelection(name)
+          with modes.GetVariantEditContext():
+              boss.CreateAttribute("threatLevel", Sdf.ValueTypeNames.Int).Set(value)
+      modes.SetVariantSelection("enraged")
+
+      # TODO: Author a direct local threatLevel of 100 on OpinionColossus.
+      stage.GetRootLayer().Save()
+    language: python
+    validator:
+      assertions:
+        - attribute_equals: {path: /City/CompositionQuarter/OpinionColossus.threatLevel, value: 100}
+        - attribute_source: {path: /City/CompositionQuarter/OpinionColossus.threatLevel, layer: submission.usd}
+        - has_inherit: {path: /City/CompositionQuarter/OpinionColossus}
+        - has_variant_set:
+            path: /City/CompositionQuarter/OpinionColossus
+            name: threatMode
+            variants: [calm, enraged]
+            selection: enraged
+        - has_reference: {path: /City/CompositionQuarter/OpinionColossus, asset: reference_threat.usda}
+        - has_payload: {path: /City/CompositionQuarter/OpinionColossus, asset: payload_threat.usda}
+        - has_specializes: {path: /City/CompositionQuarter/OpinionColossus}
+        - prim_stack: {path: /City/CompositionQuarter/OpinionColossus, min: 5}
+    cookbook: docs/composition-basics/strength-ordering.md
+    xp: 450
+    reward:
+      opinion_points: 3
+      achievement: "Floor clear! You survived LIVRPS. The weaker opinions request a recount."
+      inventory: {system_peeks: 1}
+    world_target: /City/CompositionQuarter/OpinionColossus
+    recipes: [LIVERPS Strength Ordering, Composition, Index]
+    questions:
+      - prompt: Choose LIVRPS from strongest to weakest.
+        choices:
+          - Local, Inherits, Variant sets, References, Payloads, Specializes
+          - Local, Variant sets, Inherits, Payloads, References, Specializes
+          - Specializes, Payloads, References, Variant sets, Inherits, Local
+        answer: 0
+        explanation: LIVRPS orders Local, Inherits, Variant sets, References, Payloads, Specializes.
+      - prompt: A local value and a selected variant both author the same attribute. Which wins?
+        choices: [The selected variant, The local value, The newest opinion]
+        answer: 1
+        explanation: Local opinions are stronger than variant opinions.
+      - prompt: Why inspect a property stack while debugging?
+        choices:
+          - It reveals the ordered authored sources contributing to that property
+          - It permanently flattens the stage
+          - It changes the edit target
+        answer: 0
+        explanation: The property stack shows where competing opinions originate and their strength order.
+

@@ -15,3 +15,7 @@ wheels/
 .venv/
 _assets/
 RUNBOOK/
+game/save.json
+game/web/node_modules/
+world/.preview/
+*.tsbuildinfo

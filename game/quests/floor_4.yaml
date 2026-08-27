@@ -1,0 +1,87 @@
+floor: 4
+floor_name: Variant Gardens
+quests:
+  - id: f4_season_gate
+    title: Turn the Season Gate
+    floor: 4
+    floor_name: Variant Gardens
+    neighborhood: Season Walk
+    kind: room
+    prerequisites: [f3_opinion_colossus]
+    level_required: 8
+    exam_tasks: [create_variant_set, author_variants]
+    stats: {craft: 3, lore: 2}
+    brief: "SYSTEM: The garden remembers many seasons. Give them named paths."
+    starter: |
+      from pxr import Usd, UsdGeom
+      stage = Usd.Stage.Open(STAGE_PATH)
+      garden = UsdGeom.Xform.Define(stage, "/City/VariantGardens/Garden").GetPrim()
+      # Create season variants "spring" and "winter"; select "spring".
+      stage.GetRootLayer().Save()
+    language: python
+    validator:
+      assertions:
+        - has_variant_set: {path: /City/VariantGardens/Garden, name: season, variants: [spring, winter], selection: spring}
+    cookbook: docs/creating-composition-arcs/variant-sets/working-with-variant-sets.md
+    xp: 230
+    reward: Perennial Token
+    world_target: /City/VariantGardens/Garden
+    recipes: [Usd.Prim.GetVariantSets, Usd.VariantSet.AddVariant, Usd.VariantSet.SetVariantSelection]
+
+  - id: f4_two_faced_topiary
+    title: Prune the Two-Faced Topiary
+    floor: 4
+    floor_name: Variant Gardens
+    neighborhood: Topiary Maze
+    kind: neighborhood_boss
+    prerequisites: [f4_season_gate]
+    level_required: 9
+    exam_tasks: [author_variant_contents, switch_variants]
+    stats: {craft: 3, resolve: 3}
+    brief: "SYSTEM: One root, two silhouettes. Contain each shape in its proper variant."
+    starter: |
+      from pxr import Usd, UsdGeom
+      stage = Usd.Stage.Open(STAGE_PATH)
+      topiary = UsdGeom.Xform.Define(stage, "/City/VariantGardens/Topiary").GetPrim()
+      shapes = topiary.GetVariantSets().AddVariantSet("shape")
+      # Add "cube" and "sphere" variants, author the matching child in each, select "sphere".
+      stage.GetRootLayer().Save()
+    language: python
+    validator:
+      assertions:
+        - has_variant_set: {path: /City/VariantGardens/Topiary, name: shape, variants: [cube, sphere], selection: sphere}
+        - prim_type: {path: /City/VariantGardens/Topiary/Sculpture, value: Sphere}
+    cookbook: docs/creating-composition-arcs/variant-sets/what-are-variant-sets.md
+    xp: 290
+    reward: Gardener's Variant Shears
+    world_target: /City/VariantGardens/Topiary
+    recipes: [Usd.VariantSet.GetVariantEditContext, UsdGeom.Cube.Define, UsdGeom.Sphere.Define]
+
+  - id: f4_hydra_of_choices
+    title: Bind the Hydra of Choices
+    floor: 4
+    floor_name: Variant Gardens
+    neighborhood: Choice Conservatory
+    kind: floor_boss
+    prerequisites: [f4_two_faced_topiary]
+    level_required: 10
+    exam_tasks: [combine_reference_variants, preserve_interface]
+    stats: {insight: 4, resolve: 3}
+    brief: "SYSTEM: Every head demands a duplicate. Refuse. Parameterize one asset."
+    starter: |
+      from pxr import Usd
+      stage = Usd.Stage.Open(STAGE_PATH)
+      hydra = stage.DefinePrim("/City/VariantGardens/HydraStatue", "Xform")
+      hydra.GetReferences().AddReference("assets/sign.usda")
+      # Add a finish variant set with "bronze" and "marble"; select "bronze".
+      stage.GetRootLayer().Save()
+    language: python
+    validator:
+      assertions:
+        - has_reference: {path: /City/VariantGardens/HydraStatue, asset: assets/sign.usda}
+        - has_variant_set: {path: /City/VariantGardens/HydraStatue, name: finish, variants: [bronze, marble], selection: bronze}
+    cookbook: docs/asset-structure/asset-parameterization/what-is-asset-parameterization.md
+    xp: 360
+    reward: Hydra Parameter Crown
+    world_target: /City/VariantGardens/HydraStatue
+    recipes: [Usd.References.AddReference, Usd.VariantSets.AddVariantSet]
