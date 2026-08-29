@@ -11,7 +11,7 @@ quests:
     level_required: 8
     exam_tasks: [author_primvar, set_interpolation]
     stats: {craft: 3, lore: 2}
-    brief: "SYSTEM: Color is not a rumor. Author displayColor on the hedge. Constant interpolation. Spring is (0, 1, 0). The flowers have opinions."
+    brief: "SYSTEM: Give the color rumor evidence. Author displayColor on the hedge. Constant interpolation. Spring is (0, 1, 0). The flowers have opinions."
     starter: |
       from pxr import Gf, Sdf, Usd, UsdGeom
 
@@ -40,7 +40,7 @@ quests:
     level_required: 8
     exam_tasks: [author_custom_attribute, namespace_property]
     stats: {craft: 3, insight: 2}
-    brief: "SYSTEM: No schema covers municipal gossip. Create custom string primvars:notes:warden = 'watch the north gate'. Custom is allowed. Chaos is not."
+    brief: "SYSTEM: No schema covers municipal gossip. Create custom string primvars:notes:warden = 'watch the north gate'. Custom is allowed. Chaos loses its permit."
     starter: |
       from pxr import Sdf, Usd, UsdGeom
 
@@ -87,7 +87,7 @@ quests:
             excluded: [/City/BeyondTheWalls/Topiary/Draft]
     cookbook: docs/beyond-basics/active-inactive-prims.md
     xp: 240
-    reward: {opinion_points: 1, achievement: "New achievement! You deactivated a draft instead of deleting the evidence."}
+    reward: {opinion_points: 1, achievement: "New achievement! You deactivated a draft and preserved the evidence."}
     world_target: /City/BeyondTheWalls/Topiary
     recipes: [Active and Inactive]
     questions:
@@ -109,7 +109,7 @@ quests:
     level_required: 9
     exam_tasks: [traverse_stage, count_gprims]
     stats: {insight: 4, craft: 2}
-    brief: "SYSTEM: Count Mesh prims on a default traversal. Classes do not vote. Write the tally on /World.census as an int."
+    brief: "SYSTEM: Count Mesh prims on a default traversal. Classes abstain. Write the tally on /World.census as an int."
     starter: |
       from pxr import Sdf, Usd, UsdGeom
 
@@ -170,7 +170,7 @@ quests:
     level_required: 9
     exam_tasks: [set_model_kind, distinguish_component]
     stats: {lore: 4, craft: 3}
-    brief: "SYSTEM: A lamp post is a component, not an assembly of regrets. Kind it. The Golem on Floor 6 is already taking notes."
+    brief: "SYSTEM: A lamp post qualifies as a component. Kind it before Floor 6 assembles your regrets for you."
     starter: |
       from pxr import Kind, Usd, UsdGeom
 
@@ -203,7 +203,7 @@ quests:
     level_required: 10
     exam_tasks: [explain_hydra]
     stats: {lore: 4, insight: 3}
-    brief: "SYSTEM: Hydra is not usdview, not Storm, not your viewport plugin. It is the bridge. This basement still will not draw a frame. Answer anyway."
+    brief: "SYSTEM: Hydra bridges scene data and rendering. usdview is the application; Storm is a delegate; your viewport plugin remains someone else's basement problem. Answer anyway."
     starter: ""
     language: none
     validator:
@@ -267,4 +267,4 @@ quests:
           - USD randomly picks a layer
           - Hydra overwrites attributes
         answer: 0
-        explanation: Composed values are resolved, not copied from one file.
+        explanation: Composition resolves values from every contributing opinion.

@@ -18,9 +18,9 @@ lessons:
           layers, textures, and volumes. An asset intended to be opened as a stage or composed
           into another stage needs a defined entry point prim that encloses its scene description.
 
-          The stage pseudo-root is not a defined prim and cannot serve as that entry point. If
-          geometry and materials remain as unrelated root prims, an external reference has no
-          single prim that includes both. A conventional root Xform such as /World creates one
+          The stage pseudo-root lacks a prim definition, so it cannot serve as that entry point.
+          When geometry and materials sit side by side as unrelated root prims, an external
+          reference has no single prim that covers both. A conventional root Xform such as /World creates one
           referenceable namespace and leaves room for transforms on the asset as a whole.
         points:
           - Everything intended to travel with the asset, including relationship targets, should be a descendant of the entry point.
@@ -34,15 +34,15 @@ lessons:
         body: |
           The root layer's defaultPrim metadata identifies the prim targeted when an external
           reference or payload supplies an asset path but omits a prim path. The default prim must
-          be a root prim on the stage. It is an interface contract, not a naming convention and
-          not the stage pseudo-root.
+          be a defined root prim on the stage, which rules out the pseudo-root. Treat it as an
+          interface contract that downstream users rely on; a naming convention carries no such weight.
 
           A consumer can still target another prim explicitly. The default simply makes the
           intended entry point discoverable and allows concise arcs such as AddReference("asset.usda").
         points:
           - "stage.SetDefaultPrim(prim) takes a Usd.Prim, while stage.GetDefaultPrim() returns that prim."
-          - "Without defaultPrim, an external arc that omits primPath cannot automatically choose a target."
-          - "Setting defaultPrim does not reparent or encapsulate any content."
+          - "An external arc that omits primPath depends on defaultPrim to choose its target."
+          - "defaultPrim advertises the entry point; encapsulation and reparenting remain separate authoring steps."
       - kind: api
         heading: Reparent with NamespaceEditor
         system: >-
@@ -71,17 +71,18 @@ lessons:
       - kind: pitfall
         heading: Encapsulation includes dependencies
         system: >-
-          A mesh that arrives without its material is not minimalist. It is evidence.
+          A mesh that arrives without its material files itself as evidence. Minimalism is the
+          defense it never wins.
         body: |
           A reference only brings in the namespace rooted at its target. A material, skeleton,
           relationship target, or other dependency left outside the entry point is outside that
           reference's scope. Targets to those external paths are ignored after composition, often
           with warnings and visibly incomplete results.
         points:
-          - Do not confuse the pseudo-root with a defined common ancestor.
-          - Reparenting changes prim paths, so use NamespaceEditor rather than copying and deleting prims by hand.
+          - Encapsulation depends on a defined common ancestor prim, a role the pseudo-root cannot fill.
+          - Reparenting changes prim paths, so let NamespaceEditor perform the move and keep dependent targets intact.
           - Apply namespace edits before saving, and save the layer that owns the edited specs.
-          - A payload or reference on a prim does not make that prim the stage's default prim.
+          - defaultPrim is authored on its own, independently of any payload or reference on the prim.
       - kind: recap
         heading: What you now owe the city
         body: |
@@ -119,15 +120,15 @@ lessons:
           downstream overrides.
         points:
           - Geometry and Looks should remain descendants of the asset entry point so one reference brings both.
-          - Partitioning changes structure and discoverability, not the visual result.
+          - Partitioning improves structure and discoverability while the composed visual result stays identical.
           - Other useful partitions include actors, environments, guides, and pipeline-specific public interfaces.
       - kind: concept
         heading: Scope carries no transform semantics
         system: >-
-          Not every folder needs to rotate. The city tried that once. We now number floors by
+          Folders rarely need to rotate. The city tried it once, and we now number floors by
           litigation outcome.
         body: |
-          UsdGeom.Scope is the preferred schema for organizational prims because it does not add
+          UsdGeom.Scope is the preferred schema for organizational prims because it carries no
           transform operations. UsdGeom.Xform is appropriate when a prim must carry a transform or
           act as a placeable asset root.
 
@@ -178,10 +179,10 @@ lessons:
           references, or application data aimed at the old paths. Public hierarchy should
           therefore be designed deliberately and changed cautiously.
         points:
-          - Do not leave Looks as a separate root prim; it will not accompany a reference to /World.
-          - Do not use names alone to classify prims when schema predicates such as IsA are available.
-          - Avoid placing materials beneath Geometry or meshes beneath Looks because ambiguous semantics impede navigation.
-          - Conventions such as leading underscores can signal internal paths, but OpenUSD does not enforce access restrictions.
+          - Keep Looks beneath the entry point so one reference to /World carries the materials along.
+          - Classify prims with schema predicates such as IsA, since a prim name carries no type guarantee.
+          - Keep materials in Looks and meshes in Geometry so the semantics stay unambiguous during navigation.
+          - Conventions such as leading underscores can signal internal paths, though enforcement is left to your pipeline.
       - kind: recap
         heading: What you now owe the city
         body: |

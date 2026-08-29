@@ -11,7 +11,7 @@ quests:
     level_required: 10
     exam_tasks: [author_sublayers, separate_workstreams]
     stats: {craft: 3, lore: 3}
-    brief: "SYSTEM: Geometry and shading filed a joint complaint. Give each a weaker layer. Do not invent a third department."
+    brief: "SYSTEM: Geometry and shading filed a joint complaint. Give each a weaker layer. A third department will be considered evidence of panic."
     starter: |
       from pathlib import Path
       from pxr import Sdf, Usd, UsdGeom
@@ -96,7 +96,7 @@ quests:
     level_required: 11
     exam_tasks: [author_external_references, reuse_city_assets]
     stats: {craft: 4, lore: 2}
-    brief: "SYSTEM: Guild job. Port the skyline exercise: two copies of Skyscraper A, one of E. Geometry is already in the city pack. Do not photocopy it."
+    brief: "SYSTEM: Guild job. Port the skyline exercise: two copies of Skyscraper A, one of E. Geometry is already in the city pack. Reuse earns fewer paperwork violations than photocopying."
     starter: |
       from pathlib import Path
       from pxr import Usd, UsdGeom
@@ -159,7 +159,7 @@ quests:
     questions:
       - prompt: Why does a material sibling of World fail when you reference World?
         choices:
-          - Referencing World does not bring unencapsulated siblings
+          - Referencing World leaves unencapsulated siblings behind
           - Materials cannot be referenced
           - Default prims ignore scopes
         answer: 0
@@ -175,7 +175,7 @@ quests:
     level_required: 11
     exam_tasks: [author_payload, defer_heavy_content]
     stats: {craft: 3, insight: 3}
-    brief: "SYSTEM: Guild job. The small building pack is cargo, not scenery. Payload three copies. They should sleep until asked."
+    brief: "SYSTEM: Guild job. Treat the small building pack as cargo. Payload three copies and let them sleep until called."
     starter: |
       from pathlib import Path
       from pxr import Usd, UsdGeom
@@ -278,7 +278,7 @@ quests:
     level_required: 12
     exam_tasks: [author_specializes, contrast_with_inherits]
     stats: {insight: 4, resolve: 4}
-    brief: "SYSTEM: Specializes is a fallback, not a megaphone. Local maxspeed must still win. Prove it before the traffic cop composes a ticket."
+    brief: "SYSTEM: Specializes speaks softly from the fallback position. Local maxspeed must still win. Prove it before the traffic cop composes a ticket."
     starter: |
       from pxr import Sdf, Usd
 
@@ -400,7 +400,7 @@ quests:
           with modes.GetVariantEditContext():
               sign.CreateAttribute("floorIndex", Sdf.ValueTypeNames.Int).Set(value)
       modes.SetVariantSelection("final")
-      # TODO: Author a local floorIndex of 4. Do not delete the weaker arcs.
+      # TODO: Author a local floorIndex of 4 while preserving the weaker arcs.
       stage.GetRootLayer().Save()
     language: python
     validator:

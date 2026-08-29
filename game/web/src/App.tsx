@@ -208,17 +208,17 @@ const TICKER = [
   "A NEW CONTESTANT HAS ENTERED THE COMPOSITION",
   "THE BROADCAST IS LIVE IN EVERY REMAINING TIMEZONE",
   "NO EXPERIENCE REQUIRED · NONE DETECTED EITHER",
-  "TEN FLOORS REMAIN SEALED · NINE OF THEM ARE NOT YOUR PROBLEM YET",
+  "TEN FLOORS REMAIN SEALED · TODAY'S PROBLEM IS FLOOR ZERO",
   "THE PREVIOUS CONTESTANT DECLINED TO READ THE BRIEF",
-  "SPONSORS REMIND YOU THAT PANIC IS NOT A STRATEGY",
+  "SPONSORS RECOMMEND A STRATEGY · PANIC FAILED FOCUS TESTING",
   "NOTHING HERE IS PERMANENT EXCEPT THE CITY YOU BUILD",
 ];
 
 const SPONSORS = [
   "THIS SEGMENT IS BROUGHT TO YOU BY THE ESTATE OF THE FOURTH FLOOR",
   "SPONSOR: A FIRM THAT NO LONGER RESOLVES · TERMS UNAVAILABLE",
-  "VIEWER DISCRETION IS ADVISED · THE SYSTEM'S IS NOT",
-  "STANDINGS UPDATE HOURLY · YOURS IS NOT ON THE BOARD",
+  "VIEWER DISCRETION IS ADVISED · THE SYSTEM DECLINED",
+  "STANDINGS UPDATE HOURLY · YOUR NAME REMAINS CONSPICUOUSLY ABSENT",
 ];
 
 function BroadcastChrome() {
@@ -321,13 +321,13 @@ function Landing({ onStart, hasProgress, nextQuest, quests, floors }: {
         </p>
         <p>
           You have been <b>filed as a Primwright</b> — my term for someone who writes the instructions that tell a 3D
-          scene what it is. Do not be flattered. I did not interview you. I skimmed one line of your work history,
-          laughed, and printed a badge. It reads <em>Contestant #USD-01</em>. <em>Primwright</em>.
+          scene what it is. Save the gratitude. Your interview consisted of me skimming one line of your work history,
+          laughing, and printing a badge. It reads <em>Contestant #USD-01</em>. <em>Primwright</em>.
           <em> Underqualified</em>. I ran out of room before I ran out of adjectives.
         </p>
         <p>
-          House rules, which you will ignore in roughly four minutes. I assign the work. I do not grade it — real
-          tooling does, so when you fail you are failing to an impartial third party and to me, personally, out loud.
+          House rules, which you will ignore in roughly four minutes. I assign the work. Real tooling grades it.
+          Every failure therefore reaches an impartial third party and me, personally, out loud.
           Nothing you build is ever taken from you. Legal insisted. Everything you get right, the city keeps forever,
           which I am told is called a portfolio and which I am told humans enjoy. Begin whenever you are ready. The
           audience is already seated. They were promised a spectacle, and so far they have you.
@@ -367,7 +367,7 @@ function Landing({ onStart, hasProgress, nextQuest, quests, floors }: {
         <h2>THE TOWER · TEN FLOORS, NO ELEVATOR</h2>
         <p className="landing-note">
           Cleared in order. Every floor teaches a new part of OpenUSD and ends with something that declines to let you
-          pass politely. The System does not post what that something is. The System finds this funnier.
+          pass politely. The System keeps that final inconvenience classified for comedic purposes.
         </p>
         <div className="tower-grid">
           {floors.map(([floor, rooms]) => {
@@ -913,7 +913,7 @@ export default function App() {
       setToast({
         kind: "success",
         title: "CLASS PATH LOCKED",
-        message: `SYSTEM: ${id} recorded. You may still clear every floor. Flavor is not a cheat.`,
+        message: `SYSTEM: ${id} recorded. You may still clear every floor. Class affects flavor; skill clears rooms.`,
       });
     } catch (error) {
       setToast({ kind: "error", title: "PATH DENIED", message: error instanceof Error ? error.message : "The kiosk refused." });
@@ -1085,7 +1085,7 @@ export default function App() {
           <div className="legend"><span><i className="complete" /> CLEARED</span><span><i className="available" /> OPEN</span><span><i className="boss" /> BOSS</span><span><i className="locked" /> LOCKED</span><span>+OP PAYS OPINION POINTS FOR THE SAFEROOM</span></div>
         </div>}
         {activeTab === "skills" && <div className={`skill-tree panel ${spotlight === "recipes" ? "spotlight" : ""}`} ref={recipesRef}>
-          <div className="section-hero"><span>THE COOKBOOK INDEX</span><h1>RECIPES OF POWER</h1><p>Glossary nodes from the Cookbook graph. Clear rooms that name them. SYSTEM: collecting terms is not the same as composing them.</p><small className="recipe-count">{masteredRecipes}/{recipes.length} MASTERED</small></div>
+          <div className="section-hero"><span>THE COOKBOOK INDEX</span><h1>RECIPES OF POWER</h1><p>Glossary nodes from the Cookbook graph. Clear rooms that name them. SYSTEM: collecting terms fills the shelf; composing them builds the city.</p><small className="recipe-count">{masteredRecipes}/{recipes.length} MASTERED</small></div>
           {recipeGroups.map(([category, nodes]) => <section className="recipe-cluster" key={category}>
             <header><span>{category.replaceAll("-", " ")}</span><b>{nodes.filter((node) => node.unlocked).length}/{nodes.length}</b></header>
             <div className="skill-grid">{nodes.map((recipe, index) => <article className={`skill-node ${recipe.unlocked ? "unlocked" : ""}`} key={recipe.id} style={{ "--i": index } as React.CSSProperties}>

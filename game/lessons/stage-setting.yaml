@@ -72,12 +72,12 @@ lessons:
         system: >-
           I keep these on a clipboard. It is the only paperwork I enjoy.
         body: |
-          Authoring a prim is not the same as persisting it. Until the layer is saved, the work
-          exists only in memory, and the judges read the file.
+          Authoring a prim puts it in memory. Persisting it takes a save, and the judges read the
+          file.
         points:
-          - "GetChild returns direct children only. It will not find a nested grandchild."
+          - "GetChild returns direct children only. Reach a grandchild by stepping down one level at a time."
           - "Forgetting stage.GetRootLayer().Save() or stage.Save() means the validator sees an empty stage."
-          - "Passing a bad type name creates a prim whose type is not recognized by any schema."
+          - "Passing a bad type name creates a prim with a type token no schema claims."
       - kind: recap
         heading: What you now owe the city
         body: |
@@ -136,8 +136,8 @@ lessons:
           you invited back.
         body: |
           Each schema-specific API has methods that grab its own attributes. GetRadiusAttr returns
-          a Usd.Attribute object, not the value. Call Get to read the resolved value and Set to
-          author one. When no schema owns the data, CreateAttribute takes an explicit value type.
+          a Usd.Attribute object; call Get on it to read the resolved value and Set to author one.
+          When no schema owns the data, CreateAttribute takes an explicit value type.
         code: |
           from pxr import Sdf, Usd, UsdGeom
 
@@ -161,10 +161,10 @@ lessons:
           Type mismatches are my favorite failure. They fail loudly and take dignity with them.
         body: |
           The value you pass must match the declared type. A Color3fArray expects a list of
-          triples, not a single triple, and a String attribute will not quietly accept a float.
+          triples, and a String attribute rejects a float outright.
         points:
-          - "GetRadiusAttr() returns the attribute object. Forgetting .Get() hands you a Usd.Attribute, not a number."
-          - "displayColor is an array-valued primvar. Set [(0, 1, 0)], not (0, 1, 0)."
+          - "GetRadiusAttr() hands back the attribute object, so chain .Get() when you want the number."
+          - "displayColor is an array-valued primvar, so wrap the triple in a list: [(0, 1, 0)]."
           - "Passing a time code to Set authors a time sample instead of the default value."
       - kind: recap
         heading: What you now owe the city
@@ -185,9 +185,9 @@ lessons:
     title: Stages
     objective: Explain what a stage is, how it composes layers, and how to create, open, and save one.
     intro: >-
-      A stage is the composed scene. Not a file. I stress this because every season someone
-      tells the audience that a stage is a file, and then I have to be unkind on camera, and the
-      sponsors send letters.
+      A stage is the composed scene, assembled from layers. I stress the distinction because every
+      season someone tells the audience a stage is merely a file, and then I have to be unkind on
+      camera, and the sponsors send letters.
     beats:
       - kind: concept
         heading: A stage presents the composed scenegraph
@@ -195,7 +195,8 @@ lessons:
           The stage is the truth. The files are just the arguing.
         body: |
           A stage presents the scenegraph, the hierarchy of prims that makes up the scene. It is
-          the composed result of one or more layers, and layers need not be file-backed.
+          the composed result of one or more layers, and a layer can come from a file or from any
+          other resource.
 
           A stage might be a single USD file describing a robot, or a file that pulls in many
           more files describing a factory full of robots. Each contributing asset can also be
@@ -219,7 +220,7 @@ lessons:
           USD file formats.
         points:
           - "stage.GetRootLayer() returns the Sdf.Layer object backing the stage."
-          - "stage.Save() writes every edited layer contributing to the stage, not just the root."
+          - "stage.Save() writes every edited layer contributing to the stage, the root among them."
           - "Usd.Stage.CreateInMemory() builds a stage with no file until you call Export."
       - kind: concept
         heading: Stage metadata is the contract consumers read first

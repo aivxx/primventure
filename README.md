@@ -4,13 +4,13 @@
 [![Python](https://img.shields.io/badge/Python-3.12%2B-3776AB.svg)](https://www.python.org/)
 [![usd-core](https://img.shields.io/badge/usd--core-25.5%2B-76B900.svg)](https://pypi.org/project/usd-core/)
 
-> SYSTEM: The 3D production world did not crash. It *unstitched*. Layers drifted. References went feral. Someone left a `class` where a `def` belonged and the city forgot its own name.
+> SYSTEM: The 3D production world *unstitched*. Layers drifted. References went feral. Someone left a `class` where a `def` belonged and the city forgot its own name.
 >
 > You are Contestant **#USD-01**, an underqualified Primwright. Recapture the Composition one authored opinion at a time.
 
 **Primventure** is a local, PG-13 OpenUSD dungeon crawl. Combat is authoring. You write real Python against [usd-core](https://pypi.org/project/usd-core/), the System grades the stage, and every cleared room publishes into a living city under [`world/`](world/). That city is also your portfolio.
 
-The lessons are not fan fiction. They are the official [NVIDIA Learn OpenUSD](https://docs.nvidia.com/learn-openusd/latest/index.html) curriculum, recast as rooms, bosses, recipes, and a city feed.
+The official [NVIDIA Learn OpenUSD](https://docs.nvidia.com/learn-openusd/latest/index.html) curriculum becomes rooms, bosses, recipes, and a city feed.
 
 ---
 
@@ -26,7 +26,7 @@ Learn OpenUSD teaches prims, attributes, composition arcs, asset structure, inst
 
 Boss rooms pay **Opinion Points**. Spend them in the Saferoom on Hint Tokens and Opinion X-Rays. The Recipe Tree is your Cookbook index: terms unlock when you have actually authored them.
 
-Nothing here is a mock USD. Submissions execute on your machine. The arena binds to localhost on purpose.
+Submissions use real USD and execute on your machine. The arena binds to localhost on purpose.
 
 ---
 
@@ -110,7 +110,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) and [STYLEGUIDE.md](STYLEGUIDE.md) if you
 | 8 | Exchange Terminal | Import, extract, transform, validate |
 | 9 | Crown District | Certification recap |
 
-Rooms are YAML under [`game/quests/`](game/quests/). Lesson cards live in [`game/lessons/`](game/lessons/), keyed to the Markdown in [`docs/`](docs/). The validator is usd-core, not a quiz key with extra steps.
+Rooms are YAML under [`game/quests/`](game/quests/). Lesson cards live in [`game/lessons/`](game/lessons/), keyed to the Markdown in [`docs/`](docs/). usd-core validates the stage directly.
 
 ---
 
@@ -118,9 +118,9 @@ Rooms are YAML under [`game/quests/`](game/quests/). Lesson cards live in [`game
 
 **Curriculum.** [NVIDIA Learn OpenUSD](https://docs.nvidia.com/learn-openusd/latest/index.html), the open-source learning path for the [OpenUSD Development Certification](https://www.nvidia.com/en-us/learn/certification/openusd-development/). Upstream repository: [NVIDIA-Omniverse/LearnOpenUSD](https://github.com/NVIDIA-Omniverse/LearnOpenUSD).
 
-Lesson text, examples, and assets in `docs/` retain their NVIDIA copyright notices and Apache-2.0 / SPDX attribution. Primventure does not replace that site; it is a crawl *through* it.
+Lesson text, examples, and assets in `docs/` retain their NVIDIA copyright notices and Apache-2.0 / SPDX attribution. Primventure turns that learning path into a crawl.
 
-**Runtime.** [OpenUSD](https://openusd.org) via `usd-core`. The City Feed reads the composed stage (`Cube`, `Sphere`, `Mesh`, and friends) and draws it in the browser. No mock scene graph.
+**Runtime.** [OpenUSD](https://openusd.org) via `usd-core`. The City Feed reads the composed stage (`Cube`, `Sphere`, `Mesh`, and friends) and draws it in the browser.
 
 **Original to this dungeon.** The System voice, floors, Saferoom, Opinion Points, Recipe Tree, and the persistent city under `world/`. Those do not reproduce characters or plot from other works.
 

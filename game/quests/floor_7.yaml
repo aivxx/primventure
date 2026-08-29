@@ -11,7 +11,7 @@ quests:
     level_required: 15
     exam_tasks: [author_scenegraph_instances, reuse_component]
     stats: {craft: 4, insight: 3}
-    brief: "SYSTEM: The Wilds bill memory by the copy. Three benches, one prototype. Instanceable is not optional."
+    brief: "SYSTEM: The Wilds bill memory by the copy. Three benches, one prototype. Instanceable is now a financial requirement."
     starter: |
       from pathlib import Path
       from pxr import Usd, UsdGeom
@@ -189,7 +189,7 @@ quests:
     questions:
       - prompt: How does point instancing differ from scenegraph instancing?
         choices:
-          - Point instancers store per-instance arrays instead of prims per copy
+          - Point instancers store each copy in compact per-instance arrays
           - Point instancers cannot use references
           - Scenegraph instancing forbids prototypes
         answer: 0

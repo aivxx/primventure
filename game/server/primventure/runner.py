@@ -18,7 +18,7 @@ TAUNTS = [
     "The System has inspected your opinions. Several have filed for witness protection.",
     "A bold layer. Incorrect, but bold. The crowd has been told this was intentional.",
     "Your authored intent and the composed result are no longer on speaking terms.",
-    "SYSTEM: Hydra did not crash. You did. There is a difference.",
+    "SYSTEM: Hydra remained operational throughout your collapse. The distinction will appear in the incident report.",
     "SYSTEM: Deleting the draft would have been faster. Also, a certification fail.",
 ]
 VICTORIES = [

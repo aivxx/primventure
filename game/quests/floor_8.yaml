@@ -100,7 +100,7 @@ quests:
     world_target: /City/ExchangeTerminal/ExtractedCube
     recipes: [Attribute]
     questions:
-      - prompt: Why doesn't usd-core open shapes.obj as a stage in this arena?
+      - prompt: Why does shapes.obj require an OBJ parser before usd-core can use its data?
         choices:
           - The local usd-core build has no OBJ file-format plugin
           - OBJ files are illegal in OpenUSD
@@ -215,7 +215,7 @@ quests:
     level_required: 16
     exam_tasks: [obj_to_usd_pipeline, validate_stage_contract]
     stats: {insight: 5, resolve: 5, craft: 4}
-    brief: "SYSTEM: City boss. Extract the OBJ cube, stamp provenance, pass the contract. The Engine does not care about your feelings."
+    brief: "SYSTEM: City boss. Extract the OBJ cube, stamp provenance, pass the contract. The Engine processes data; your feelings remain an unsupported format."
     starter: |
       from pxr import Gf, Kind, Sdf, Usd, UsdGeom
 
@@ -253,7 +253,7 @@ quests:
           - Only polygon count
           - Only file size
         answer: 0
-        explanation: Asset validation encodes pipeline contracts, not vibes.
+        explanation: Asset validation turns pipeline contracts into enforceable checks.
       - prompt: Where should source-format provenance live after an OBJ import?
         choices: [customData on the asset interface, The filename only, A sidecar PDF]
         answer: 0

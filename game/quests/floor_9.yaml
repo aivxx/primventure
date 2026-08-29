@@ -42,7 +42,7 @@ quests:
     level_required: 18
     exam_tasks: ["8.1", set_edit_target, inspect_property_stack]
     stats: {insight: 5, craft: 3}
-    brief: "SYSTEM: Root is strongest. The notes layer is weaker. Set the edit target before you author or you will vandalize the wrong file. This is debugging, not interior design."
+    brief: "SYSTEM: Root is strongest. The notes layer is weaker. Set the edit target before you author or you will redecorate the wrong file and call it debugging."
     starter: |
       from pathlib import Path
       from pxr import Sdf, Usd
@@ -76,7 +76,7 @@ quests:
     level_required: 18
     exam_tasks: ["8.2", debug_value_resolution, inspect_prim_stack]
     stats: {insight: 6, resolve: 4}
-    brief: "SYSTEM: A reference says 1. You will say 4. GetPropertyStack is a flashlight, not a weapon. Leave the weaker arc alive."
+    brief: "SYSTEM: A reference says 1. You will say 4. GetPropertyStack illuminates the evidence. Leave the weaker arc alive."
     starter: |
       from pathlib import Path
       from pxr import Sdf, Usd
@@ -104,7 +104,7 @@ quests:
     world_target: /City/CrownDistrict
     recipes: [Value Resolution, LIVERPS Strength Ordering]
     questions:
-      - prompt: Why inspect GetPropertyStack instead of guessing?
+      - prompt: What does GetPropertyStack reveal about a resolved property?
         choices:
           - It lists the authored sources in strength order for that property
           - It flattens the stage
@@ -122,7 +122,7 @@ quests:
     level_required: 18
     exam_tasks: ["8.3", author_layer_offset]
     stats: {insight: 5, craft: 4}
-    brief: "SYSTEM: The clip starts at frame 0. The shot wants it at 10. LayerOffset. Do not bake new samples unless you enjoy unpaid overtime."
+    brief: "SYSTEM: The clip starts at frame 0. The shot wants it at 10. Use LayerOffset and leave sample baking to contestants who enjoy unpaid overtime."
     starter: |
       from pathlib import Path
       from pxr import Sdf, Usd
@@ -161,7 +161,7 @@ quests:
     level_required: 18
     exam_tasks: ["7.2", flatten_stage, deliver_package]
     stats: {lore: 5, craft: 4}
-    brief: "SYSTEM: Delivery wants one file. Flatten the composed cube. This is a package, not a workstream. Do not confuse the two."
+    brief: "SYSTEM: Delivery wants one file. Flatten the composed cube into a package. The workstream stays behind with the production crew."
     starter: |
       from pathlib import Path
       from pxr import Sdf, Usd
@@ -187,7 +187,7 @@ quests:
     recipes: [Flatten, Layer]
 
   - id: f9_changeblock_sprint
-    title: Batch the Edits, Don't Spam Notices
+    title: Batch the Edits, Spare the Notices
     floor: 9
     floor_name: Recap Colosseum
     neighborhood: Debug Gauntlet
@@ -196,7 +196,7 @@ quests:
     level_required: 19
     exam_tasks: ["8.4", use_sdf_changeblock]
     stats: {craft: 4, insight: 4}
-    brief: "SYSTEM: Three attributes, one Sdf.ChangeBlock. Notices are not a personality. Batch them. usd-core can do this much without a full build."
+    brief: "SYSTEM: Three attributes, one Sdf.ChangeBlock. Give the notices one orderly entrance. usd-core can do this much without a full build."
     starter: |
       from pxr import Sdf, Usd
 
@@ -251,7 +251,7 @@ quests:
           - Only a USDA file and usdview
           - A PointInstancer
         answer: 0
-        explanation: Schema generation is a full-install workflow, not a usd-core notebook trick.
+        explanation: Schema generation requires a full OpenUSD installation and its plugin toolchain.
       - prompt: What is an Asset Resolver responsible for?
         choices:
           - Mapping asset identifiers to locatable resources
@@ -265,14 +265,14 @@ quests:
           - Inside every Sdf.LayerOffset
           - In Kind.Tokens
         answer: 0
-        explanation: Scene Indexes filter Hydra scene data; they are not a substitute for LIVRPS.
+        explanation: Scene Indexes filter Hydra scene data; LIVRPS still resolves USD composition.
       - prompt: "Value clips are best described as:"
         choices:
           - Time-sampled layer sequences composed onto a prim, often for animation caches
           - A synonym for variant sets
           - A render delegate
         answer: 0
-        explanation: Value clips stream time samples from clip layers rather than baking them all locally.
+        explanation: Value clips stream time samples from clip layers and keep the local layer compact.
 
   - id: f9_hydra_brief
     title: Name the Three Heads of Hydra
@@ -284,7 +284,7 @@ quests:
     level_required: 19
     exam_tasks: ["6.4", hydra_architecture]
     stats: {lore: 6, insight: 4}
-    brief: "SYSTEM: Hydra is not usdview. It is the bridge. Name the parts. HdStorm ships. Your custom delegate does not, not in this basement."
+    brief: "SYSTEM: Hydra is the bridge between scene data and rendering. Name the parts. HdStorm ships; your custom delegate remains stranded several toolchains above this basement."
     starter: ""
     language: none
     validator:
@@ -335,7 +335,7 @@ quests:
         - metadata_equals: {path: /City/CrownDistrict/CertificationArchive, key: documentation, value: "Composition knowledge verified."}
     cookbook: docs/creating-composition-arcs/strength-ordering/what-is-liverps.md
     xp: 400
-    reward: {opinion_points: 2, achievement: "Archive sealed. Your opinions have been indexed against the study guide, not a braindump."}
+    reward: {opinion_points: 2, achievement: "Archive sealed. Your opinions have been indexed against the official study guide."}
     world_target: /City/CrownDistrict/CertificationArchive
     recipes: [Composition, LIVERPS Strength Ordering]
     questions:
@@ -355,14 +355,14 @@ quests:
         explanation: External references without a prim path require a default prim.
       - prompt: Why is TfDebug a poor substitute for GetPropertyStack while studying composition?
         choices:
-          - TfDebug traces runtime diagnostics; it does not list authored opinion strength
+          - TfDebug traces runtime diagnostics; authored opinion strength comes from stack inspection
           - TfDebug deletes weaker layers
           - TfDebug is the same API
         answer: 0
         explanation: Debug symbols and composition inspection solve different problems.
       - prompt: "Custom Kind tokens in production usually require:"
         choices:
-          - Kind plugin configuration in a full USD install, not just SetKind on a random string
+          - Kind plugin configuration in a full USD install, with registered semantics beyond a random SetKind string
           - Only a displayName
           - Flattening
         answer: 0
@@ -378,7 +378,7 @@ quests:
     level_required: 20
     exam_tasks: ["1.1", "2.x", "7.2", capstone_stage_authoring]
     stats: {craft: 6, insight: 6, resolve: 6}
-    brief: "SYSTEM: The Null Monarch deletes meaning, not matter. Reassert the city contract, instance a sign, and keep Y-up. Last fight. No C++. No mercy for missing default prims."
+    brief: "SYSTEM: The Null Monarch leaves matter standing after meaning disappears. Reassert the city contract, instance a sign, and keep Y-up. Last fight. No C++. No mercy for missing default prims."
     starter: |
       from pathlib import Path
       from pxr import Kind, Usd, UsdGeom

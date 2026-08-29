@@ -95,7 +95,7 @@ quests:
     level_required: 7
     exam_tasks: [author_def, understand_traversal]
     stats: {craft: 2, insight: 1}
-    brief: "SYSTEM: The Court has opinions about a kiosk that does not legally exist. Give it a def before zoning notices become sentient."
+    brief: "SYSTEM: The Court has opinions about a kiosk with no legal existence. Give it a def before zoning notices become sentient."
     starter: |
       from pxr import Usd
 
@@ -333,7 +333,7 @@ quests:
     level_required: 8
     exam_tasks: [create_variant_set, author_variant_opinions]
     stats: {craft: 3, lore: 2}
-    brief: "SYSTEM: Day and night are not separate assets. They are choices. Try to contain your astonishment."
+    brief: "SYSTEM: Day and night belong in one asset as choices. Try to contain your astonishment."
     starter: |
       from pxr import Sdf, Usd
 
@@ -451,7 +451,7 @@ quests:
     world_target: /City/CompositionQuarter/ModularMarket
     recipes: [Asset, Assembly]
     questions:
-      - prompt: Why use three references instead of copying the stall hierarchy three times?
+      - prompt: What advantage do three references provide over three copied stall hierarchies?
         choices: [Shared source and maintainability, References always render faster, USD forbids copied prims]
         answer: 0
         explanation: References preserve a shared, reusable source and allow local overrides.

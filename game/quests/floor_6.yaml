@@ -120,7 +120,7 @@ quests:
     level_required: 13
     exam_tasks: [reference_payload_pattern, set_default_prim, split_workstreams]
     stats: {craft: 4, resolve: 4, lore: 3}
-    brief: "SYSTEM: City boss. Contents are bulk. The asset file is a door. Payload the workstreams. Do not weld the foundry to the catalog card."
+    brief: "SYSTEM: City boss. Contents are bulk. The asset file is a door. Payload the workstreams and keep the foundry detachable from its catalog card."
     starter: |
       from pathlib import Path
       from pxr import Sdf, Usd, UsdGeom
@@ -151,7 +151,7 @@ quests:
     world_target: /City/AssetFoundry/Townhouse
     recipes: [Payload, Asset]
     questions:
-      - prompt: Why payload contents instead of referencing them from the asset interface?
+      - prompt: Why should the asset interface payload its contents?
         choices:
           - Payloads keep heavy contents unloadable while preserving the asset door
           - References cannot target USDA
@@ -282,7 +282,7 @@ quests:
     level_required: 14
     exam_tasks: [author_assembly, aggregate_components]
     stats: {craft: 4, insight: 4}
-    brief: "SYSTEM: Loose components clog the skyline. An assembly references components. It does not become one."
+    brief: "SYSTEM: Loose components clog the skyline. An assembly gathers them through references while each component keeps its identity."
     starter: |
       from pathlib import Path
       from pxr import Kind, Usd, UsdGeom
@@ -311,7 +311,7 @@ quests:
           - Flattened gprims copied from every component
           - Only class prims
         answer: 0
-        explanation: Assemblies aggregate models rather than duplicating their geometry.
+        explanation: Assemblies aggregate models through composition and preserve shared geometry.
 
   - id: f6_street_groups
     title: Group the North and South Lots
