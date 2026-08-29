@@ -116,12 +116,62 @@ const TICKER = [
   "NOTHING HERE IS PERMANENT EXCEPT THE CITY YOU BUILD",
 ];
 
+const SPONSORS = [
+  "THIS SEGMENT IS BROUGHT TO YOU BY THE ESTATE OF THE FOURTH FLOOR",
+  "SPONSOR: A FIRM THAT NO LONGER RESOLVES · TERMS UNAVAILABLE",
+  "VIEWER DISCRETION IS ADVISED · THE SYSTEM'S IS NOT",
+  "STANDINGS UPDATE HOURLY · YOURS IS NOT ON THE BOARD",
+];
+
+function BroadcastChrome() {
+  const [now, setNow] = useState(() => Date.now());
+  const [viewers, setViewers] = useState(4_412_908);
+  const start = useRef(Date.now());
+
+  useEffect(() => {
+    const clock = window.setInterval(() => setNow(Date.now()), 100);
+    const audience = window.setInterval(
+      () => setViewers((count) => Math.max(1_000_000, count + Math.floor(Math.random() * 900) - 260)),
+      1800,
+    );
+    return () => { window.clearInterval(clock); window.clearInterval(audience); };
+  }, []);
+
+  const elapsed = now - start.current;
+  const pad = (value: number) => String(value).padStart(2, "0");
+  const timecode = [
+    pad(Math.floor(elapsed / 3_600_000)),
+    pad(Math.floor(elapsed / 60_000) % 60),
+    pad(Math.floor(elapsed / 1000) % 60),
+    pad(Math.floor(((elapsed % 1000) / 1000) * 24)),
+  ].join(":");
+
+  return <div className="broadcast-chrome" aria-hidden="true">
+    <div className="chrome-bug"><b>SYS</b><span>1</span></div>
+    <div className="chrome-tc"><i className="rec-dot" />REC<em>{timecode}</em></div>
+    <div className="chrome-cam">CAM 04 · INTAKE FOYER · SIGNAL <b>98%</b></div>
+    <span className="chrome-corner tl" /><span className="chrome-corner tr" />
+    <span className="chrome-corner bl" /><span className="chrome-corner br" />
+    <div className="chrome-roll" />
+    <div className="broadcast-bottom">
+      <span className="bottom-viewers"><i /> {viewers.toLocaleString()} WATCHING</span>
+      <div className="ticker-window">
+        <div className="ticker-track slow">
+          {[...SPONSORS, ...SPONSORS].map((line, index) => <em key={index}>{line}</em>)}
+        </div>
+      </div>
+      <span className="bottom-meter"><i /><i /><i /><i /><i /></span>
+    </div>
+  </div>;
+}
+
 function Landing({ onStart, hasProgress, nextQuest, quests, floors }: {
   onStart: () => void; hasProgress: boolean; nextQuest: Quest | null;
   quests: Quest[]; floors: Array<[number, Quest[]]>;
 }) {
   const bossCount = quests.filter((quest) => quest.kind.endsWith("boss")).length;
   return <div className="landing">
+    <BroadcastChrome />
     <div className="landing-ticker">
       <span className="ticker-live"><span className="live-dot" /> LIVE</span>
       <div className="ticker-window">
@@ -129,6 +179,7 @@ function Landing({ onStart, hasProgress, nextQuest, quests, floors }: {
           {[...TICKER, ...TICKER].map((line, index) => <em key={index}>SYSTEM // {line}</em>)}
         </div>
       </div>
+      <span className="ticker-clock">SEASON 01 · EP 00</span>
     </div>
     <div className="landing-inner">
       <header className="landing-hero">
@@ -136,14 +187,25 @@ function Landing({ onStart, hasProgress, nextQuest, quests, floors }: {
         <span className="landing-eyebrow">SEASON 01 · LIVE, UNRENDERED, AND MILDLY EMBARRASSED</span>
         <h1 data-text="PRIMVENTURE">PRIMVENTURE</h1>
         <p className="landing-tagline">
-          A dungeon crawl where nobody swings a sword. You type. The building either believes you or it does not.
+          “Other dungeons hand you a sword. I hand you a keyboard, ten floors of architecture that no longer agrees
+          with itself, and my full attention.”
         </p>
+        <span className="tagline-by">— YOUR HOST, THE SYSTEM</span>
         <p className="landing-context">
           The subject is <b>OpenUSD</b> — the open standard for describing 3D scenes across film, games, and simulation.
           The lessons are NVIDIA's Learn OpenUSD curriculum. The judge is <b>usd-core</b>, the real library, which has
           never once been impressed.
         </p>
       </header>
+
+      <div className="lower-third">
+        <span className="lt-accent" />
+        <div className="lt-body">
+          <strong>CONTESTANT #USD-01</strong>
+          <span>PRIMWRIGHT · UNDERQUALIFIED · AWAITING FLOOR 00</span>
+        </div>
+        <span className="lt-live"><i className="live-dot" /> ON AIR</span>
+      </div>
 
       <section className="landing-transmission">
         <div className="transmission-tag">SYSTEM BROADCAST · ORIENTATION · YOU CANNOT SKIP THIS</div>
