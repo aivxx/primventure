@@ -170,7 +170,12 @@ quests:
       blueprint = stage.CreateClassPrim("/City/CompositionQuarter/_BoothBlueprint")
       blueprint.CreateAttribute("department", Sdf.ValueTypeNames.String).Set("permits")
       # TODO: Define /City/CompositionQuarter/PermitBooth as an Xform.
-      # TODO: Add an inherit arc from the booth to _BoothBlueprint.
+
+      # Supplied by the System: the inherit arc that carries the blueprint's
+      # department opinion to the booth. Floor 05 teaches you to author these.
+      booth = stage.GetPrimAtPath("/City/CompositionQuarter/PermitBooth")
+      if booth:
+          booth.GetInherits().AddInherit(blueprint.GetPath())
       stage.GetRootLayer().Save()
     language: python
     validator:

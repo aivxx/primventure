@@ -1,16 +1,21 @@
+import os
 import re
 import shutil
 from pathlib import Path
 
+from pxr import Usd
+
 from primventure.models import PlayerState, Question, Quest, RunRequest
 from primventure import runner as runner_module
 from primventure.runner import QuestRunner
+from primventure.scene import world_scene
 from primventure.store import (
     WORLD_DIR,
     LessonStore,
     QuestStore,
     SaveStore,
     level_for_xp,
+    newest_world_mtime,
     quest_view,
     space_out_steps,
     with_save_line,
@@ -284,11 +289,13 @@ def test_every_validated_room_states_what_the_terminal_checks() -> None:
 
 
 def test_expectations_name_the_exact_value_the_validator_wants() -> None:
-    nameplate = next(quest for quest in QuestStore().all() if quest.id == "f0_nameplate")
-    expects = quest_view(nameplate, PlayerState())["expects"]
-    assert expects == [
+    quests = {quest.id: quest for quest in QuestStore().all()}
+    assert quest_view(quests["f0_nameplate"], PlayerState())["expects"] == [
         '/City.cityName is set to "Primventure"',
-        '/City carries documentation metadata "The persistent city portfolio."',
+    ]
+    assert quest_view(quests["f1_civic_record"], PlayerState())["expects"] == [
+        '/City/PropertyWard carries kind metadata "group"',
+        '/City/PropertyWard carries documentation metadata "Civic property district."',
     ]
 
 
@@ -346,7 +353,7 @@ def test_nameplate_room_is_solvable_from_what_the_ui_states(
 
     unchanged = runner.run(quest, RunRequest(code=quest.starter))
     assert not unchanged.success
-    assert [check.passed for check in unchanged.results] == [False, False]
+    assert [check.passed for check in unchanged.results] == [False]
     assert 'def Xform "City"' in unchanged.before_usda
     assert "cityName" not in unchanged.after_usda
 
@@ -354,13 +361,11 @@ def test_nameplate_room_is_solvable_from_what_the_ui_states(
         "stage.GetRootLayer().Save()",
         'attribute = city.CreateAttribute("cityName", Sdf.ValueTypeNames.String)\n'
         'attribute.Set("Primventure")\n'
-        'city.SetMetadata("documentation", "The persistent city portfolio.")\n'
         "stage.GetRootLayer().Save()",
     )
     solved = runner.run(quest, RunRequest(code=solution))
     assert solved.success, [check.message for check in solved.results if not check.passed]
     assert 'custom string cityName = "Primventure"' in solved.after_usda
-    assert 'doc = "The persistent city portfolio."' in solved.after_usda
     review = runner.usda_view(quest)
     assert review["before_usda"] == solved.before_usda
     assert review["after_usda"] == solved.after_usda
@@ -395,4 +400,178 @@ def test_publish_preserves_supporting_layers(
     assert "workstreams/layer-boss/submission.usd" in (
         world / "root.usda"
     ).read_text()
+
+
+def test_city_feed_goes_stale_when_any_published_layer_changes(tmp_path: Path) -> None:
+    """Re-clearing a room rewrites its workstream layer and leaves root.usda alone."""
+    world = tmp_path / "world"
+    bundle = world / "workstreams" / "f0_first_prim"
+    bundle.mkdir(parents=True)
+    (world / ".preview").mkdir()
+
+    root = world / "root.usda"
+    root.write_text("#usda 1.0\n")
+    os.utime(root, (1_000, 1_000))
+    cache = world / ".preview" / "world.glb"
+    cache.write_text("glb")
+    os.utime(cache, (5_000, 5_000))
+    assert newest_world_mtime(world) == 1_000
+
+    submission = bundle / "submission.usd"
+    submission.write_text("#usda 1.0\n")
+    os.utime(submission, (9_000, 9_000))
+    assert newest_world_mtime(world) == 9_000
+
+    review = bundle / ".review" / "after.usda"
+    review.parent.mkdir()
+    review.write_text("#usda 1.0\n")
+    os.utime(review, (20_000, 20_000))
+    assert newest_world_mtime(world) == 9_000
+
+
+def test_city_feed_stamp_survives_a_missing_world(tmp_path: Path) -> None:
+    assert newest_world_mtime(tmp_path / "nothing-here") == 0.0
+
+
+def test_city_feed_scene_carries_the_shapes_the_city_is_built_from(tmp_path: Path) -> None:
+    """The districts are implicit Cube and Sphere gprims, which carry no points."""
+    from pxr import Gf, UsdGeom
+
+    root = tmp_path / "root.usda"
+    stage = Usd.Stage.CreateNew(str(root))
+    UsdGeom.SetStageUpAxis(stage, UsdGeom.Tokens.y)
+    UsdGeom.Xform.Define(stage, "/City")
+    tower = UsdGeom.Cube.Define(stage, "/City/Tower")
+    tower.GetSizeAttr().Set(3.0)
+    tower.AddTranslateOp().Set(Gf.Vec3d(5, 0, 0))
+    dome = UsdGeom.Sphere.Define(stage, "/City/Dome")
+    dome.GetRadiusAttr().Set(2.0)
+    dome.GetDisplayColorAttr().Set([Gf.Vec3f(1.0, 0.0, 0.0)])
+    road = UsdGeom.Mesh.Define(stage, "/City/Road")
+    road.GetPointsAttr().Set([Gf.Vec3f(0, 0, 0), Gf.Vec3f(1, 0, 0), Gf.Vec3f(1, 0, 1), Gf.Vec3f(0, 0, 1)])
+    road.GetFaceVertexCountsAttr().Set([4])
+    road.GetFaceVertexIndicesAttr().Set([0, 1, 2, 3])
+    UsdGeom.Cube.Define(stage, "/City/Ghost").MakeInvisible()
+    stage.GetRootLayer().Save()
+
+    scene = world_scene(root)
+    shapes = {prim["path"]: prim for prim in scene["prims"]}
+
+    assert scene["up_axis"] == "Y"
+    assert "/City/Ghost" not in shapes, "hidden prims should not reach the feed"
+    assert shapes["/City/Tower"]["size"] == 3.0
+    # USD writes a row-major matrix, so translation sits in the last row.
+    assert shapes["/City/Tower"]["matrix"][12:15] == [5.0, 0.0, 0.0]
+    assert shapes["/City/Dome"]["radius"] == 2.0
+    assert shapes["/City/Dome"]["color"] == [1.0, 0.0, 0.0]
+    assert len(shapes["/City/Road"]["points"]) == 4
+    assert shapes["/City/Road"]["triangles"] == [0, 1, 2, 0, 2, 3], "quads need triangulating"
+
+
+def test_city_feed_scene_grows_as_rooms_author_geometry(tmp_path: Path) -> None:
+    root = tmp_path / "root.usda"
+    stage = Usd.Stage.CreateNew(str(root))
+    stage.GetRootLayer().Save()
+    assert world_scene(root)["prims"] == []
+
+    from pxr import UsdGeom
+
+    UsdGeom.Cube.Define(stage, "/City/Kiosk")
+    stage.GetRootLayer().Save()
+    assert [prim["path"] for prim in world_scene(root)["prims"]] == ["/City/Kiosk"]
+
+
+def test_city_feed_scene_is_empty_without_a_world(tmp_path: Path) -> None:
+    assert world_scene(tmp_path / "missing.usda")["prims"] == []
+
+
+# A room may only grade the player on an API the curriculum has already
+# covered. Each validator demand lists the calls that can satisfy it.
+AUTHORING_CALLS: dict[str, tuple[str, ...]] = {
+    "prim_exists": ("DefinePrim", "OverridePrim"),
+    "prim_type": ("DefinePrim",),
+    "traversal_contains": ("DefinePrim",),
+    "attribute_equals": ("CreateAttribute",),
+    "metadata_equals": ("SetMetadata", "SetDocumentation", "SetAssetInfo", "SetKind"),
+    "kind_equals": ("SetKind", "SetMetadata"),
+    "active": ("SetActive",),
+    "default_prim": ("SetDefaultPrim",),
+    "up_axis": ("SetStageUpAxis",),
+    "meters_per_unit": ("SetStageMetersPerUnit",),
+    "start_time": ("SetStartTimeCode",),
+    "end_time": ("SetEndTimeCode",),
+    "sublayer_order": ("subLayerPaths",),
+    "has_reference": ("AddReference",),
+    "has_payload": ("AddPayload",),
+    "has_inherit": ("AddInherit",),
+    "has_specializes": ("AddSpecialize",),
+    "has_variant_set": ("AddVariantSet",),
+    "instanceable": ("SetInstanceable",),
+    "point_instancer": ("PointInstancer",),
+    "layer_offset": ("LayerOffset",),
+}
+# One demand, three constructors.
+SPECIFIER_CALLS = {
+    "def": ("DefinePrim",),
+    "over": ("OverridePrim",),
+    "class": ("CreateClassPrim",),
+}
+# These read the composed result instead of asking for another call.
+INSPECTION_ONLY = {"attribute_source", "prim_stack"}
+
+
+def _lesson_body(lesson) -> str:
+    parts: list[str] = []
+    for beat in lesson.beats:
+        parts += [beat.heading or "", beat.body or "", beat.code or ""]
+        parts += list(beat.points or [])
+    return "\n".join(parts)
+
+
+def _calls_for(kind: str, payload) -> tuple[str, ...]:
+    if kind == "specifier_equals":
+        value = payload.get("value") if isinstance(payload, dict) else payload
+        return SPECIFIER_CALLS[str(value)]
+    return AUTHORING_CALLS.get(kind, ())
+
+
+def test_no_room_grades_an_api_the_lessons_have_not_taught_yet() -> None:
+    """Rooms are exercises, not guessing games about APIs still floors away.
+
+    A demand is fair once a lesson the player has already read shows the call,
+    or once the terminal types it out for them.
+    """
+    store = QuestStore()
+    lessons = store.lessons.all()
+    taught = ""
+    unfair: list[str] = []
+    for quest in store.all():
+        lesson = lessons.get(quest.cookbook)
+        if lesson is not None:
+            taught += "\n" + _lesson_body(lesson)
+        for rule in quest.validator.get("assertions", []):
+            for kind, payload in rule.items():
+                if kind in INSPECTION_ONLY:
+                    continue
+                calls = _calls_for(kind, payload)
+                if any(call in quest.starter for call in calls):
+                    continue
+                if not any(call in taught for call in calls):
+                    unfair.append(
+                        f"{quest.id} grades {kind} before any lesson teaches "
+                        f"{' or '.join(calls)}"
+                    )
+    assert not unfair, unfair
+
+
+def test_every_assertion_kind_names_the_call_it_grades() -> None:
+    """A new rule has to declare its API, or the audit above quietly goes blind."""
+    known = set(AUTHORING_CALLS) | INSPECTION_ONLY | {"specifier_equals"}
+    used = {
+        kind
+        for quest in QuestStore().all()
+        for rule in quest.validator.get("assertions", [])
+        for kind in rule
+    }
+    assert used <= known, used - known
 

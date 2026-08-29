@@ -2,18 +2,16 @@ from __future__ import annotations
 
 import re
 import shutil
-import subprocess
-from pathlib import Path
 from typing import Any
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
 from .models import RunRequest
 from .runner import QuestRunner
-from .store import ROOT, WORLD_DIR, QuestStore, SaveStore, quest_view
+from .scene import world_scene
+from .store import ROOT, WORLD_DIR, QuestStore, SaveStore, newest_world_mtime, quest_view
 
 
 UPGRADES: dict[str, dict[str, Any]] = {
@@ -291,27 +289,16 @@ def world_tree() -> dict[str, Any]:
     }
 
 
-@app.get("/api/world/preview")
-def world_preview() -> FileResponse:
-    source = WORLD_DIR / "root.usda"
-    output = WORLD_DIR / ".preview" / "world.glb"
-    if not source.exists():
-        raise HTTPException(status_code=404, detail="Recapture a world layer first.")
-    converter = shutil.which("usd2gltf")
-    if converter is None:
-        raise HTTPException(status_code=503, detail="usd2gltf command is unavailable.")
-    output.parent.mkdir(parents=True, exist_ok=True)
-    if not output.exists() or output.stat().st_mtime < source.stat().st_mtime:
-        completed = subprocess.run(
-            [converter, "-i", str(source), "-o", str(output)],
-            cwd=ROOT,
-            capture_output=True,
-            text=True,
-            timeout=30,
-        )
-        if completed.returncode:
-            raise HTTPException(status_code=500, detail=completed.stderr.strip())
-    return FileResponse(output, media_type="model/gltf-binary", filename="primventure.glb")
+@app.get("/api/world/scene")
+def world_scene_view() -> dict[str, Any]:
+    """Geometry for the City Feed, straight off the composed stage."""
+    return world_scene(WORLD_DIR / "root.usda")
+
+
+@app.get("/api/world/stamp")
+def world_stamp() -> dict[str, float]:
+    """When the city last changed, so a client can poll for a redraw."""
+    return {"mtime": newest_world_mtime(WORLD_DIR)}
 
 
 docs_build = ROOT / "docs" / "_build" / "html"

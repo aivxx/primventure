@@ -74,6 +74,26 @@ def opinion_points_for(quest: Quest) -> int:
     return int(reward.get("opinion_points", 1 if quest.kind.endswith("boss") else 0))
 
 
+def newest_world_mtime(world_dir: Path = WORLD_DIR) -> float:
+    """When the composed city last changed.
+
+    The stage is the root layer plus every layer it sublayers in, so a room that
+    republishes an existing workstream changes the city without touching
+    root.usda. Dot-directories hold caches and review snapshots, not scene
+    description, so they are ignored.
+    """
+    newest = 0.0
+    if not world_dir.exists():
+        return newest
+    for path in world_dir.rglob("*"):
+        if not path.is_file():
+            continue
+        if any(part.startswith(".") for part in path.relative_to(world_dir).parts):
+            continue
+        newest = max(newest, path.stat().st_mtime)
+    return newest
+
+
 def content_stamp(directory: Path, recursive: bool = False) -> tuple[tuple[str, int, int], ...]:
     """Identity of a content directory, so edited YAML can be noticed on the fly."""
     if not directory.exists():

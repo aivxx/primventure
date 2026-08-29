@@ -283,8 +283,9 @@ lessons:
         Use the existing appeal over to author size 8 locally. The evidence stays untouched, which
         disappoints the demolition sponsor.
       f3_specifier_boss: >-
-        Define PermitBooth, then inherit the abstract blueprint's department opinion. The boss must
-        remain class, the booth must resolve def, and the traversal will serve as judge.
+        Define PermitBooth as a def. The System wires the inherit arc that carries the blueprint's
+        department opinion, because arcs are Floor 05's problem. The blueprint must remain class,
+        the booth must resolve def, and the traversal will serve as judge.
 
   - source: docs/composition-basics/references.md
     title: References

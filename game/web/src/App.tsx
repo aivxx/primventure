@@ -7,7 +7,6 @@ import {
   Sparkles, Swords, TerminalSquare, Trophy, X, XCircle, Zap,
 } from "lucide-react";
 import * as THREE from "three";
-import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 
 type Language = "python" | "usda" | "none";
 type Question = { prompt: string; choices?: string[]; answer?: number; answer_key?: string };
@@ -75,7 +74,8 @@ const GUIDED_KEY = "primventure.guided";
 const LESSONS_READ_KEY = "primventure.lessons-read.v1";
 const USDA_REVIEW_KEY = "primventure.usda-review";
 
-type GuideTarget = "lesson" | "editor" | "run" | "usda" | "map" | "payout" | "consumables" | "feed";
+type Tab = "map" | "skills" | "kiosk";
+type GuideTarget = "lesson" | "editor" | "run" | "usda" | "map" | "payout" | "consumables" | "saferoom" | "recipes" | "feed";
 // Panels on the left edge have no room for an arrow beside them, and the
 // tutorial card owns the bottom left, so those targets get pointed at from the
 // right instead of being covered by their own callout.
@@ -87,6 +87,8 @@ const POINTER_SIDE: Record<GuideTarget, "left" | "right"> = {
   map: "right",
   payout: "left",
   consumables: "left",
+  saferoom: "right",
+  recipes: "right",
   feed: "left",
 };
 const GUIDE_STEPS: Array<{ target: GuideTarget; title: string; body: string }> = [
@@ -124,6 +126,16 @@ const GUIDE_STEPS: Array<{ target: GuideTarget; title: string; body: string }> =
     target: "consumables",
     title: "Spend it on consumables",
     body: "Hint Tokens buy you a clue for the room you are stuck on. Opinion X-Rays show the composed layer stack after you clear a room. Click one here to use it, and hit SAFEROOM to buy more once a boss has paid you.",
+  },
+  {
+    target: "saferoom",
+    title: "Restock in the Saferoom",
+    body: "This is where Opinion Points turn into supplies: more Hint Tokens and X-Rays, permanent upgrades, and from level 2 your class path. Nothing sold here clears a room for you.",
+  },
+  {
+    target: "recipes",
+    title: "Collect the recipes",
+    body: "The Recipe Tree is your Cookbook index. Every room names the OpenUSD terms it uses, and clearing it unlocks those nodes, so the tree is a record of what you have actually authored.",
   },
   {
     target: "feed",
@@ -411,6 +423,34 @@ function GuideDock({ step, onBack, onNext, onClose }: {
   </div>;
 }
 
+type ScenePrim = {
+  path: string; type: string; matrix: number[]; color: [number, number, number];
+  size?: number; radius?: number; height?: number; axis?: string;
+  points?: number[][]; triangles?: number[];
+};
+type WorldScene = { up_axis: string; meters_per_unit: number; prims: ScenePrim[] };
+
+/** One gprim, as three.js geometry. Implicit shapes carry parameters, not points. */
+function primGeometry(prim: ScenePrim): THREE.BufferGeometry | null {
+  if (prim.type === "Cube") {
+    const size = prim.size ?? 2;
+    return new THREE.BoxGeometry(size, size, size);
+  }
+  if (prim.type === "Sphere") return new THREE.SphereGeometry(prim.radius ?? 1, 24, 16);
+  if (prim.type === "Cylinder" || prim.type === "Capsule") {
+    return new THREE.CylinderGeometry(prim.radius ?? 1, prim.radius ?? 1, prim.height ?? 2, 20);
+  }
+  if (prim.type === "Cone") return new THREE.ConeGeometry(prim.radius ?? 1, prim.height ?? 2, 20);
+  if (prim.type === "Mesh" && prim.points?.length) {
+    const geometry = new THREE.BufferGeometry();
+    geometry.setAttribute("position", new THREE.Float32BufferAttribute(prim.points.flat(), 3));
+    if (prim.triangles?.length) geometry.setIndex(prim.triangles);
+    geometry.computeVertexNormals();
+    return geometry;
+  }
+  return null;
+}
+
 function ScenePreview({ revision, panelRef, spotlit }: {
   revision: number;
   panelRef?: React.Ref<HTMLElement>;
@@ -427,6 +467,8 @@ function ScenePreview({ revision, panelRef, spotlit }: {
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(42, 1, 0.1, 100);
     camera.position.set(3.2, 2.4, 4.2);
+    // Without this the camera stares off past the city it is meant to frame.
+    camera.lookAt(0, 0, 0);
     const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
     renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
     renderer.outputColorSpace = THREE.SRGBColorSpace;
@@ -447,17 +489,46 @@ function ScenePreview({ revision, panelRef, spotlit }: {
     );
     model = fallback;
     scene.add(fallback);
-    setStatus("PROCEDURAL STAND-IN");
-    new GLTFLoader().load(`/api/world/preview?rev=${revision}`, (gltf) => {
-      if (disposed) return;
-      scene.remove(fallback);
-      model = gltf.scene;
-      const box = new THREE.Box3().setFromObject(model);
-      model.scale.multiplyScalar(2.4 / (box.getSize(new THREE.Vector3()).length() || 1));
-      model.position.sub(new THREE.Box3().setFromObject(model).getCenter(new THREE.Vector3()));
-      scene.add(model);
-      setStatus("LIVE GLTF FEED");
-    }, undefined, () => setStatus("USD STAGE ONLINE"));
+    setStatus("SCANNING STAGE...");
+    const edgeMaterial = new THREE.LineBasicMaterial({
+      color: 0xffcb2e, transparent: true, opacity: 0.4,
+    });
+    fetch(`/api/world/scene?rev=${revision}`)
+      .then((response) => response.json() as Promise<WorldScene>)
+      .then((world) => {
+        if (disposed) return;
+        const city = new THREE.Group();
+        for (const prim of world.prims) {
+          const geometry = primGeometry(prim);
+          if (!geometry) continue;
+          const color = new THREE.Color().setRGB(...prim.color);
+          const shape = new THREE.Mesh(geometry, new THREE.MeshStandardMaterial({
+            color, roughness: 0.42, metalness: 0.28, emissive: color, emissiveIntensity: 0.09,
+          }));
+          // USD hands back a row-major matrix for row-vector math, and fromArray
+          // reads column-major, so the load itself performs the transpose.
+          const placement = new THREE.Matrix4().fromArray(prim.matrix);
+          shape.applyMatrix4(placement);
+          const outline = new THREE.LineSegments(new THREE.EdgesGeometry(geometry), edgeMaterial);
+          outline.applyMatrix4(placement);
+          city.add(shape, outline);
+        }
+        if (!city.children.length) {
+          setStatus("NO GEOMETRY AUTHORED YET");
+          return;
+        }
+        if (world.up_axis === "Z") city.rotation.x = -Math.PI / 2;
+        city.updateMatrixWorld(true);
+        const extent = new THREE.Box3().setFromObject(city);
+        city.scale.multiplyScalar(2.4 / (extent.getSize(new THREE.Vector3()).length() || 1));
+        city.updateMatrixWorld(true);
+        city.position.sub(new THREE.Box3().setFromObject(city).getCenter(new THREE.Vector3()));
+        scene.remove(fallback);
+        model = city;
+        scene.add(city);
+        setStatus(`LIVE STAGE · ${city.children.length / 2} PRIMS`);
+      })
+      .catch(() => setStatus("STAGE FEED OFFLINE"));
     const resize = () => {
       renderer.setSize(container.clientWidth, container.clientHeight, false);
       camera.aspect = container.clientWidth / Math.max(container.clientHeight, 1);
@@ -495,7 +566,7 @@ export default function App() {
   const [activeQuest, setActiveQuest] = useState<Quest | null>(null);
   const [code, setCode] = useState("");
   const [answers, setAnswers] = useState<Array<number | string>>([]);
-  const [activeTab, setActiveTab] = useState<"map" | "skills" | "kiosk">("map");
+  const [activeTab, setActiveTab] = useState<Tab>("map");
   const [running, setRunning] = useState(false);
   const [assistBusy, setAssistBusy] = useState<"hint" | "peek" | null>(null);
   const [assistResult, setAssistResult] = useState<AssistResult | null>(null);
@@ -522,6 +593,8 @@ export default function App() {
   const payoutRef = useRef<HTMLElement>(null);
   const consumablesRef = useRef<HTMLElement>(null);
   const feedRef = useRef<HTMLElement>(null);
+  const recipesRef = useRef<HTMLDivElement>(null);
+  const saferoomRef = useRef<HTMLDivElement>(null);
 
   const refresh = async (advance = false) => {
     const [nextState, nextQuests, nextRecipes] = await Promise.all([
@@ -640,7 +713,10 @@ export default function App() {
   useEffect(() => {
     if (guideStep === null) return;
     const target = GUIDE_STEPS[guideStep].target;
-    if (target === "map") setActiveTab("map");
+    // Some steps describe a tab, so the tour opens it for them. The closing step
+    // returns to the map, which is where the player actually starts.
+    const tab = ({ map: "map", recipes: "skills", saferoom: "kiosk", feed: "map" } as Record<string, Tab>)[target];
+    if (tab) setActiveTab(tab);
     // The drawer covers the screen, so it has to step aside once the tour
     // moves on to the terminal behind it.
     setLessonOpen(target === "lesson");
@@ -662,6 +738,8 @@ export default function App() {
       usda: usdaRef.current,
       payout: payoutRef.current,
       consumables: consumablesRef.current,
+      saferoom: saferoomRef.current,
+      recipes: recipesRef.current,
       feed: feedRef.current,
     } as Record<GuideTarget, HTMLElement | null>)[target];
     const measure = () => {
@@ -746,11 +824,13 @@ export default function App() {
       });
       setUsdaMode(result.after_usda ? "after" : "before");
       const needsUsdaReview = result.success && activeQuest.language !== "none" && Boolean(result.after_usda);
+      // Every clear publishes into world/root.usda, so the feed re-renders on
+      // any win, not only the ones that open a USDA review.
+      if (result.success) setRevision((value) => value + 1);
       if (needsUsdaReview) {
         setToast(null);
         localStorage.setItem(USDA_REVIEW_KEY, activeQuest.id);
         setReviewPending(true);
-        setRevision((value) => value + 1);
         window.setTimeout(() => usdaRef.current?.scrollIntoView({ block: "center", behavior: "smooth" }), 80);
       } else if (!result.success) {
         setToast({
@@ -1004,7 +1084,7 @@ export default function App() {
           </div>)}</div>
           <div className="legend"><span><i className="complete" /> CLEARED</span><span><i className="available" /> OPEN</span><span><i className="boss" /> BOSS</span><span><i className="locked" /> LOCKED</span><span>+OP PAYS OPINION POINTS FOR THE SAFEROOM</span></div>
         </div>}
-        {activeTab === "skills" && <div className="skill-tree panel">
+        {activeTab === "skills" && <div className={`skill-tree panel ${spotlight === "recipes" ? "spotlight" : ""}`} ref={recipesRef}>
           <div className="section-hero"><span>THE COOKBOOK INDEX</span><h1>RECIPES OF POWER</h1><p>Glossary nodes from the Cookbook graph. Clear rooms that name them. SYSTEM: collecting terms is not the same as composing them.</p><small className="recipe-count">{masteredRecipes}/{recipes.length} MASTERED</small></div>
           {recipeGroups.map(([category, nodes]) => <section className="recipe-cluster" key={category}>
             <header><span>{category.replaceAll("-", " ")}</span><b>{nodes.filter((node) => node.unlocked).length}/{nodes.length}</b></header>
@@ -1013,7 +1093,7 @@ export default function App() {
             </article>)}</div>
           </section>)}
         </div>}
-        {activeTab === "kiosk" && <div className="kiosk panel">
+        {activeTab === "kiosk" && <div className={`kiosk panel ${spotlight === "saferoom" ? "spotlight" : ""}`} ref={saferoomRef}>
           <div className="section-hero"><span>SAFEROOM KIOSK // OPINIONS FINAL</span><h1>SPEND TO SURVIVE</h1><p>SYSTEM: Everything here costs Opinion Points, and Opinion Points come from clearing boss rooms. {nextPayingQuest ? `Your next payout is ${nextPayingQuest.title}, worth ${nextPayingQuest.opinion_points}.` : "You have cleared every paying room on this route."} Consumables land in the left rail. Upgrades never clear rooms for you.</p><small className="recipe-count">{state.opinion_points} OP BANKED</small></div>
           <div className="class-grid">{CLASS_PATHS.map((path) => {
             const selected = state.specialization === path.id;

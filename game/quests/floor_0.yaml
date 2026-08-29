@@ -35,28 +35,26 @@ quests:
     kind: room
     prerequisites: [f0_first_prim]
     level_required: 1
-    exam_tasks: [author_attribute, author_metadata]
+    exam_tasks: [author_attribute]
     stats: {craft: 1, lore: 1}
     brief: "SYSTEM: A nameless city cannot persist. Author its identity."
     starter: |
       from pxr import Sdf, Usd
       stage = Usd.Stage.Open(STAGE_PATH)
       city = stage.GetPrimAtPath("/City")
-      # 1. Create a string attribute named cityName on /City and set it to "Primventure".
-      #    Sdf.ValueTypeNames.String is the type; CreateAttribute returns the attribute,
-      #    and Set() writes the value.
-      # 2. Set the prim's documentation metadata to "The persistent city portfolio."
+      # Create a string attribute named cityName on /City and set it to "Primventure".
+      # Sdf.ValueTypeNames.String is the type; CreateAttribute returns the attribute,
+      # and Set() writes the value.
       stage.GetRootLayer().Save()
     language: python
     validator:
       assertions:
         - attribute_equals: {path: /City.cityName, value: Primventure}
-        - metadata_equals: {path: /City, key: documentation, value: "The persistent city portfolio."}
     cookbook: docs/stage-setting/properties/attributes.md
     xp: 60
     reward: Archivist's Stylus
     world_target: /City
-    recipes: [Usd.Prim.CreateAttribute, Usd.Attribute.Set, Usd.Object.SetMetadata]
+    recipes: [Usd.Prim.CreateAttribute, Usd.Attribute.Set]
 
   - id: f0_gatekeeper
     title: Gatekeeper of the Root

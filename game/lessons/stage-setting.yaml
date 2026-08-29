@@ -174,9 +174,9 @@ lessons:
           CreateAttribute with an explicit Sdf value type covers everything else.
     apply:
       f0_nameplate: >-
-        Author cityName as a string attribute set to Primventure, then set /City's documentation
-        metadata to "The persistent city portfolio." — exactly, punctuation included, because the
-        Registrar reads it aloud. A city that cannot state its own name does not persist.
+        Author cityName as a string attribute set to Primventure — exactly, punctuation included,
+        because the Registrar reads it aloud. No schema owns a city's name, so this is the generic
+        CreateAttribute case. A city that cannot state its own name does not persist.
       f1_lamp_post: >-
         Define the SphereLight, then use its schema-provided intensity input and set it to 750.
         The alley has been dark since the last contestant, who is also still in there.
