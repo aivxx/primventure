@@ -7,19 +7,56 @@ from typing import Any
 
 import yaml
 
-from .models import PlayerState, Quest
+from .models import LessonCard, PlayerState, Quest
 
 
 ROOT = Path(__file__).resolve().parents[3]
 GAME_DIR = ROOT / "game"
 QUEST_DIR = GAME_DIR / "quests"
+LESSON_DIR = GAME_DIR / "lessons"
 SAVE_PATH = GAME_DIR / "save.json"
 WORLD_DIR = ROOT / "world"
 
 
+class LessonStore:
+    def __init__(self, lesson_dir: Path = LESSON_DIR):
+        self.lesson_dir = lesson_dir
+        self._lessons: dict[str, LessonCard] = {}
+        self.reload()
+
+    def reload(self) -> None:
+        lessons: dict[str, LessonCard] = {}
+        if self.lesson_dir.exists():
+            for path in sorted(self.lesson_dir.rglob("*.y*ml")):
+                raw = yaml.safe_load(path.read_text()) or {}
+                records = raw.get("lessons", raw) if isinstance(raw, dict) else raw
+                if isinstance(records, dict):
+                    records = [records]
+                for record in records or []:
+                    lesson = LessonCard.model_validate(record)
+                    if lesson.source in lessons:
+                        raise ValueError(f"Duplicate lesson source {lesson.source!r}")
+                    lessons[lesson.source] = lesson
+        self._lessons = lessons
+
+    def all(self) -> dict[str, LessonCard]:
+        return dict(self._lessons)
+
+    def resolve(self, source: str, quest_id: str) -> dict[str, Any] | None:
+        lesson = self._lessons.get(source)
+        if lesson is None:
+            return None
+        data = lesson.model_dump(exclude={"apply"})
+        data["apply"] = lesson.apply.get(quest_id, "")
+        return data
+
+
 class QuestStore:
-    def __init__(self, quest_dir: Path = QUEST_DIR):
+    def __init__(self, quest_dir: Path = QUEST_DIR, lesson_dir: Path | None = None):
         self.quest_dir = quest_dir
+        if lesson_dir is None:
+            lesson_dir = LESSON_DIR if quest_dir == QUEST_DIR else quest_dir.parent / "lessons"
+        self.lessons = LessonStore(lesson_dir)
         self._quests: dict[str, Quest] = {}
         self.reload()
 
@@ -48,6 +85,9 @@ class QuestStore:
             return self._quests[quest_id]
         except KeyError as exc:
             raise KeyError(f"Unknown quest {quest_id!r}") from exc
+
+    def lesson_for(self, quest: Quest) -> dict[str, Any] | None:
+        return self.lessons.resolve(quest.cookbook, quest.id)
 
 
 class SaveStore:
@@ -83,7 +123,11 @@ def level_for_xp(xp: int) -> int:
     return 1 + xp // 100
 
 
-def quest_view(quest: Quest, state: PlayerState) -> dict[str, Any]:
+def quest_view(
+    quest: Quest,
+    state: PlayerState,
+    lesson: dict[str, Any] | None = None,
+) -> dict[str, Any]:
     data = quest.model_dump(exclude={"validator"})
     data["questions"] = [
         {"prompt": question.prompt, "choices": question.choices}
@@ -92,5 +136,6 @@ def quest_view(quest: Quest, state: PlayerState) -> dict[str, Any]:
     prereqs_met = all(item in state.completed_quests for item in quest.prerequisites)
     data["unlocked"] = prereqs_met and state.level >= quest.level_required
     data["completed"] = quest.id in state.completed_quests
+    data["lesson"] = lesson
     return data
 

@@ -1,9 +1,10 @@
+import re
 from pathlib import Path
 
 from primventure.models import PlayerState, Question, Quest, RunRequest
 from primventure import runner as runner_module
 from primventure.runner import QuestRunner
-from primventure.store import QuestStore, SaveStore, level_for_xp, quest_view
+from primventure.store import LessonStore, QuestStore, SaveStore, level_for_xp, quest_view
 
 
 def test_level_curve_is_generous() -> None:
@@ -40,6 +41,88 @@ def test_catalog_order_is_a_playable_route() -> None:
         cleared.add(quest.id)
 
 
+def test_lesson_store_resolves_room_specific_apply(tmp_path: Path) -> None:
+    (tmp_path / "prims.yaml").write_text(
+        """
+source: docs/prims.md
+title: Prims
+objective: Identify what a prim is.
+intro: Welcome to the part where empty boxes get addresses.
+beats:
+  - kind: concept
+    heading: A prim is a container
+    system: Unglamorous, like the badge I printed for you.
+    body: A prim has a path.
+    points:
+      - Paths are unique.
+apply:
+  first_prim: Define /City.
+"""
+    )
+    lesson = LessonStore(tmp_path).resolve("docs/prims.md", "first_prim")
+    assert lesson == {
+        "source": "docs/prims.md",
+        "title": "Prims",
+        "objective": "Identify what a prim is.",
+        "intro": "Welcome to the part where empty boxes get addresses.",
+        "beats": [
+            {
+                "kind": "concept",
+                "heading": "A prim is a container",
+                "system": "Unglamorous, like the badge I printed for you.",
+                "body": "A prim has a path.",
+                "points": ["Paths are unique."],
+                "code": "",
+            }
+        ],
+        "apply": "Define /City.",
+    }
+
+
+def test_every_quest_has_a_resolved_lesson() -> None:
+    store = QuestStore()
+    missing = [
+        quest.id
+        for quest in store.all()
+        if not (store.lesson_for(quest) or {}).get("apply")
+    ]
+    assert not missing
+
+
+def test_lessons_teach_in_depth() -> None:
+    """Cards must stand alone, so shallow ones are a regression, not a style choice."""
+    thin: list[str] = []
+    for source, lesson in QuestStore().lessons.all().items():
+        kinds = [beat.kind for beat in lesson.beats]
+        prose = sum(
+            len(beat.body) + sum(len(point) for point in beat.points)
+            for beat in lesson.beats
+        )
+        if (
+            len(lesson.beats) < 4
+            or kinds[-1] != "recap"
+            or "pitfall" not in kinds
+            or not any(beat.code for beat in lesson.beats)
+            or prose < 1200
+        ):
+            thin.append(source)
+    assert not thin
+
+
+def test_system_voice_stays_in_its_own_fields() -> None:
+    """The UI labels the speaker, so narration must not leak into teaching copy."""
+    leaks: list[str] = []
+    for source, lesson in QuestStore().lessons.all().items():
+        if not lesson.intro or not lesson.objective:
+            leaks.append(source)
+            continue
+        teaching = [lesson.objective, *(beat.body for beat in lesson.beats)]
+        teaching += [point for beat in lesson.beats for point in beat.points]
+        if any(re.search(r"\bSYSTEM\s*:|\bThe System\b", text) for text in teaching):
+            leaks.append(source)
+    assert not leaks
+
+
 def test_orientation_awards_only_once(tmp_path: Path) -> None:
     saves = SaveStore(tmp_path / "save.json")
     runner = QuestRunner(saves)
@@ -74,6 +157,7 @@ def test_quest_view_does_not_leak_answers() -> None:
     )
     public = quest_view(quest, PlayerState())
     assert public["questions"] == [{"prompt": "Why?", "choices": []}]
+    assert public["lesson"] is None
 
 
 def test_publish_preserves_supporting_layers(

@@ -1,0 +1,687 @@
+lessons:
+  - source: docs/scene-description-blueprints/index.md
+    title: Schema-Backed Prims
+    objective: Define typed prims with schema classes and use their declared properties through schema-specific accessors.
+    intro: >-
+      Blueprint Borough has survived for years on boxes labeled "probably geometry." Today we
+      introduce schemas, which give prims meaning, capabilities, and considerably better paperwork.
+      The live audience has been asked not to wager on your first type mismatch.
+    beats:
+      - kind: concept
+        heading: Schemas give prims meaning
+        system: >-
+          An empty container can become a light, a transform, or a cube. The sponsors call this
+          career mobility.
+        body: |
+          A prim is a container, while a schema defines the standard data and behavior associated
+          with that container. A typed, schema-backed prim has a type name such as Xform, Scope,
+          Cube, or SphereLight, allowing USD-aware applications to recognize and process it
+          consistently.
+
+          IsA schemas establish what a prim is. A prim has at most one authored type name, and
+          schema classes such as UsdGeom.Cube provide a typed interface to that prim. API schemas
+          instead describe capabilities that can be applied to compatible prims without replacing
+          their concrete type.
+        points:
+          - A typeless prim is valid but does not claim the properties or behavior of a typed schema.
+          - IsA schema compatibility can be tested with prim.IsA(SchemaClass).
+          - API schemas add or expose a capability while preserving the prim's existing type.
+      - kind: concept
+        heading: Types declare standard properties
+        system: >-
+          The blueprint tells every department what belongs in the building. This is more
+          coordination than the Composition has achieved since the collapse.
+        body: |
+          Schema definitions standardize attribute names, value types, metadata, relationships,
+          and fallback values. For example, a Cube has a double-valued size attribute and inherits
+          geometric properties such as extent and displayColor through its schema hierarchy.
+
+          A schema accessor can return an attribute whose value is supplied by a schema fallback
+          even when no opinion is authored in any layer. Calling Set or CreateXxxAttr authors a
+          real opinion, which then participates in value resolution and appears in the layer.
+        points:
+          - GetTypeName reports the prim's authored type token, such as Cube.
+          - GetXxxAttr returns a Usd.Attribute; call Get to read its resolved value.
+          - CreateXxxAttr can author a value using the schema's correct name and Sdf value type.
+      - kind: api
+        heading: Define through the schema class
+        system: >-
+          You could spell every property by hand. You could also represent yourself in floor-four
+          litigation.
+        body: |
+          Prefer a schema class's Define method when the desired type is known. It defines the prim
+          and any missing ancestors, authors the correct type name, and returns the typed schema
+          object. Use GetPrim when a generic Usd.Prim API is needed.
+        code: |
+          from pxr import Usd, UsdGeom
+
+          stage = Usd.Stage.Open(STAGE_PATH)
+          stall = UsdGeom.Cube.Define(
+              stage, "/City/BlueprintBorough/Stall"
+          )
+          stall.CreateSizeAttr(2.0)
+
+          prim = stall.GetPrim()
+          assert prim.GetTypeName() == "Cube"
+          assert prim.IsA(UsdGeom.Cube)
+          assert stall.GetSizeAttr().Get() == 2.0
+
+          stage.GetRootLayer().Save()
+      - kind: pitfall
+        heading: Where contestants lose the room
+        system: >-
+          A prim named Cube is not necessarily a Cube. Names are not credentials, despite what the
+          former mayor believed.
+        body: |
+          A prim's name, path, and type name are separate. Naming an Xform "Cube" does not give it
+          the Cube schema, and wrapping a prim in a schema object does not retag an incompatible
+          prim. Author the intended type with Define or stage.DefinePrim(path, typeName).
+        points:
+          - Define returns a schema object, while stage.DefinePrim returns a generic Usd.Prim.
+          - A schema attribute's fallback may make Get return a value even though no value is authored.
+          - Generic CreateAttribute requires the exact property name and Sdf value type, so schema accessors are safer.
+      - kind: recap
+        heading: What you now owe the city
+        body: |
+          Schemas turn generic prim containers into standardized scene elements. IsA schemas
+          establish a prim's type, API schemas provide additional capabilities, and schema-specific
+          Define and attribute accessors author valid, interoperable scene description.
+    apply:
+      f2_market_stall: >-
+        Define the Stall with UsdGeom.Cube and author size 2. The market accepts typed goods only;
+        the untyped inventory was seized by a boss with a clipboard.
+
+  - source: docs/composition-basics/layers.md
+    title: Layers and Sublayers
+    objective: Compose modular scene description with sublayers and control conflicting local opinions through layer ordering.
+    intro: >-
+      City Hall attempted to store the entire Composition in one file. The file survived; City
+      Hall did not. Layers let separate voices contribute to one stage without rewriting each
+      other, provided you remember which voice is shouting from the top of the list.
+    beats:
+      - kind: concept
+        heading: Layers hold scene description
+        system: >-
+          A layer is one witness, not the verdict. This distinction would have shortened several
+          trials and one season finale.
+        body: |
+          A layer is a file or resource containing scene description data. It may be a .usd,
+          .usda, or .usdc file, data from a file-format plugin, or a non-file-backed resource.
+          Each layer can contain only part of a scene, such as geometry, materials, animation, or
+          local corrections.
+
+          A stage is the composed result presented at runtime. It is assembled from layer stacks,
+          so neither a layer nor a single file should be confused with the complete composed stage.
+        points:
+          - Separate layers support parallel work by disciplines and teams.
+          - New stronger layers enable non-destructive edits without modifying weaker source data.
+          - Layers also support reusable assets, references, payloads, and scalable scene assembly.
+      - kind: concept
+        heading: Sublayers form a local layer stack
+        system: >-
+          Photoshop is permitted as an analogy for exactly one arc. The legal department has
+          underlined "exactly."
+        body: |
+          Sublayering is one composition arc. A layer's subLayerPaths metadata includes other
+          layers so their prim and property opinions participate in the same local layer stack.
+          Sublayers can themselves contain sublayers, producing a recursively assembled stack.
+
+          Sublayering is only one way USD composes data. References, payloads, inherits, variants,
+          and specializes have different namespace and loading behavior, so the flat image-layer
+          analogy does not describe USD composition as a whole.
+        points:
+          - Sublayer paths are resolved relative to the layer that authors them when they are relative paths.
+          - The root layer anchors the stage's root layer stack.
+          - Adding a sublayer changes composition without copying or rewriting the sublayer's contents.
+      - kind: api
+        heading: Author and inspect sublayers
+        system: >-
+          First is strongest. I repeat this because the Permit Desk has two faces and both deny
+          hearing it.
+        body: |
+          Sdf.Layer.subLayerPaths is an ordered list from strongest to weakest. The containing
+          layer's direct opinions are stronger than opinions from its sublayers. When sublayers
+          disagree at the same property, the earliest listed sublayer wins, assuming no still
+          stronger opinion resolves the conflict.
+        code: |
+          from pxr import Sdf, Usd
+
+          stage = Usd.Stage.Open(STAGE_PATH)
+          root = stage.GetRootLayer()
+
+          # Strongest sublayer first, weakest last.
+          root.subLayerPaths = ["commerce.usda", "safety.usda"]
+
+          for layer in stage.GetLayerStack():
+              print(layer.identifier)
+
+          root.Save()
+      - kind: pitfall
+        heading: Saving and reloading are not composition
+        system: >-
+          Reload discards unsaved opinions with the serenity of a producer cutting your best scene.
+        body: |
+          layer.Save() writes that layer's edits to its backing resource. layer.Reload() clears
+          unsaved content and reloads persisted content; it does not make an opinion stronger or
+          repair an incorrect sublayer order.
+        points:
+          - The first entry in subLayerPaths is strongest, not the last or most recently saved.
+          - stage.Save writes dirty file-backed layers, while root.Save writes only the root layer.
+          - Reordering subLayerPaths changes the result without changing either source layer.
+          - Missing or incorrectly anchored paths prevent the intended layer from contributing.
+      - kind: recap
+        heading: What you now owe the city
+        body: |
+          Layers modularize scene description, and a stage composes their opinions into one
+          scenegraph. Sublayers build a local layer stack, with direct opinions above sublayers and
+          subLayerPaths ordered strongest to weakest from first entry to last.
+    apply:
+      f3_layer_registry: >-
+        Add district_registry.usda to the root layer's subLayerPaths, then save the root. City Hall
+        requires a weaker, inspectable voice and has weaponized the filing deadline.
+      f3_layer_stack_boss: >-
+        Put commerce.usda before safety.usda so "open" wins. The Permit Desk respects list order,
+        unlike ordinances, testimony, or basic geometry.
+
+  - source: docs/composition-basics/specifiers.md
+    title: Prim Specifiers
+    objective: Use def, over, and class specifiers to establish prim existence, author non-destructive overrides, and create abstract composition sources.
+    intro: >-
+      Specifier Court recognizes three legal states: concrete, corrective, and abstract. It calls
+      them def, over, and class because plain language was ruled inadmissible. Classify each prim
+      correctly or the traversal will ignore the wrong witness.
+    beats:
+      - kind: concept
+        heading: Every prim spec has intent
+        system: >-
+          The declaration says whether the building exists, merely complains, or serves as a
+          blueprint. Zoning remains furious.
+        body: |
+          A specifier records how a prim spec in a layer should contribute to composition. The
+          three values are def, over, and class. Multiple prim specs at the same path can compose
+          into one prim, and the resolved specifier determines whether that composed prim is
+          concrete, abstract, or only an unresolved override.
+
+          Default stage traversal visits active, loaded, defined, non-abstract prims. Therefore a
+          composed def is normally visited, while a composed class is present on the stage but
+          omitted from default traversal.
+      - kind: concept
+        heading: Def, over, and class
+        system: >-
+          One exists, one edits, one haunts the architecture as pure potential. The casting office
+          was unusually efficient.
+        body: |
+          def, short for define, establishes that a concrete prim exists. over, short for override,
+          sparsely contributes opinions intended to combine with a definition or class from a
+          weaker source. It enables non-destructive edits because the original defining layer is
+          untouched.
+
+          class creates an abstract prim whose opinions are intended to be composed onto other
+          prims through arcs such as inherits, references, payloads, or specializes. A class may
+          also serve as a relationship target for a PointInstancer, but is not rendered or visited
+          by default traversal.
+        points:
+          - An over is the weakest specifier and can resolve to a weaker def or class at the same path.
+          - A stronger over plus a weaker def produces a composed prim whose resolved specifier is def.
+          - An unresolved over can exist as a prim on the stage but is not visited by default traversal.
+      - kind: api
+        heading: Author and inspect specifiers
+        system: >-
+          Three constructors, three intentions, and one courtroom boss pretending the distinction
+          is philosophical.
+        body: |
+          DefinePrim authors a def, OverridePrim authors an over, and CreateClassPrim authors a
+          class. GetSpecifier returns the resolved Sdf specifier token. SetSpecifier can change the
+          authored specifier at the current edit target, while GetPrimStack reveals contributing
+          prim specs ordered strongest to weakest.
+        code: |
+          from pxr import Sdf, Usd
+
+          stage = Usd.Stage.Open(STAGE_PATH)
+          booth = stage.DefinePrim(
+              "/City/CompositionQuarter/PermitBooth", "Xform"
+          )
+          appeal = stage.OverridePrim(
+              "/City/CompositionQuarter/Billboard"
+          )
+          blueprint = stage.CreateClassPrim(
+              "/City/CompositionQuarter/_BoothBlueprint"
+          )
+
+          assert booth.GetSpecifier() == Sdf.SpecifierDef
+          assert appeal.GetSpecifier() == Sdf.SpecifierOver
+          assert blueprint.GetSpecifier() == Sdf.SpecifierClass
+          print(booth.GetPrimStack())
+
+          stage.GetRootLayer().Save()
+      - kind: pitfall
+        heading: Authored is not resolved
+        system: >-
+          The local document says over. The composed verdict says def. Both are true, which is why
+          the Court sells refreshments.
+        body: |
+          GetSpecifier reports the composed prim's resolved specifier, not necessarily the
+          specifier of every contributing prim spec. Inspect GetPrimStack when distinguishing a
+          local over from the weaker def that establishes the prim.
+        points:
+          - Use OverridePrim to modify an existing composed prim without redefining its source.
+          - Do not use an over when the new prim must independently exist in default traversal.
+          - Do not expect class prims to appear in ordinary stage traversal or rendering.
+          - SetSpecifier operates at the current edit target and can change intent unexpectedly.
+      - kind: recap
+        heading: What you now owe the city
+        body: |
+          def establishes concrete existence, over contributes sparse non-destructive opinions,
+          and class supplies abstract reusable opinions. Composition resolves contributions at one
+          path, and default traversal includes defined non-abstract prims while excluding classes
+          and unresolved overs.
+    apply:
+      f3_def_docket: >-
+        Define CourtKiosk as a Cube so the Court can traverse it. A kiosk made entirely of opinions
+        sells nothing but appeals.
+      f3_over_case: >-
+        Use the existing appeal over to author size 8 locally. The evidence stays untouched, which
+        disappoints the demolition sponsor.
+      f3_specifier_boss: >-
+        Define PermitBooth, then inherit the abstract blueprint's department opinion. The boss must
+        remain class, the booth must resolve def, and the traversal will serve as judge.
+
+  - source: docs/composition-basics/references.md
+    title: References
+    objective: Compose reusable external or internal prim hierarchies onto destination prims and specialize each use with local opinions.
+    intro: >-
+      Reference Arcade banned copying after the Duplicate Baron filled three blocks with identical
+      invoices. A reference grafts reusable scene description into a new address, leaving the
+      source intact and your local amendments free to be judgmental.
+    beats:
+      - kind: concept
+        heading: References graft reusable hierarchies
+        system: >-
+          One source, many destinations, fewer opportunities for someone to fix two copies and
+          forget the third. The audience has seen that episode.
+        body: |
+          A reference is a composition arc that composes a source prim and its descendants onto a
+          destination prim. External references identify another layer and optionally a prim path.
+          Internal references omit the asset path and target another prim within the same layer
+          stack.
+
+          References aggregate large scenes from modular assets without copying the source
+          hierarchy. Asset libraries, materials, props, and sub-scenes can therefore be maintained
+          once and reused across many destinations.
+        points:
+          - The destination prim keeps its own namespace path and receives the referenced hierarchy beneath it.
+          - Multiple destination prims can reference the same source asset independently.
+          - A reference is a composition arc, not a relationship and not a duplicated file.
+      - kind: concept
+        heading: Source first, destination second
+        system: >-
+          The source arrives with history. The destination adds notes. Local management naturally
+          assumes its notes are law.
+        body: |
+          USD first composes the layer stack of the referenced source prim, then introduces that
+          composed result at the destination. Opinions and additional composition arcs authored
+          locally on the destination are then applied according to strength ordering.
+
+          A reference records an asset identifier and a source prim path. For an external reference,
+          the prim path may be omitted when the referenced layer defines a default prim. Omitting
+          both the correct prim path and a usable default prim leaves no source entry point.
+        points:
+          - Local destination opinions are stronger than opinions introduced through a reference.
+          - Referenced descendants are remapped under the destination prim's path.
+          - Relative asset paths are resolved relative to the layer that authors the reference.
+      - kind: api
+        heading: Add, target, and clear references
+        system: >-
+          GetReferences returns the controls, not the asset. Pulling the lever remains your
+          responsibility and, regrettably, your screen time.
+        body: |
+          prim.GetReferences() returns a Usd.References editor for the current edit target.
+          AddReference authors a reference list operation. Supply only an asset path to use that
+          layer's default prim, or supply both the asset path and an Sdf.Path to target a specific
+          source prim. ClearReferences removes reference opinions authored at the edit target.
+        code: |
+          from pxr import Sdf, Usd
+
+          stage = Usd.Stage.Open(STAGE_PATH)
+
+          sign = stage.DefinePrim(
+              "/City/CompositionQuarter/ArcadeSign", "Xform"
+          )
+          sign.GetReferences().AddReference("arcade_sign.usda")
+
+          explicit = stage.DefinePrim(
+              "/City/CompositionQuarter/ExplicitSign", "Xform"
+          )
+          explicit.GetReferences().AddReference(
+              "arcade_sign.usda", Sdf.Path("/Sign")
+          )
+
+          sign.CreateAttribute(
+              "stallId", Sdf.ValueTypeNames.String
+          ).Set("A")
+          stage.GetRootLayer().Save()
+      - kind: pitfall
+        heading: Entry points and edits
+        system: >-
+          A reference with no target is a dramatic entrance by nobody. Reviews were mixed.
+        body: |
+          Referencing an asset path without a prim path depends on valid defaultPrim metadata in
+          the target layer. If it is absent, USD cannot infer which root hierarchy to compose and
+          emits a warning. Local changes should be authored on the destination, not by opening and
+          modifying the shared source asset.
+        points:
+          - Asset paths must be valid from the authoring layer's location.
+          - ClearReferences removes authored references; it does not delete the source asset.
+          - Editing the shared source changes every consumer, while a destination-local opinion changes only that use.
+          - Defining copied geometry forfeits the shared maintenance benefit of references.
+      - kind: recap
+        heading: What you now owe the city
+        body: |
+          References compose reusable source prims and descendants onto destination prims.
+          External references use asset identifiers, internal references use same-stage paths,
+          default prims provide optional external entry points, and stronger local opinions
+          customize each use without changing its source.
+    apply:
+      f3_reference_license: >-
+        Add arcade_sign.usda to ArcadeSign's references and let its default prim supply the target.
+        The licensing desk accepts arcs and rejects photocopies on aesthetic grounds.
+      f3_city_block: >-
+        Define three stall destinations, reference market_stall.usda on each, and author local
+        stallId values. Three addresses, one asset, and no tribute to the Duplicate Baron.
+
+  - source: docs/composition-basics/default-prim.md
+    title: Default Prim
+    objective: Set a top-level default prim that provides the entry point when a layer is referenced or payloaded without an explicit prim path.
+    intro: >-
+      The asset has two root prims and no front door. Visitors currently choose one by panic. A
+      default prim marks the intended entrance, satisfies usdchecker, and prevents references from
+      composing an exquisitely organized absence.
+    beats:
+      - kind: concept
+        heading: The asset entry point
+        system: >-
+          Every building needs a front door. Floor four maintains that a trapdoor qualifies, hence
+          the litigation.
+        body: |
+          A default prim is a top-level prim named by defaultPrim metadata on the stage's root
+          layer. It identifies the primary hierarchy consumers should treat as the asset's entry
+          point. The metadata stores the root prim's name, while the stage API works with the
+          corresponding Usd.Prim.
+
+          The default prim is not automatically the first prim authored, and it does not hide,
+          delete, or weaken other root prims. It simply identifies the principal content.
+        points:
+          - The selected prim must be a root-level prim, such as /Kiosk rather than /World/Kiosk.
+          - defaultPrim is layer metadata, not a prim attribute.
+          - stage.GetDefaultPrim returns the resolved default Usd.Prim or an invalid prim if none is set.
+      - kind: concept
+        heading: References use the default
+        system: >-
+          Omit the source path only after naming the entrance. Otherwise the reference waits
+          outside and files a complaint.
+        body: |
+          An external reference or payload normally identifies both a layer and a source prim path.
+          When the path is omitted, USD consults the target layer's defaultPrim metadata. This
+          makes an asset easy to consume and allows its internal root naming to remain encapsulated.
+
+          If the target layer has multiple roots and no default prim, a pathless reference cannot
+          choose one. It resolves without the intended content and reports a composition warning.
+          usdchecker also reports a missing default prim as an asset validation error.
+      - kind: api
+        heading: Set and verify the default
+        system: >-
+          SetDefaultPrim takes a prim, not a string and not your firm belief that "/Kiosk" should
+          be obvious.
+        body: |
+          Define or retrieve the top-level prim, pass that Usd.Prim to stage.SetDefaultPrim, and
+          save the root layer. GetDefaultPrim verifies the selection. A later reference can then
+          pass only the target asset path.
+        code: |
+          from pxr import Usd
+
+          asset = Usd.Stage.CreateNew("kiosk_asset.usda")
+          kiosk = asset.DefinePrim("/Kiosk", "Xform")
+          asset.DefinePrim("/Scratch", "Scope")
+
+          asset.SetDefaultPrim(kiosk)
+          assert asset.GetDefaultPrim() == kiosk
+          asset.GetRootLayer().Save()
+
+          stage = Usd.Stage.Open(STAGE_PATH)
+          instance = stage.DefinePrim("/City/InfoKiosk", "Xform")
+          instance.GetReferences().AddReference("kiosk_asset.usda")
+          stage.GetRootLayer().Save()
+      - kind: pitfall
+        heading: Metadata has jurisdiction
+        system: >-
+          A nested lobby is still not the building entrance. The Gate has rejected stronger
+          metaphors.
+        body: |
+          SetDefaultPrim accepts any Usd.Prim at the Python type level, but the prim must be
+          top-level for valid defaultPrim metadata. Also ensure the metadata is authored on the
+          root layer that external consumers actually reference.
+        points:
+          - Passing a path string to SetDefaultPrim is incorrect; pass stage.GetPrimAtPath(path).
+          - Setting a nested prim such as /World/Kiosk does not create a valid root-level entry point.
+          - Saving only the consuming stage does not save a separately created asset stage.
+          - A default prim selects content; it does not change the stage's pseudo-root.
+      - kind: recap
+        heading: What you now owe the city
+        body: |
+          defaultPrim metadata names a top-level prim as the asset entry point. It guides tools,
+          satisfies asset validation, and lets external references and payloads omit a source prim
+          path while still composing the intended hierarchy.
+    apply:
+      f3_default_gate: >-
+        Set the asset stage's /Kiosk prim as default before saving it. The waiting reference has an
+        asset path, no prim path, and the patience of a televised boss.
+
+  - source: docs/composition-basics/strength-ordering.md
+    title: LIVRPS Strength Ordering
+    objective: Predict which opinion wins across composition arcs and author non-destructive local overrides over referenced, payloaded, or specialized data.
+    intro: >-
+      Six arcs enter the LIVRPS Labyrinth. One opinion leaves. The result is not based on save time,
+      confidence, seniority, or which department brought pastries; it is based on deterministic
+      strength ordering.
+    beats:
+      - kind: concept
+        heading: Composition resolves opinions
+        system: >-
+          A stage is the verdict after every layer has finished arguing. I admire the efficiency
+          and resent the precedent.
+        body: |
+          An opinion is authored scene description about a prim, property, metadata field, or
+          namespace. During composition, USD gathers contributing opinions, orders them by
+          composition strength, and uses the strongest applicable opinion when values conflict.
+
+          Strong opinions can add to or override weaker data without editing the weaker source.
+          The resulting stage is the composed scenegraph, not a copy of any single contributing
+          layer.
+        points:
+          - Strength is structural and deterministic, not determined by file modification time.
+          - Opinions that do not conflict can all contribute to the final prim.
+          - Layer ordering resolves strength within local layer stacks before arc categories are compared.
+      - kind: concept
+        heading: LIVRPS from strong to weak
+        system: >-
+          Local, Inherits, Variants, References, Payloads, Specializes. Memorize it before the
+          sponsors rename the maze for branding.
+        body: |
+          LIVRPS orders composition arcs from strongest to weakest: Local, Inherits, Variant sets,
+          References, Payloads, and Specializes. Local opinions are authored directly in a prim's
+          local layer stack. Inherits broadcast opinions from a source prim. A selected variant
+          contributes one named alternative. References and payloads compose external or internal
+          hierarchies, with payloads additionally supporting runtime loading and unloading.
+          Specializes supplies the weakest, fallback-like opinions.
+        points:
+          - A local destination opinion wins over an inherited, variant, referenced, payloaded, or specialized opinion.
+          - Inherits is stronger than variants; variants are stronger than references.
+          - References are stronger than payloads; specializes is weakest.
+      - kind: concept
+        heading: Strength ordering is recursive
+        system: >-
+          The maze contains smaller mazes. The architect received an award and several subpoenas.
+        body: |
+          LIVRPS is applied recursively at composition nodes. A referenced prim is first composed
+          from its own local layers and arcs; that result then participates through the reference
+          arc at the destination. "Local" is therefore relative to the current composition node,
+          not a claim that every opinion inside a referenced file beats the destination.
+
+          This recursion preserves predictable asset internals while still allowing the referencing
+          prim's direct local opinions to override the referenced result.
+      - kind: api
+        heading: Override and inspect the result
+        system: >-
+          Author one local value and six competing departments become historical context. This is
+          the closest the broadcast comes to wish fulfillment.
+        body: |
+          Author a property directly on the destination prim to create a local opinion stronger
+          than referenced or variant values. GetPrimStack and an attribute's GetPropertyStack expose
+          contributing authored specs in strength order, which is essential when debugging an
+          unexpected result.
+        code: |
+          from pxr import Sdf, Usd
+
+          stage = Usd.Stage.Open(STAGE_PATH)
+          boss = stage.GetPrimAtPath(
+              "/City/CompositionQuarter/OpinionColossus"
+          )
+          threat = boss.CreateAttribute(
+              "threatLevel", Sdf.ValueTypeNames.Int
+          )
+          threat.Set(100)  # Direct local opinion, strongest in LIVRPS.
+
+          print(threat.Get())               # 100
+          print(boss.GetPrimStack())         # prim specs, strong to weak
+          print(threat.GetPropertyStack())   # property specs, strong to weak
+
+          stage.GetRootLayer().Save()
+      - kind: pitfall
+        heading: Strength is not chronology
+        system: >-
+          Saving last does not mean winning. This rule has devastated executives across all ten
+          floors.
+        body: |
+          A weaker reference saved after a local edit remains weaker. Likewise, flattening or
+          editing the source asset is unnecessary when a stronger local opinion can express the
+          shot- or instance-specific change non-destructively.
+        points:
+          - Do not read LIVRPS weakest to strongest; Local is strongest and Specializes is weakest.
+          - A selected variant does not beat a direct local value on the same destination prim.
+          - An unloaded payload contributes no payload contents until loaded.
+          - GetPropertyStack reveals value sources; GetPrimStack reveals broader prim-spec contributions.
+      - kind: recap
+        heading: What you now owe the city
+        body: |
+          USD resolves conflicts by deterministic LIVRPS order: Local, Inherits, Variant sets,
+          References, Payloads, Specializes. The rule applies recursively, lets local destination
+          opinions override reusable source data, and supports non-destructive collaboration
+          without modifying weaker layers.
+    apply:
+      f3_reference_arcade: >-
+        Author "THE CITY OWNS ITSELF" directly on the referencing BaronSign. Local defeats
+        reference, and the Baron's immutable-asset speech has been cut for time.
+      f3_opinion_colossus: >-
+        Set threatLevel to 100 as a direct local opinion, then let LIVRPS bury every weaker threat.
+        The Colossus requests a recount; the property stack declines.
+
+  - source: docs/composition-basics/variant-sets.md
+    title: Variant Sets
+    objective: Create named alternatives, author variant-specific opinions in edit contexts, and select the composed choice without deleting other variants.
+    intro: >-
+      Variant Gallery offers day or night, red or blue, calm or regrettably enraged. These are
+      choices inside one asset, not duplicate assets wearing novelty mustaches. The Curator has
+      already selected incorrectly on your behalf.
+    beats:
+      - kind: concept
+        heading: Sets contain named choices
+        system: >-
+          One prim may contain several mutually exclusive realities. The broadcast calls this
+          programming.
+        body: |
+          A variant set is a named collection of variants on a prim. Each variant is one named
+          choice containing alternative scene description. Selecting a variant composes the
+          opinions authored for that choice at the prim where the set is defined.
+
+          A prim may have multiple variant sets, such as model, look, and lod. Typical variants
+          switch geometry, materials, properties, or descendant hierarchies without maintaining
+          separate duplicated assets.
+        points:
+          - The variant set name identifies the category; variant names identify its choices.
+          - Only the selected variant's opinions contribute from that set.
+          - Unselected variants remain authored and can be selected later.
+      - kind: concept
+        heading: Selections are composable opinions
+        system: >-
+          Every reference may choose differently. At last, controlled disagreement with
+          documentation.
+        body: |
+          A variant selection can be authored in the same layer that defines the variants or in a
+          stronger layer that consumes the asset. Separate references to one asset can therefore
+          select different variants without altering the shared source.
+
+          Variant selections and variant contents still obey composition strength. In LIVRPS,
+          variant opinions are weaker than local and inherited opinions but stronger than
+          references, payloads, and specializes at the same composition node.
+        points:
+          - GetVariantSelection returns the currently resolved selected name or an empty string.
+          - ClearVariantSelection removes the selection opinion at the current edit target.
+          - Clearing a selection does not delete the set or any variants.
+      - kind: api
+        heading: Author inside the edit context
+        system: >-
+          Select, enter context, author. Reverse that order and your allegedly exclusive choice
+          escapes into the city at large.
+        body: |
+          GetVariantSets returns the prim's Usd.VariantSets collection. AddVariantSet creates or
+          retrieves a Usd.VariantSet, and AddVariant adds named choices. To author a choice, select
+          it first and enter GetVariantEditContext; edits inside the with block are stored in that
+          variant rather than as ordinary local opinions.
+        code: |
+          from pxr import Sdf, Usd
+
+          stage = Usd.Stage.Open(STAGE_PATH)
+          marquee = stage.DefinePrim(
+              "/City/CompositionQuarter/VariantMarquee", "Xform"
+          )
+          lighting = marquee.GetVariantSets().AddVariantSet("lighting")
+
+          for name in ("day", "night"):
+              lighting.AddVariant(name)
+              lighting.SetVariantSelection(name)
+              with lighting.GetVariantEditContext():
+                  marquee.CreateAttribute(
+                      "modeName", Sdf.ValueTypeNames.String
+                  ).Set(name)
+
+          lighting.SetVariantSelection("night")
+          assert lighting.GetVariantNames() == ["day", "night"]
+          stage.GetRootLayer().Save()
+      - kind: pitfall
+        heading: Context controls authorship
+        system: >-
+          An edit outside the context applies to every choice. The Curator calls this inclusivity;
+          the validator calls it wrong.
+        body: |
+          SetVariantSelection chooses which variant is active, but it does not by itself redirect
+          subsequent edits into that variant. GetVariantEditContext must be active while authoring
+          variant-specific prims or properties.
+        points:
+          - Select the intended variant before opening its edit context.
+          - Authoring outside the context creates an ordinary local opinion that can override every variant.
+          - Changing the selection does not delete or rewrite the contents of either variant.
+          - AddVariantSet and AddVariant create choices; SetVariantSelection only chooses among them.
+      - kind: recap
+        heading: What you now owe the city
+        body: |
+          Variant sets hold named alternatives on one prim. Select a variant and use its variant
+          edit context to author choice-specific opinions, then author selections wherever each
+          asset use should choose differently. All choices remain intact and composition strength
+          still determines the final result.
+    apply:
+      f3_variant_switch: >-
+        Add day and night, author modeName inside each selected variant's edit context, and leave
+        night active. The marquee has confused noon with midnight for the final broadcast.
+      f3_variant_boss: >-
+        Select blue without clearing either authored choice. The Curator promised free will, then
+        hid it behind one method call and a merchandise table.

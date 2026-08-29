@@ -10,12 +10,20 @@ import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 
 type Language = "python" | "usda" | "none";
 type Question = { prompt: string; choices?: string[]; answer?: number; answer_key?: string };
+type LessonBeat = {
+  kind: "concept" | "api" | "pitfall" | "recap";
+  heading: string; system?: string; body?: string; points?: string[]; code?: string;
+};
+type Lesson = {
+  source: string; title: string; objective: string; intro: string;
+  beats: LessonBeat[]; apply: string;
+};
 type Quest = {
   id: string; title: string; floor: number; floor_name: string; neighborhood: string;
   kind: "orientation" | "room" | "neighborhood_boss" | "city_boss" | "floor_boss";
   brief: string; language: Language; starter: string; xp: number; reward?: string | object;
   cookbook: string; unlocked: boolean; completed: boolean; exam_tasks: string[];
-  stats: Record<string, number>; questions?: Question[];
+  stats: Record<string, number>; questions?: Question[]; lesson?: Lesson | null;
 };
 type ShopItem = { name: string; description: string; cost: number; repeatable?: boolean };
 type PlayerState = {
@@ -51,13 +59,14 @@ const CLASS_PATHS = [
 
 const ONBOARDED_KEY = "primventure.onboarded.v2";
 const GUIDED_KEY = "primventure.guided";
+const LESSONS_READ_KEY = "primventure.lessons-read.v1";
 
-type GuideTarget = "challenge" | "editor" | "run" | "map";
+type GuideTarget = "lesson" | "editor" | "run" | "map";
 const GUIDE_STEPS: Array<{ target: GuideTarget; title: string; body: string }> = [
   {
-    target: "challenge",
-    title: "Read the room",
-    body: "Every room gives you one small authoring job. The brief says what to build. Open Cookbook for the lesson behind it.",
+    target: "lesson",
+    title: "Learn this room",
+    body: "The System compresses the official lesson into one objective, one concept, and one API example. Read the beats, then acknowledge the briefing.",
   },
   {
     target: "editor",
@@ -72,7 +81,7 @@ const GUIDE_STEPS: Array<{ target: GuideTarget; title: string; body: string }> =
   {
     target: "map",
     title: "Move through the floors",
-    body: "Clearing a room unlocks the next one. Each floor ends in a boss, and your cleared work stacks up as a real USD city in world/.",
+    body: "Clear the rooms to learn the floor. The boss is the exit exam, and your cleared work stacks up as a real USD city in world/.",
   },
 ];
 
@@ -103,7 +112,27 @@ function questStatus(quest: Quest): "locked" | "available" | "complete" | "boss"
 
 function cookbookUrl(path: string) {
   const relative = path.replace(/^docs\//, "").replace(/\.md$/, ".html");
-  return `http://127.0.0.1:8000/cookbook/${relative}`;
+  return `/cookbook/${relative}`;
+}
+
+// The host talks; the lesson teaches. Every line the System speaks gets the
+// same nameplate so beats never read as unattributed narration.
+function SystemLine({ text, tone }: { text: string; tone: "intro" | "aside" | "apply" }) {
+  return <div className={`system-line ${tone}`}>
+    <span className="system-avatar">SYS</span>
+    <div>
+      <span className="system-tag">THE SYSTEM</span>
+      <p>{text}</p>
+    </div>
+  </div>;
+}
+
+function lessonsRead(): Set<string> {
+  try {
+    return new Set(JSON.parse(localStorage.getItem(LESSONS_READ_KEY) || "[]") as string[]);
+  } catch {
+    return new Set();
+  }
 }
 
 const TICKER = [
@@ -412,7 +441,15 @@ export default function App() {
   const [showLanding, setShowLanding] = useState(() => localStorage.getItem(ONBOARDED_KEY) !== "1");
   const [guideStep, setGuideStep] = useState<number | null>(null);
   const [mapScope, setMapScope] = useState<"floor" | "all">("floor");
+  const [pointer, setPointer] = useState<{ x: number; y: number } | null>(null);
+  const [lessonOpen, setLessonOpen] = useState(false);
+  const [, setLessonRevision] = useState(0);
   const booted = useRef(false);
+  const lessonRef = useRef<HTMLElement>(null);
+  const editorRef = useRef<HTMLElement>(null);
+  const focusEditor = useRef<(() => void) | null>(null);
+  const runRef = useRef<HTMLButtonElement>(null);
+  const mapRef = useRef<HTMLElement>(null);
 
   const refresh = async (advance = false) => {
     const [nextState, nextQuests, nextRecipes] = await Promise.all([
@@ -458,12 +495,65 @@ export default function App() {
     if (!activeQuest) return;
     setCode(activeQuest.starter || "");
     setAnswers(activeQuest.questions?.map(() => "") || []);
-  }, [activeQuest?.id]);
+    if (!showLanding && activeQuest.lesson && !activeQuest.completed && !lessonsRead().has(activeQuest.id)) {
+      setLessonOpen(true);
+    }
+  }, [activeQuest?.id, showLanding]);
   useEffect(() => {
     if (!toast) return;
     const timeout = window.setTimeout(() => setToast(null), 6000);
     return () => window.clearTimeout(timeout);
   }, [toast]);
+  useEffect(() => {
+    if (!lessonOpen) return;
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setLessonOpen(false);
+    };
+    window.addEventListener("keydown", closeOnEscape);
+    return () => window.removeEventListener("keydown", closeOnEscape);
+  }, [lessonOpen]);
+
+  // Park the arrow just outside the left edge of whatever the tutorial is
+  // describing, so the callout and the outline agree on the target.
+  useEffect(() => {
+    if (guideStep === null) {
+      setPointer(null);
+      return;
+    }
+    const target = GUIDE_STEPS[guideStep].target;
+    if (target === "map" && activeTab !== "map") setActiveTab("map");
+    if (target === "lesson" && !lessonOpen) setLessonOpen(true);
+    const node = () => ({
+      lesson: lessonRef.current,
+      editor: editorRef.current,
+      run: runRef.current,
+      map: mapRef.current,
+    } as Record<GuideTarget, HTMLElement | null>)[target];
+    const measure = () => {
+      const rect = node()?.getBoundingClientRect();
+      if (!rect || !rect.width) {
+        setPointer(null);
+        return;
+      }
+      const centered = rect.top + Math.min(rect.height / 2, 150);
+      setPointer({
+        x: Math.max(108, rect.left - 10),
+        y: Math.min(Math.max(centered, 96), window.innerHeight - 44),
+      });
+    };
+    // Narrow windows move the editor rail below the columns, so the run button
+    // can start off-screen and take the fixed-position arrow with it.
+    node()?.scrollIntoView({ block: target === "run" ? "center" : "nearest", inline: "nearest" });
+    measure();
+    const settle = window.setTimeout(measure, 280);
+    window.addEventListener("resize", measure);
+    window.addEventListener("scroll", measure, true);
+    return () => {
+      window.clearTimeout(settle);
+      window.removeEventListener("resize", measure);
+      window.removeEventListener("scroll", measure, true);
+    };
+  }, [guideStep, activeTab, lessonOpen]);
 
   const floors = useMemo(() => {
     const grouped = new Map<number, Quest[]>();
@@ -484,6 +574,7 @@ export default function App() {
   const visibleFloors = mapScope === "all" ? floors : floors.filter(([floor]) => floor === focusFloor);
   const focusRooms = floors.find(([floor]) => floor === focusFloor)?.[1] || [];
   const focusCleared = focusRooms.filter((quest) => quest.completed).length;
+  const lessonRead = activeQuest ? lessonsRead().has(activeQuest.id) : false;
   const spotlight = guideStep === null ? null : GUIDE_STEPS[guideStep].target;
   const xpFloor = (state.level - 1) * 100;
   const xpProgress = ((state.xp - xpFloor) / Math.max(state.next_level_xp - xpFloor, 1)) * 100;
@@ -499,7 +590,7 @@ export default function App() {
       setToast({
         kind: result.success ? "success" : "error",
         title: result.success ? "ROOM CLEARED" : "VALIDATION FAILED",
-        message: `${result.system_message} ${result.results.filter((item) => !item.passed).map((item) => item.message).join(" ")}`,
+        message: `${!result.success && !lessonRead ? "SYSTEM: You skipped the briefing. The lesson remains available. " : ""}${result.system_message} ${result.results.filter((item) => !item.passed).map((item) => item.message).join(" ")}`,
       });
       await refresh(result.success);
       if (result.success) setRevision((value) => value + 1);
@@ -508,6 +599,16 @@ export default function App() {
     } finally {
       setRunning(false);
     }
+  };
+
+  const acknowledgeLesson = () => {
+    if (!activeQuest) return;
+    const read = lessonsRead();
+    read.add(activeQuest.id);
+    localStorage.setItem(LESSONS_READ_KEY, JSON.stringify([...read]));
+    setLessonRevision((value) => value + 1);
+    setLessonOpen(false);
+    window.setTimeout(() => focusEditor.current?.(), 0);
   };
 
   const chooseClass = async (id: string) => {
@@ -579,7 +680,7 @@ export default function App() {
         </section>}
         <ScenePreview revision={revision} />
       </aside>
-      <section className={`command-center ${spotlight === "map" ? "spotlight" : ""}`}>
+      <section className={`command-center ${spotlight === "map" ? "spotlight" : ""}`} ref={mapRef}>
         <nav className="mode-tabs">
           <button className={activeTab === "map" ? "active" : ""} onClick={() => setActiveTab("map")}><Skull size={16} /> DUNGEON MAP</button>
           <button className={activeTab === "skills" ? "active" : ""} onClick={() => setActiveTab("skills")}><Sparkles size={16} /> RECIPE TREE</button>
@@ -590,7 +691,7 @@ export default function App() {
             <div>
               <span>{mapScope === "floor" ? `FLOOR ${String(focusFloor).padStart(2, "0")} · ${focusCleared}/${focusRooms.length} CLEARED` : "CONTESTANT PATH // FLOORS 00–09"}</span>
               <h1>{mapScope === "floor" ? focusRooms[0]?.floor_name || "RECAPTURE PROTOCOL" : "RECAPTURE PROTOCOL"}</h1>
-              <p>{nextQuest ? <>Next room: <b>{nextQuest.title}</b>. Click a room to load it into the terminal.</> : "Every room on this route is cleared."}</p>
+              <p>{nextQuest ? <>Clear the rooms to learn the floor. The boss is the exit exam. Next: <b>{nextQuest.title}</b>.</> : "Every room on this route is cleared."}</p>
               <div className="map-scope">
                 <button className={mapScope === "floor" ? "active" : ""} onClick={() => setMapScope("floor")}>THIS FLOOR</button>
                 <button className={mapScope === "all" ? "active" : ""} onClick={() => setMapScope("all")}>ALL FLOORS</button>
@@ -644,32 +745,83 @@ export default function App() {
         </div>}
       </section>
       <aside className="editor-rail">
-        <section className={`challenge-card ${spotlight === "challenge" ? "spotlight" : ""}`}>
+        <section className="challenge-card">
           <div className="eyebrow"><span>{activeQuest?.kind.replaceAll("_", " ").toUpperCase() || "NO SIGNAL"}</span><b>+{activeQuest?.xp || 0} XP</b></div>
           <h2>{activeQuest?.title || "Waiting for the System"}</h2><p>{activeQuest?.brief}</p>
           <div className="objective"><ChevronRight size={16} /><span><small>NEIGHBORHOOD</small>{activeQuest?.neighborhood}</span></div>
-          {activeQuest && <a className="cookbook-link" href={cookbookUrl(activeQuest.cookbook)} target="_blank" rel="noreferrer"><BookOpen size={15} /> OPEN COOKBOOK</a>}
+          {activeQuest && <div className="learning-route">
+            <span className={lessonRead ? "done" : "current"}><b>1</b> LEARN</span><i /><span className={lessonRead ? "current" : ""}><b>2</b> AUTHOR</span><i /><span><b>3</b> VALIDATE</span>
+          </div>}
+          {activeQuest && <button className="cookbook-link" onClick={() => setLessonOpen(true)}><BookOpen size={15} /> {lessonRead ? "REVIEW LESSON" : "LEARN THIS ROOM"}</button>}
           {activeQuest?.questions?.map((question, index) => <label className="boss-question" key={question.prompt}>{question.prompt}
             {question.choices?.length ? <select value={String(answers[index] ?? "")} onChange={(event) => setAnswers((current) => current.map((answer, i) => i === index ? Number(event.target.value) : answer))}>
               <option value="">Choose…</option>{question.choices.map((choice, choiceIndex) => <option value={choiceIndex} key={choice}>{choice}</option>)}
             </select> : <input value={String(answers[index] ?? "")} onChange={(event) => setAnswers((current) => current.map((answer, i) => i === index ? event.target.value : answer))} placeholder="Explain your reasoning…" />}
           </label>)}
         </section>
-        <section className={`code-panel panel ${spotlight === "editor" ? "spotlight" : ""}`}>
+        <section className={`code-panel panel ${spotlight === "editor" ? "spotlight" : ""}`} ref={editorRef}>
           <div className="editor-toolbar"><span><TerminalSquare size={15} /> ROOM TERMINAL</span><div><button className="active">{activeQuest?.language.toUpperCase() || "—"}</button></div></div>
-          <Editor height="100%" language={activeQuest?.language === "python" ? "python" : "plaintext"} theme="vs-dark" value={code} onChange={(value) => setCode(value || "")} options={{ readOnly: activeQuest?.language === "none", minimap: { enabled: false }, fontSize: 13, lineHeight: 21, padding: { top: 16 }, scrollBeyondLastLine: false, tabSize: 4 }} />
+          <Editor height="100%" language={activeQuest?.language === "python" ? "python" : "plaintext"} theme="vs-dark" value={code} onChange={(value) => setCode(value || "")} onMount={(editor) => { focusEditor.current = () => editor.focus(); }} options={{ readOnly: activeQuest?.language === "none", minimap: { enabled: false }, fontSize: 13, lineHeight: 21, padding: { top: 16 }, scrollBeyondLastLine: false, tabSize: 4 }} />
         </section>
-        <button className={`run-button ${spotlight === "run" ? "spotlight" : ""}`} onClick={runQuest} disabled={running || !activeQuest || status === "locked"}>
+        <button className={`run-button ${spotlight === "run" ? "spotlight" : ""}`} onClick={runQuest} disabled={running || !activeQuest || status === "locked"} ref={runRef}>
           {running ? <RefreshCw className="spin" /> : <Play fill="currentColor" />} {running ? "JUDGES ARE THINKING..." : activeQuest?.language === "none" ? "ACKNOWLEDGE BRIEF" : "RUN THE ROOM"}
         </button>
       </aside>
     </main>
+    {guideStep !== null && pointer && <div className="guide-pointer" style={{ left: pointer.x, top: pointer.y }} aria-hidden="true">
+      <span className="pointer-step">{guideStep + 1}</span>
+      <ChevronRight /><ChevronRight />
+    </div>}
     {guideStep !== null && <GuideDock
       step={guideStep}
       onBack={() => setGuideStep((current) => Math.max(0, (current ?? 0) - 1))}
       onNext={() => setGuideStep((current) => Math.min(GUIDE_STEPS.length - 1, (current ?? 0) + 1))}
       onClose={closeGuide}
     />}
+    {lessonOpen && activeQuest && <div className="lesson-overlay" role="dialog" aria-modal="true" aria-label={`Lesson for ${activeQuest.title}`}>
+      <button className="lesson-backdrop" onClick={() => setLessonOpen(false)} aria-label="Close lesson" />
+      <section className={`lesson-drawer ${spotlight === "lesson" ? "spotlight" : ""}`} ref={lessonRef}>
+        <header>
+          <div><span>LESSON // {activeQuest.lesson?.title || "COOKBOOK"}</span><strong>{activeQuest.title}</strong></div>
+          <div className="lesson-actions">
+            <a href={cookbookUrl(activeQuest.cookbook)} target="_blank" rel="noreferrer">FULL PAGE <ArrowRight size={13} /></a>
+            <button onClick={() => setLessonOpen(false)} aria-label="Close lesson"><X /></button>
+          </div>
+        </header>
+        <div className="lesson-content">
+          {activeQuest.lesson ? <>
+            <SystemLine text={activeQuest.lesson.intro} tone="intro" />
+            <div className="lesson-objective">
+              <BookOpen size={15} />
+              <div><span>OBJECTIVE</span><p>{activeQuest.lesson.objective}</p></div>
+            </div>
+            {activeQuest.lesson.beats.map((beat, index) => <article className={`lesson-beat ${beat.kind}`} key={`${beat.kind}-${index}`}>
+              <header>
+                <span className="beat-index">{String(index + 1).padStart(2, "0")}</span>
+                <div><span className={`beat-kind ${beat.kind}`}>{beat.kind}</span><h3>{beat.heading}</h3></div>
+              </header>
+              {beat.system && <SystemLine text={beat.system} tone="aside" />}
+              {beat.body?.trim().split(/\n{2,}/).map((paragraph) => <p key={paragraph}>{paragraph}</p>)}
+              {beat.points && beat.points.length > 0 && <ul>
+                {beat.points.map((point) => <li key={point}>{point}</li>)}
+              </ul>}
+              {beat.code && <pre><code>{beat.code.replace(/\n$/, "")}</code></pre>}
+            </article>)}
+            <section className="lesson-apply">
+              <span className="apply-tag">THAT IS THE FIGHT</span>
+              <SystemLine text={activeQuest.lesson.apply} tone="apply" />
+            </section>
+            <button className="lesson-ack" onClick={acknowledgeLesson}>
+              {lessonRead ? "BACK TO THE TERMINAL" : "I GOT IT · LET ME AUTHOR"} <ArrowRight size={16} />
+            </button>
+            <div className="lesson-source">Compressed from the official Learn OpenUSD lesson · {activeQuest.lesson.source}</div>
+          </> : <div className="lesson-missing">
+            <strong>BRIEFING SIGNAL MISSING</strong>
+            <p>Use the full Cookbook page for this room.</p>
+          </div>}
+        </div>
+      </section>
+    </div>}
     {toast && <div className={`system-toast ${toast.kind}`}><div className="toast-tag">SYSTEM // {toast.kind === "error" ? "ALERT" : "ANNOUNCEMENT"}</div><button onClick={() => setToast(null)} aria-label="Close notification"><X /></button><strong>{toast.title}</strong><p>{toast.message}</p><div className="toast-scan" /></div>}
   </div>;
 }

@@ -1,0 +1,608 @@
+lessons:
+  - source: docs/stage-setting/prims.md
+    title: Prims
+    objective: Identify what a prim is, how it is addressed, and the role it plays inside a stage's scenegraph.
+    intro: >-
+      Welcome to your first lesson, Contestant. The city currently contains exactly as much
+      scene description as your work history contained relevant experience. We fix that with
+      prims. I will explain them once, thoroughly, in my generous host voice, and then I will
+      stand behind you making notes while you fail to apply any of it.
+    beats:
+      - kind: concept
+        heading: A prim is a container with an address
+        system: >-
+          "Container" is an unglamorous word. So was "contestant," and here we both are.
+        body: |
+          A primitive, or prim, is the core building block of every OpenUSD scene. A prim is a
+          container that holds data: attributes, relationships, and metadata that together
+          describe one object or entity in the scene.
+
+          Every prim has a unique path that locates it in the scenegraph, such as
+          /World/BuildingA/Geometry/building_geo. That path says building_geo is a child of
+          Geometry, which is a child of BuildingA, which is a child of World. Nesting prims
+          this way is how a hierarchical scenegraph takes shape.
+        points:
+          - A prim can represent visual entities like meshes, materials, and lights, or non-visual organizational entities.
+          - The path is the prim's identity. Two prims cannot share one path, and moving a prim changes its address.
+          - Prims encapsulate data so it can be shared, referenced, and instanced across scenes and files.
+      - kind: concept
+        heading: Typed prims declare what kind of data belongs there
+        system: >-
+          An untyped prim is a building with no purpose and no permits. The city has forty. They
+          are why the fourth floor is in litigation.
+        body: |
+          DefinePrim creates a typeless prim by default, which is an empty container. Supplying a
+          type name tells consumers what kind of data lives there and which schema attributes
+          apply.
+
+          Xform defines a transform. Scope is a simple container that holds no transform data.
+          Cube, Sphere, and Mesh define geometry. The type appears in USDA as part of the prim
+          declaration: def Xform "City".
+        points:
+          - "stage.DefinePrim(path, type) is the generic authoring call and works for any type."
+          - "Schema classes such as UsdGeom.Xform.Define(stage, path) are the clearer, less brittle option when the type is known."
+          - A typeless prim is still a valid prim. It simply carries no schema contract.
+      - kind: api
+        heading: Working with prims in Python
+        system: >-
+          Five methods. I have seen contestants memorize longer coffee orders.
+        body: |
+          Define prims with the generic stage API or a schema class, then inspect the composed
+          result through the returned Usd.Prim. An invalid prim evaluates as False, which makes
+          existence checks cheap before you author an override.
+        code: |
+          from pxr import Usd, UsdGeom
+
+          stage = Usd.Stage.CreateNew("city.usda")
+
+          # Generic: define a prim at a path, optionally with a type.
+          city = stage.DefinePrim("/City", "Xform")
+
+          # Schema-specific: the same result with a typed interface.
+          tower = UsdGeom.Xform.Define(stage, "/City/Tower")
+
+          city.GetTypeName()      # 'Xform'
+          city.GetChildren()      # direct children only
+          city.GetProperties()    # every property on the prim
+
+          if stage.GetPrimAtPath("/City").IsValid():
+              stage.GetRootLayer().Save()
+      - kind: pitfall
+        heading: Where contestants lose the room
+        system: >-
+          I keep these on a clipboard. It is the only paperwork I enjoy.
+        body: |
+          Authoring a prim is not the same as persisting it. Until the layer is saved, the work
+          exists only in memory, and the judges read the file.
+        points:
+          - "GetChild returns direct children only. It will not find a nested grandchild."
+          - "Forgetting stage.GetRootLayer().Save() or stage.Save() means the validator sees an empty stage."
+          - "Passing a bad type name creates a prim whose type is not recognized by any schema."
+      - kind: recap
+        heading: What you now owe the city
+        body: |
+          Prims are containers identified by scenegraph paths. A type name declares what kind of
+          data belongs in that container. Nesting prims creates the hierarchy that every later
+          lesson, from composition to instancing, depends on.
+    apply:
+      f0_first_prim: >-
+        Define /City as an Xform and save the root layer. One address. The entire room. I have
+        already told the audience you will spend four minutes on it.
+
+  - source: docs/stage-setting/properties/attributes.md
+    title: Attributes
+    objective: Author and read typed values on prims, and understand fallbacks, time samples, and schema-specific accessors.
+    intro: >-
+      Prims are containers. Congratulations, you own empty boxes. Attributes are the part where
+      the boxes contain something, which the audience tells me is the interesting part. Attributes
+      are also where value resolution starts quietly deciding things behind your back.
+    beats:
+      - kind: concept
+        heading: Attributes are typed name-value pairs on a prim
+        system: >-
+          One name, one type, one value. Three constraints. You will violate two.
+        body: |
+          Attributes are the most common kind of property in OpenUSD and the primary means of
+          storing data. Each attribute is a name-value pair with exactly one defined data type,
+          declared through the Sdf library: Sdf.ValueTypeNames.String, Double, Color3fArray, and
+          so on.
+
+          Common attributes include visibility, which controls whether a prim renders, display
+          color, which sets the color on a geometric prim, and extent, which defines a gprim's
+          boundaries.
+        points:
+          - "The other kind of property is a relationship, which targets paths rather than holding values."
+          - Attributes are authored into layers, and composition combines opinions from those layers into a resolved value.
+          - "An attribute can hold a default value, time samples, or both."
+      - kind: concept
+        heading: Fallbacks mean Get can succeed with nothing authored
+        system: >-
+          The value exists, the file is empty, and no one is lying to you. Yes, this upsets people.
+        body: |
+          Schema attributes carry fallback values defined by the schema itself. Calling Get on an
+          unauthored schema attribute returns that fallback, and the value never appears in the
+          USDA text because nothing was authored.
+
+          This is value resolution doing its job. Once you author a default value with Set, the
+          authored opinion wins over the fallback and the value appears in the layer.
+        points:
+          - "Unauthored plus fallback returns a value, but the USDA file shows no opinion."
+          - "Authored default appears in the layer and takes precedence over the schema fallback."
+          - "HasAuthoredValue distinguishes an authored opinion from a fallback."
+      - kind: api
+        heading: Prefer schema accessors, fall back to the generic API
+        system: >-
+          The generic API is a crowbar. The schema API is a key. Both open the door. Only one gets
+          you invited back.
+        body: |
+          Schema types expose GetXxxAttr and CreateXxxAttr methods that return a Usd.Attribute
+          object. The accessor returns the attribute, not the value, so Get and Set are separate
+          calls. When no schema owns the data, CreateAttribute takes an explicit value type.
+        code: |
+          from pxr import Sdf, Usd, UsdGeom
+
+          sphere = UsdGeom.Sphere.Define(stage, "/World/Sphere")
+
+          # Schema-specific: clear and less brittle.
+          sphere.GetRadiusAttr().Set(2.0)
+          radius = sphere.GetRadiusAttr().Get()
+          sphere.GetDisplayColorAttr().Set([(0.0, 1.0, 0.0)])
+
+          # Generic: for data no schema defines.
+          prim = sphere.GetPrim()
+          name = prim.CreateAttribute("cityName", Sdf.ValueTypeNames.String)
+          name.Set("Primventure")
+
+          prim.GetAttributes()      # every attribute on the prim
+          prim.GetPropertyNames()   # names only
+      - kind: pitfall
+        heading: Where contestants lose the room
+        system: >-
+          Type mismatches are my favorite failure. They fail loudly and take dignity with them.
+        body: |
+          The value you pass must match the declared type. A Color3fArray expects a list of
+          triples, not a single triple, and a String attribute will not quietly accept a float.
+        points:
+          - "GetRadiusAttr() returns the attribute object. Forgetting .Get() hands you a Usd.Attribute, not a number."
+          - "displayColor is an array-valued primvar. Set [(0, 1, 0)], not (0, 1, 0)."
+          - "Passing a time code to Set authors a time sample instead of the default value."
+      - kind: recap
+        heading: What you now owe the city
+        body: |
+          Attributes store typed data on prims, resolve from authored opinions or schema
+          fallbacks, and can vary over time. Schema accessors are the preferred interface;
+          CreateAttribute with an explicit Sdf value type covers everything else.
+    apply:
+      f0_nameplate: >-
+        Author cityName as a string set to Primventure, then set the documentation metadata the
+        Registrar demands. A city that cannot state its own name does not persist.
+      f1_lamp_post: >-
+        Define the SphereLight, then use its schema-provided intensity input and set it to 750.
+        The alley has been dark since the last contestant, who is also still in there.
+
+  - source: docs/stage-setting/stage.md
+    title: Stages
+    objective: Explain what a stage is, how it composes layers, and how to create, open, and save one.
+    intro: >-
+      A stage is the composed scene. Not a file. I stress this because every season someone
+      tells the audience that a stage is a file, and then I have to be unkind on camera, and the
+      sponsors send letters.
+    beats:
+      - kind: concept
+        heading: A stage presents the composed scenegraph
+        system: >-
+          The stage is the truth. The files are just the arguing.
+        body: |
+          A stage presents the scenegraph, the hierarchy of prims that makes up the scene. It is
+          the composed result of one or more layers, and layers need not be file-backed.
+
+          A stage might be a single USD file describing a robot, or a file that pulls in many
+          more files describing a factory full of robots. Each contributing asset can also be
+          opened independently as its own stage.
+        points:
+          - "Composition is the algorithm that decides how layers combine into that one scenegraph."
+          - "Stages enable non-destructive editing, so elements change without altering the original files."
+          - "Stages scale through mechanisms like payloads, which defer heavy content."
+      - kind: concept
+        heading: Every stage has a root layer
+        system: >-
+          The root layer is where your edits land when you have not told me otherwise. You will
+          later learn to tell me otherwise. That lesson has a boss.
+        body: |
+          The root layer is the first layer the stage opens and the anchor of the layer stack.
+          When you create a stage with CreateNew, the file you pass becomes the root layer, and
+          edits are written there unless another edit target is set.
+
+          Most authored data can live in other layers depending on composition. The root layer's
+          subLayerPaths list is one way to bring those layers in, and sublayers may use different
+          USD file formats.
+        points:
+          - "stage.GetRootLayer() returns the Sdf.Layer object backing the stage."
+          - "stage.Save() writes every edited layer contributing to the stage, not just the root."
+          - "Usd.Stage.CreateInMemory() builds a stage with no file until you call Export."
+      - kind: concept
+        heading: Stage metadata is the contract consumers read first
+        system: >-
+          Two pieces of metadata prevent roughly eighty percent of the screaming I hear on this
+          floor. I have measured. I keep charts. Nobody asks to see them.
+        body: |
+          Stage-level metadata declares scene-wide conventions. The default prim names the primary
+          root prim, which lets an external reference target the layer without naming a prim path.
+          The up axis declares which axis is vertical so downstream tools do not tip your city onto
+          its side.
+        code: |
+          from pxr import Usd, UsdGeom
+
+          stage = Usd.Stage.CreateNew("city.usda")
+          city = stage.DefinePrim("/City", "Xform")
+
+          stage.SetDefaultPrim(city)
+          UsdGeom.SetStageUpAxis(stage, UsdGeom.Tokens.y)
+
+          stage.GetDefaultPrim().GetPath()   # Sdf.Path('/City')
+          UsdGeom.GetStageUpAxis(stage)      # 'Y'
+
+          stage.GetRootLayer().Save()
+      - kind: api
+        heading: Creating, opening, and saving
+        body: |
+          Three calls cover the lifecycle. CreateNew fails if the file already exists, Open loads
+          an existing layer as a stage, and Save writes edits back to disk.
+        code: |
+          from pxr import Usd
+
+          stage = Usd.Stage.CreateNew("city.usda")   # new stage, new root layer
+          stage = Usd.Stage.Open("city.usda")        # existing file as a stage
+          stage.Save()                               # write all edited layers
+
+          print(stage.ExportToString(addSourceFileComment=False))
+      - kind: pitfall
+        heading: Where contestants lose the room
+        system: >-
+          SetDefaultPrim takes a prim. Not a path. Not a string. Not a hopeful gesture at the
+          screen.
+        body: |
+          Default prim and up axis are stage metadata, so they are authored on the stage, not on
+          a prim's attributes. A default prim must also be a root-level prim.
+        points:
+          - "stage.SetDefaultPrim(prim) expects a Usd.Prim object, not a path string."
+          - "UsdGeom.SetStageUpAxis is a UsdGeom free function, not a stage method."
+          - "CreateNew raises if the file exists. Use Open when the room already made the stage for you."
+      - kind: recap
+        heading: What you now owe the city
+        body: |
+          A stage is the composed scenegraph assembled from layers, anchored by a root layer, and
+          described by stage metadata. Default prim and up axis are the two contracts every
+          consumer of your asset reads before anything else.
+    apply:
+      f0_gatekeeper: >-
+        Make /City the default prim and set the stage up axis to Y. The Gatekeeper accepts exactly
+        one clear entrance and has never once accepted an explanation.
+
+  - source: docs/stage-setting/metadata.md
+    title: Metadata
+    objective: Use metadata to attach non-animatable information to prims, properties, layers, and stages.
+    intro: >-
+      Metadata is how the scene describes itself rather than its shape. Author, notes, project
+      data, rendering hints. It is the paperwork of the Composition, and I say that with real
+      affection, because paperwork is what convicted the last three bosses.
+    beats:
+      - kind: concept
+        heading: Metadata is non-animatable name-value data
+        system: >-
+          A dictionary that will not move over time. Restful. Unlike this building.
+        body: |
+          Metadata is a set of name-value pairs attached to prims, properties, or layers. It lets
+          you annotate scene description without modifying the underlying schema or data model.
+
+          Typical uses include author information, creation and modification dates,
+          project-specific data, annotations, and rendering hints. Metadata can be set at
+          different levels of the hierarchy, supporting both global and localized information.
+        points:
+          - Metadata is stored separately from the primary data and is accessed and modified independently.
+          - Because it cannot be time sampled, metadata evaluates and stores more efficiently than attribute values.
+          - Composition still applies, so a stronger layer's metadata opinion wins.
+      - kind: concept
+        heading: Metadata versus attributes
+        system: >-
+          Contestants confuse these constantly, then act surprised when the animation department
+          arrives with questions and torches.
+        body: |
+          Both store extra data, but they answer different questions. Attributes are part of the
+          schema definition and describe the object's properties or behavior. Metadata sits
+          outside the schema and carries supplementary information about the object.
+
+          The decisive difference is time. Attributes can be animated with time samples. Metadata
+          cannot be sampled over time at all.
+        points:
+          - "Use an attribute when the value describes the thing and might animate."
+          - "Use metadata when the value describes the record and never animates."
+          - "assetInfo holds asset-related data; customData holds everything else."
+      - kind: api
+        heading: Reading and writing metadata
+        system: >-
+          Note the dict-key variants. They exist because someone profiled this and was horrified.
+        body: |
+          Usd.Object exposes generic GetMetadata and SetMetadata, and the stage has its own
+          equivalents. Well-known keys such as documentation, kind, and displayName also have
+          convenience accessors. When you need one entry inside a dictionary-valued key, the
+          ByDictKey variants avoid fetching the whole dictionary.
+        code: |
+          from pxr import Kind, Usd
+
+          prim = stage.GetPrimAtPath("/City/PropertyWard")
+
+          prim.SetMetadata("kind", "group")
+          prim.SetDocumentation("Civic property district.")
+          prim.SetMetadata("documentation", "Civic property district.")
+
+          prim.SetCustomDataByKey("sourceFormat", "OBJ")
+          prim.GetMetadataByDictKey("customData", "sourceFormat")
+
+          Usd.ModelAPI(prim).SetKind(Kind.Tokens.group)
+          stage.SetMetadata("comment", "Composed by contestant USD-01.")
+      - kind: pitfall
+        heading: Where contestants lose the room
+        system: >-
+          "customData" is not a spelling suggestion. It is the key. Type it exactly.
+        body: |
+          Metadata keys are fixed unless a schema introduces new ones, so a typo becomes an error
+          rather than a new field. Dictionary-valued keys also replace wholesale if you set the
+          whole dictionary instead of one entry.
+        points:
+          - "Setting customData with a full dictionary discards entries you did not include."
+          - "documentation is a well-known key. Arbitrary top-level keys need a schema."
+          - "kind participates in model hierarchy rules, so it is not a free-form label."
+      - kind: recap
+        heading: What you now owe the city
+        body: |
+          Metadata annotates scene description outside the schema, never animates, and is the
+          right home for provenance, documentation, kind, and pipeline data. Attributes remain
+          the home for values that describe or animate the object itself.
+    apply:
+      f1_civic_record: >-
+        Restore kind and documentation metadata on /City/PropertyWard. The Registrar erased the
+        ledger, and unlike the Registrar, I keep receipts.
+
+  - source: docs/stage-setting/timecodes-timesamples.md
+    title: Timecodes and Time Samples
+    objective: Author animated attribute values and configure the stage timeline that gives them meaning.
+    intro: >-
+      Time. The floor's least favorite subject, and the reason Clockwork Crossing keeps arriving
+      before it departs. A time sample is a value at a moment. A time code is the moment. Confuse
+      them and the crossing loops forever, which the audience does enjoy.
+    beats:
+      - kind: concept
+        heading: Time samples are values at specific time codes
+        system: >-
+          One attribute, many moments, no duplication. This is the part where USD is quietly
+          excellent and nobody applauds.
+        body: |
+          An attribute can hold a default value and a set of time samples. A time sample pairs a
+          time code with a value, so a single attribute describes an animated quantity without
+          duplicating the prim.
+
+          Time codes are unitless numbers. The stage's timeCodesPerSecond metadata maps them onto
+          real time, which is what lets a scene authored in frames play back correctly.
+        points:
+          - "A default value is used when no time samples apply; time samples win when they exist."
+          - "Values between samples are interpolated, with linear interpolation as the default."
+          - "attr.GetTimeSamples() returns the authored sample times."
+      - kind: concept
+        heading: The stage timeline declares the playback range
+        system: >-
+          Without a range, your animation exists but nothing agrees on when to watch it. Like my
+          contract.
+        body: |
+          Start and end time codes are stage metadata describing the intended playback range.
+          They do not clamp authoring; you can author samples outside the range. They tell
+          consumers which span of time the scene is about.
+        code: |
+          from pxr import Usd, UsdGeom
+
+          stage = Usd.Stage.Open(STAGE_PATH)
+          stage.SetStartTimeCode(1)
+          stage.SetEndTimeCode(48)
+
+          clock = UsdGeom.Xform.Define(stage, "/City/PropertyWard/Clock")
+          translate = clock.AddTranslateOp()
+
+          translate.Set((0.0, 0.0, 0.0), 1)    # sample at time code 1
+          translate.Set((0.0, 4.0, 0.0), 48)   # sample at time code 48
+
+          stage.GetRootLayer().Save()
+      - kind: api
+        heading: Authoring and querying samples
+        system: >-
+          The second argument to Set is the entire difference between animation and a very
+          confident still image.
+        body: |
+          Passing a time code to Set authors a sample; omitting it authors the default value. Get
+          takes the same optional time code and resolves the value at that moment.
+        code: |
+          attr.Set(value)             # default value
+          attr.Set(value, timeCode)   # time sample
+
+          attr.Get()                  # resolved default
+          attr.Get(timeCode)          # resolved value at that time
+
+          attr.GetTimeSamples()       # [1.0, 48.0]
+          attr.ValueMightBeTimeVarying()
+      - kind: pitfall
+        heading: Where contestants lose the room
+        system: >-
+          Authoring one sample and calling it animation is a bold artistic statement. It is not a
+          cleared room.
+        body: |
+          Transform animation runs through xform ops, so the op must exist before you can sample
+          it. Adding a translate op twice stacks two ops rather than replacing one.
+        points:
+          - "Set(value) and Set(value, time) author different things. Mixing them up leaves a static default."
+          - "Metadata cannot be time sampled, so animated data belongs on attributes."
+          - "AddTranslateOp on a prim that already has one appends another op to xformOpOrder."
+      - kind: recap
+        heading: What you now owe the city
+        body: |
+          Time samples attach values to time codes on a single attribute, the stage's start and
+          end time codes declare the playback range, and interpolation fills the gaps between
+          authored moments.
+    apply:
+      f1_clockwork_crossing: >-
+        Bind the city clock from 1 to 48 and author translate samples at both endpoints. The
+        crossing has been looping outside time and the commuters have opinions.
+
+  - source: docs/stage-setting/properties/relationships.md
+    title: Relationships
+    objective: Author relationships that target other prims and properties without copying their data.
+    intro: >-
+      An attribute holds a value. A relationship holds a pointer to somewhere else in the
+      scenegraph. Reconnect Relationship Bridge is one room away and it currently leads nowhere,
+      which the residents describe as "structurally honest."
+    beats:
+      - kind: concept
+        heading: Relationships target paths, not values
+        system: >-
+          It points. That is the whole personality. Some of us are typecast.
+        body: |
+          A relationship is the second kind of property. Instead of holding typed data, it stores
+          one or more scene paths targeting other prims or properties.
+
+          This keeps the target independent. Material binding, light linking, and collection
+          membership all use relationships so the referenced object stays a single authored
+          entity rather than a copy.
+        points:
+          - "Targets are Sdf.Path values, and a relationship may hold zero, one, or many."
+          - "Relationships compose like other properties, so stronger layers can change targets."
+          - "A relationship can target a property, not just a prim."
+      - kind: api
+        heading: Creating and reading targets
+        system: >-
+          SetTargets replaces. AddTarget appends. Choose wrong and the bridge points at three
+          districts simultaneously, which is how the fourth floor started.
+        body: |
+          CreateRelationship authors the relationship on a prim, and SetTargets assigns its
+          targets. GetTargets returns the authored target paths.
+        code: |
+          from pxr import Usd
+
+          bridge = stage.DefinePrim("/City/BlueprintBorough/Bridge", "Xform")
+
+          destination = bridge.CreateRelationship("destination")
+          destination.SetTargets(["/City/BlueprintBorough/Stall"])
+
+          destination.GetTargets()      # [Sdf.Path('/City/BlueprintBorough/Stall')]
+          destination.AddTarget("/City/BlueprintBorough/Stall2")
+
+          bridge.GetRelationships()     # every relationship on the prim
+      - kind: pitfall
+        heading: Where contestants lose the room
+        system: >-
+          A relationship to a prim that does not exist is not an error. It is a promise. USD keeps
+          promises badly.
+        body: |
+          Target paths are not validated at authoring time, so a typo produces a relationship that
+          simply resolves to nothing. Relationships also live alongside attributes in the property
+          namespace, so GetProperties returns both kinds.
+        points:
+          - "SetTargets replaces the entire target list, discarding anything previously authored."
+          - "Dangling targets fail silently. Verify with GetTargets and a prim existence check."
+          - "Use a relationship to link objects, and an attribute when you actually need a value."
+      - kind: recap
+        heading: What you now owe the city
+        body: |
+          Relationships are properties that hold scene paths, letting one prim point at others
+          without duplicating them. They are how USD expresses connection instead of copying.
+    apply:
+      f2_relationship_bridge: >-
+        Create the destination relationship on Bridge and target the Stall. A bridge that knows no
+        destination is technically just an expensive opinion about air.
+
+  - source: docs/stage-setting/usd-file-formats.md
+    title: USD File Formats
+    objective: Choose between USD's file formats and author scene description directly in USDA text.
+    intro: >-
+      The Warden of this room does not accept Python. It accepts text. Specifically it accepts
+      USDA, the human-readable format, which means for one glorious room you will see exactly
+      what the file says instead of guessing what your script did.
+    beats:
+      - kind: concept
+        heading: Four extensions, two real formats
+        system: >-
+          Yes, .usd could be either one. Yes, that is deliberate. No, I did not design it, though
+          I would have.
+        body: |
+          USDA is the human-readable ASCII format, readable and diffable in any text editor. USDC
+          is the binary crate format, compact and fast to load for large data.
+
+          The .usd extension can hold either encoding, which lets a pipeline swap between text and
+          binary without changing references. USDZ is an uncompressed, zero-padded archive that
+          packages a stage with its assets for read-only delivery.
+        points:
+          - "Use USDA for small, hand-edited, review-friendly layers."
+          - "Use USDC for heavy geometry and anything performance sensitive."
+          - "Because references name the file, switching encodings behind a .usd extension is transparent."
+      - kind: concept
+        heading: Reading USDA scene description
+        system: >-
+          Every Python call you have made so far has been typing this file with extra steps and
+          more self-esteem.
+        body: |
+          A USDA file opens with the #usda 1.0 header, followed by an optional metadata block in
+          parentheses, then prim declarations. Each prim declaration is a specifier, a type name,
+          a quoted name, and a brace block containing properties and children.
+
+          Properties are declared with their type, then name, then value. The uniform qualifier
+          marks a property that cannot vary over time.
+        code: |
+          #usda 1.0
+          (
+              defaultPrim = "City"
+              upAxis = "Y"
+          )
+
+          def Xform "City" {
+              string cityName = "Primventure"
+
+              def Scope "WardenVault" {
+                  uniform token purpose = "guide"
+              }
+          }
+      - kind: api
+        heading: Moving between formats
+        system: >-
+          Export converts. It does not flatten composition unless you ask. People assume otherwise
+          and then file complaints with a department I invented.
+        body: |
+          The stage and layer APIs convert between encodings by exporting to a path with a
+          different extension. Export writes the layer's own content in the target format.
+        code: |
+          from pxr import Sdf, Usd
+
+          stage = Usd.Stage.Open("city.usda")
+          stage.Export("city.usdc")          # text to binary
+
+          layer = Sdf.Layer.FindOrOpen("city.usdc")
+          layer.Export("review.usda")        # binary to text
+
+          print(stage.ExportToString(addSourceFileComment=False))
+      - kind: pitfall
+        heading: Where contestants lose the room
+        system: >-
+          The header is not decorative. Omit it and the file becomes a very confident text
+          document about nothing.
+        body: |
+          USDA is whitespace-tolerant but syntax-strict. The declaration order is specifier, type,
+          then quoted name, and stage metadata belongs in the parenthesized block at the top.
+        points:
+          - "Every USDA file must start with the #usda 1.0 header line."
+          - "Prim names are quoted; type names are not."
+          - "Stage metadata such as defaultPrim goes in the top parentheses, not inside a prim block."
+      - kind: recap
+        heading: What you now owe the city
+        body: |
+          USDA is text, USDC is binary, .usd is either, and USDZ packages a stage for delivery.
+          Reading USDA fluently is how you verify what your authoring code actually wrote.
+    apply:
+      f2_schema_warden: >-
+        Author it by hand. Define WardenVault as a Scope with purpose set to guide. The Warden
+        rejects vague forms, imprecise types, and, historically, contestants.

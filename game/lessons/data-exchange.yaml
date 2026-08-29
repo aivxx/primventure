@@ -1,0 +1,784 @@
+lessons:
+  - source: docs/data-exchange/data-exchange/what-is-data-exchange.md
+    title: Data Exchange
+    objective: Distinguish data exchange implementations and preserve source provenance while translating foreign data into OpenUSD.
+    intro: >-
+      Welcome to the Exchange Terminal, where every crate is foreign, every manifest is incomplete,
+      and customs has misplaced the definition of "complete." Data exchange gets data into and out
+      of OpenUSD without pretending incompatible formats are secretly identical. I will be checking
+      the paperwork.
+    beats:
+      - kind: concept
+        heading: Exchange maps data models, not just files
+        system: >-
+          Renaming a crate does not change its contents. Customs learned this after the glTF incident
+          and the resulting sponsor inquiry.
+        body: |
+          Data exchange asks how data enters OpenUSD, how it leaves OpenUSD, and how concepts in one
+          representation map to concepts in another. OpenUSD supplies schemas for common scene
+          entities such as meshes, materials, lights, and cameras, and extensible schemas can cover
+          domains such as physics, robotics, and synthetic data.
+
+          Translation is usually lossy because formats do not share identical data models,
+          structures, or fidelity. A faithful implementation documents unsupported concepts and
+          chooses mappings based on the needs of its consumers rather than assuming one output
+          structure serves every pipeline.
+        points:
+          - An importer translates OpenUSD into an application's runtime representation.
+          - An exporter translates an application's runtime representation into OpenUSD.
+          - A standalone converter is a script, executable, or service that translates files in one or both directions.
+          - Good mapping preserves meaning and structure where possible, not merely recognizable geometry.
+      - kind: concept
+        heading: File format plugins compose foreign sources
+        system: >-
+          A plugin lets the foreign crate enter the layer stack without changing uniforms. Elegant,
+          powerful, and unavailable in this particular customs hall.
+        body: |
+          An OpenUSD file format plugin presents another file format or non-file source as an
+          Sdf.Layer. A stage can then include that source through a reference, payload, or sublayer,
+          and the plugin translates it as USD data is read. The foreign source can remain the source
+          of truth, plugins may support reading and writing, and tools such as usdcat can use them as
+          converters.
+
+          This floor's usd-core build has no OBJ file format plugin. An OBJ file therefore cannot be
+          passed to Usd.Stage.Open. The intake implementation must parse OBJ text itself and author
+          equivalent USD schema data on a new stage.
+        points:
+          - Runtime formats often favor application importers and exporters.
+          - File-backed or procedural sources may be candidates for file format plugins.
+          - Plugin availability is build-dependent and must not be assumed.
+      - kind: concept
+        heading: Extract first, transform second
+        system: >-
+          First record what arrived. Then make it presentable. Reversing those steps is how the
+          terminal acquired a chandelier classified as agricultural equipment.
+        body: |
+          Two-phase exchange separates fidelity from downstream customization. Extraction maps the
+          source into OpenUSD as directly as possible, retaining source structure and intent.
+          Transformation applies optional export settings, restructures content, prunes data, or
+          optimizes it for a client.
+
+          This separation makes extraction easier to inspect and transformations easier to reuse.
+          It also reduces the risk that workflow-specific choices are mistaken for facts from the
+          source.
+        points:
+          - Extraction should preserve source fidelity and legibility.
+          - Transformation may apply user options, structural changes, and performance optimizations.
+          - Round trips are easier to reason about when transformations are minimized and documented.
+      - kind: api
+        heading: Stamp provenance on the USD result
+        system: >-
+          The filename can change. Authored provenance travels with the asset, which is more than I
+          can say for half this season's contestants.
+        body: |
+          Provenance records what the USD data came from and how intake treated it. customData is a
+          dictionary-valued metadata field suited to pipeline-specific values; documentation is
+          well-known metadata suited to a human-readable note. SetCustomDataByKey changes one entry
+          without replacing unrelated customData.
+        code: |
+          from pxr import Usd, UsdGeom
+
+          stage = Usd.Stage.CreateNew("imported_kiosk.usda")
+          prim = UsdGeom.Xform.Define(
+              stage, "/City/ExchangeTerminal/ImportedKiosk"
+          ).GetPrim()
+
+          prim.SetCustomDataByKey("sourceFormat", "OBJ")
+          prim.SetDocumentation("Normalized at intake.")
+
+          assert prim.GetCustomDataByKey("sourceFormat") == "OBJ"
+          stage.GetRootLayer().Save()
+      - kind: pitfall
+        heading: Where customs rejects the crate
+        system: >-
+          "Universal" does not mean "telepathic." OpenUSD still requires you to explain what the
+          foreign numbers mean.
+        body: |
+          A successful parse is not a successful exchange. The result must preserve relevant
+          meaning, declare assumptions, and remain useful to its intended consumers.
+        points:
+          - Do not call Usd.Stage.Open on OBJ when no OBJ file format plugin is installed.
+          - Do not treat a filename extension as durable provenance; author metadata on the asset interface.
+          - SetCustomData replaces the complete dictionary, while SetCustomDataByKey preserves sibling entries.
+          - Do not bury client-specific restructuring in extraction when it belongs in a transformation.
+      - kind: recap
+        heading: What cleared customs
+        body: |
+          Data exchange maps source concepts into or out of OpenUSD through application I/O,
+          converters, or file format plugins. A robust pipeline extracts faithfully, transforms
+          deliberately, and records provenance so downstream users know what entered the stage and
+          which assumptions accompanied it.
+    apply:
+      f8_import_depot: >-
+        Stamp ImportedKiosk with sourceFormat OBJ and the exact intake documentation. The Depot
+        accepts metadata, not your solemn assurance that the crate looked foreign.
+
+  - source: docs/data-exchange/data-extraction/exercise-extracting-geometry.md
+    title: Extracting a Mesh
+    objective: Parse foreign geometry and author its vertices, topology, normals, and polygonal subdivision behavior as a UsdGeom.Mesh.
+    intro: >-
+      The dock has delivered OBJ text and no plugin to interpret it. You will read the manifest
+      yourself, extract the geometry, and author a mesh with the sort of precision customs normally
+      reserves for confiscation notices. The vertices have already retained counsel.
+    beats:
+      - kind: concept
+        heading: Extraction preserves the source representation
+        system: >-
+          We are translating evidence, not improving it. Improvements happen later, under brighter
+          lights and with more waivers.
+        body: |
+          Geometry extraction reads the source representation and writes the closest corresponding
+          OpenUSD schema data. For OBJ, vertex records begin with "v", object names begin with "o",
+          and face records identify vertex indices. In this environment those records are parsed as
+          text because usd-core has no OBJ file format plugin.
+
+          OBJ commonly stores vertices globally, while each UsdGeom.Mesh owns its own points array.
+          An extractor must select or remap the vertices belonging to each object before authoring
+          the mesh.
+        points:
+          - Preserve source ordering unless an explicit remapping updates every dependent index.
+          - Sanitize foreign object names before using them as prim identifiers.
+          - Extraction should not silently add workflow-specific hierarchy or optimization.
+      - kind: concept
+        heading: Mesh topology uses two ordered arrays
+        system: >-
+          Faces arrive in groups. USD asks for one queue and a list explaining where each group
+          ends. The terminal calls this efficiency and employs six clerks to oversee it.
+        body: |
+          OBJ groups vertex indices per face. UsdGeom.Mesh stores all face indices in one flattened
+          faceVertexIndices array and stores the number of indices belonging to each face in the
+          parallel faceVertexCounts array.
+
+          Counts are consumed in order. For two triangles, faceVertexCounts is [3, 3] and the first
+          three flattened indices form the first face. The sum of all counts must equal the length
+          of faceVertexIndices.
+        points:
+          - points stores per-mesh vertex positions.
+          - faceVertexIndices stores zero-based indices into points in face order.
+          - faceVertexCounts stores one vertex count per face in the same order.
+      - kind: api
+        heading: Parse vertices and define the mesh
+        system: >-
+          Eight vertices enter. One typed prim leaves. This is the cleanest transaction the
+          Exchange Terminal has processed in years.
+        body: |
+          Read foreign text with normal Python I/O, convert numeric values to Gf.Vec3f objects, then
+          define a UsdGeom.Mesh and author its schema attributes. CreatePointsAttr accepts a default
+          value directly; calling Set on the returned Usd.Attribute is equivalent for a default
+          value.
+        code: |
+          from pathlib import Path
+          from pxr import Gf, Usd, UsdGeom
+
+          stage = Usd.Stage.CreateNew("cube.usda")
+          world = UsdGeom.Xform.Define(stage, "/World")
+          stage.SetDefaultPrim(world.GetPrim())
+
+          points = []
+          for line in Path("shapes.obj").read_text().splitlines():
+              if line.startswith("v "):
+                  _, x, y, z = line.split()[:4]
+                  points.append(Gf.Vec3f(float(x), float(y), float(z)))
+              if line.startswith("o ") and points:
+                  break
+
+          mesh = UsdGeom.Mesh.Define(stage, "/World/Cube")
+          mesh.CreatePointsAttr(points[:8])
+          stage.GetRootLayer().Save()
+      - kind: api
+        heading: Author complete polygonal topology
+        system: >-
+          A pile of points is not a mesh. It is cargo arranged with suspicious confidence.
+        body: |
+          Flatten each source face's indices and append its length to faceVertexCounts. OBJ face
+          indices are one-based in text and must be converted to zero-based indices if the parser
+          has not already done so. Set subdivisionScheme to none because OBJ polygon meshes do not
+          carry OpenSubdiv subdivision behavior. Author normals only when the source supplies them
+          so smooth and faceted artistic intent is retained.
+        code: |
+          face_vertex_counts = []
+          face_vertex_indices = []
+          for face in source_faces:
+              zero_based = [index - 1 for index in face]
+              face_vertex_indices.extend(zero_based)
+              face_vertex_counts.append(len(zero_based))
+
+          mesh.CreateFaceVertexCountsAttr().Set(face_vertex_counts)
+          mesh.CreateFaceVertexIndicesAttr().Set(face_vertex_indices)
+          mesh.CreateSubdivisionSchemeAttr(UsdGeom.Tokens.none)
+          if source_normals:
+              mesh.CreateNormalsAttr(source_normals)
+      - kind: pitfall
+        heading: Where extraction drops geometry
+        system: >-
+          Off-by-one topology produces modern sculpture. The validator remains stubbornly
+          provincial about it.
+        body: |
+          Geometry attributes are interdependent. Valid-looking arrays can still describe wrong or
+          unreadable faces when indexing, ownership, or ordering is mishandled.
+        points:
+          - OBJ text indices are one-based; UsdGeom.Mesh indices are zero-based.
+          - Global OBJ vertices may require remapping into each mesh's local points array.
+          - The sum of faceVertexCounts must equal the number of entries in faceVertexIndices.
+          - Omitting subdivisionScheme none may let consumers treat polygonal source geometry as a subdivision surface.
+          - Do not invent normals when the source omits them; preserve the distinction.
+      - kind: recap
+        heading: What left steerage
+        body: |
+          Mesh extraction converts foreign vertex and face records into per-mesh points, flattened
+          face indices, ordered face counts, and optional normals. Explicit polygonal subdivision
+          behavior and faithful index remapping preserve the source geometry in OpenUSD.
+    apply:
+      f8_extract_mesh: >-
+        The starter has already parsed the first OBJ vertices. Define /World/Cube and set its points
+        to cube_points; do not ask usd-core to open a crate it cannot read.
+
+  - source: docs/data-exchange/data-extraction/what-is-data-extraction.md
+    title: Complete Extraction
+    objective: Evaluate whether extracted geometry is faithful, complete, legible, and suitable as a foundation for later transformations.
+    intro: >-
+      The Overseer does not count intentions. It counts authored data, checks the bounds, and files
+      discrepancies in triplicate. A mesh must contain enough information for consumers to
+      understand what was extracted, not merely enough information to earn a promising thumbnail.
+    beats:
+      - kind: concept
+        heading: Extraction is the fidelity baseline
+        system: >-
+          Before customs rearranges the cargo, someone must record how it arrived. Apparently that
+          someone is you, because the cameras are already rolling.
+        body: |
+          The extraction phase maps source data into OpenUSD as directly as possible. Output that
+          resembles the source is more legible, easier to debug, easier to round-trip, and provides
+          a common foundation for every later transformation.
+
+          Extracted USD is often transient and may remain in memory while only transformed output
+          is saved. Exposing or optionally persisting that raw stage lets third parties add their
+          own transformations without reverse engineering earlier decisions.
+        points:
+          - Faithful extraction separates source facts from destination-specific choices.
+          - Transient extracted data may be discarded, cached, or exposed for extension and debugging.
+          - Transformation should consume this baseline rather than reparsing the source independently.
+      - kind: concept
+        heading: Complete geometry has positions, bounds, and topology
+        system: >-
+          Points say where the cargo is. Extent says how much warehouse it occupies. Topology
+          explains why eight loose corners were billed as a cube.
+        body: |
+          A UsdGeom.Mesh needs points to define vertex positions. Faces additionally require
+          faceVertexIndices and faceVertexCounts, whose order reconstructs polygon boundaries.
+          extent stores the local-space, axis-aligned bounding box as exactly two vectors: minimum
+          and maximum.
+
+          Extent can accelerate bounds queries because consumers need not scan every point. It must
+          enclose the authored geometry and must be updated when the default or time-sampled points
+          change.
+        points:
+          - points alone can satisfy a vertex extraction task but do not define polygon faces.
+          - extent is ordered [minimum, maximum], with one coordinate triple in each entry.
+          - faceVertexIndices indexes into points; faceVertexCounts partitions that flattened array by face.
+          - Normals, primvars, materials, and subdivision behavior may also be required for source fidelity.
+      - kind: concept
+        heading: Conceptual mapping documents the contract
+        system: >-
+          If a source concept has nowhere to go, write that down before someone stores it in a
+          filename and calls the case closed.
+        body: |
+          Conceptual data mapping identifies corresponding data models and exposes schema gaps.
+          The mapping document acts as the extraction specification, records unsupported features,
+          and gives stakeholders and third-party developers a shared statement of expected output.
+
+          OpenUSD has no native struct value type. Compound source records can be represented with
+          namespace-prefixed custom attributes when no schema models them directly. The mapping
+          should be revised as the source format, OpenUSD schemas, or implementation changes.
+        points:
+          - Easy syntactic conversion does not guarantee equivalent semantics.
+          - Schema gaps should be documented and may motivate new schemas.
+          - Namespaced attributes conventionally group related custom properties.
+      - kind: api
+        heading: Author points and a trustworthy extent
+        system: >-
+          The Overseer accepts eight corners and two bounds. A ninth corner triggers an audit and,
+          for reasons nobody will explain, confetti.
+        body: |
+          Schema accessors enforce the expected OpenUSD value types. For known points, author
+          Gf.Vec3f values and either set the expected extent directly or compute it from the points
+          with UsdGeom.PointBased.ComputeExtent.
+        code: |
+          from pxr import Gf, Usd, UsdGeom
+
+          stage = Usd.Stage.CreateNew("extracted.usda")
+          mesh = UsdGeom.Mesh.Define(stage, "/World/Cube")
+          points = [
+              Gf.Vec3f(1, 1, 1), Gf.Vec3f(1, 1, -1),
+              Gf.Vec3f(1, -1, 1), Gf.Vec3f(1, -1, -1),
+              Gf.Vec3f(-1, 1, 1), Gf.Vec3f(-1, 1, -1),
+              Gf.Vec3f(-1, -1, 1), Gf.Vec3f(-1, -1, -1),
+          ]
+          mesh.GetPointsAttr().Set(points)
+          mesh.GetExtentAttr().Set([
+              Gf.Vec3f(-1, -1, -1),
+              Gf.Vec3f(1, 1, 1),
+          ])
+          stage.GetRootLayer().Save()
+      - kind: pitfall
+        heading: Where completeness becomes fiction
+        system: >-
+          An incorrect extent is worse than no manifest. It sends the renderer searching the wrong
+          warehouse while the asset remains exactly where you left it.
+        body: |
+          Completeness is measured against the source and the extraction contract. Authoring an
+          attribute name is insufficient when its value is stale, partial, or semantically wrong.
+        points:
+          - Extent is local-space and does not include ancestor transforms.
+          - A stale extent can cause incorrect culling and bounds even when points are correct.
+          - Topology arrays must remain consistent with points and with one another.
+          - Do not discard useful transient data before downstream transformations have consumed it.
+      - kind: recap
+        heading: What the Overseer counted
+        body: |
+          Extraction is a faithful, inspectable baseline for transformation. Complete mesh data
+          includes the positions, bounds, and topology required by its contract, while conceptual
+          mapping records assumptions, unsupported concepts, and schema gaps.
+    apply:
+      f8_extract_overseer: >-
+        Author the eight unit-cube corners and the matching extent from (-1, -1, -1) to
+        (1, 1, 1). The Overseer has already sharpened the discrepancy pencil.
+
+  - source: docs/data-exchange/data-transformation/transformation-hierarchy.md
+    title: Hierarchy and Axes
+    objective: Restructure extracted prims under a referenceable root and normalize stage and local transform conventions.
+    intro: >-
+      The Axis Switchyard has received a flat shipment, a Z-up declaration, and absolutely no
+      shared ancestor. This is considered three separate emergencies for billing purposes. You will
+      give the asset a usable hierarchy and point vertical toward the ceiling we currently insure.
+    beats:
+      - kind: concept
+        heading: Faithful extraction may be awkward to consume
+        system: >-
+          OBJ offers a flat list. The Composition prefers a family tree. Neither has volunteered to
+          compromise.
+        body: |
+          A direct OBJ extraction can produce several root prims because OBJ has no OpenUSD-style
+          scenegraph root. Without a common ancestor, no single prim represents the complete asset.
+          Without defaultPrim metadata, a reference must also name a target prim explicitly.
+
+          A mandatory transformation can define a root Xform, reparent extracted prims beneath it,
+          and set it as the default prim. The result remains recognizable but becomes easy to
+          reference as one asset.
+        points:
+          - The stage pseudo-root is not an authored prim and cannot be used as defaultPrim.
+          - A default prim must be a root prim.
+          - Reparenting changes prim paths, so path-based relationships and pipeline records require care.
+      - kind: api
+        heading: Reparent root prims with NamespaceEditor
+        system: >-
+          Move the cargo under /World, then stamp /World as the entrance. Even customs can
+          understand one front door on a favorable day.
+        body: |
+          Capture the existing pseudo-root children before defining /World so the new root is not
+          included in the move list. Usd.NamespaceEditor queues namespace edits; ApplyEdits applies
+          the pending edit. SetDefaultPrim takes the root Usd.Prim, not its path.
+        code: |
+          from pxr import Usd, UsdGeom
+
+          stage = Usd.Stage.Open("extracted.usda")
+          root_prims = list(stage.GetPseudoRoot().GetChildren())
+          world = UsdGeom.Xform.Define(stage, "/World").GetPrim()
+          stage.SetDefaultPrim(world)
+
+          editor = Usd.NamespaceEditor(stage)
+          for prim in root_prims:
+              editor.ReparentPrim(prim, world)
+              if not editor.ApplyEdits():
+                  raise RuntimeError(f"Could not reparent {prim.GetPath()}")
+
+          stage.GetRootLayer().Save()
+      - kind: concept
+        heading: Up axis is a stage-wide convention
+        system: >-
+          Vertical is not subjective in this room. Legal settled that after Floor Four rotated
+          ninety degrees and claimed artistic intent.
+        body: |
+          upAxis metadata declares which stage axis consumers should treat as vertical. OpenUSD
+          permits Y or Z. Changing the token declares a convention; it does not rotate existing
+          points or transforms.
+
+          A real Z-up to Y-up conversion must transform authored spatial data or introduce an
+          appropriate conversion transform, then declare Y-up. If the geometry is already expressed
+          in the destination coordinates, updating metadata is sufficient.
+        points:
+          - UsdGeom.GetStageUpAxis reads the resolved convention.
+          - UsdGeom.SetStageUpAxis(stage, UsdGeom.Tokens.y) authors Y-up metadata.
+          - Do not relabel Z-up coordinates as Y-up without converting the data they describe.
+      - kind: api
+        heading: Xform ops place the converted asset
+        system: >-
+          The kiosk has cleared orientation and now requires parking. Naturally the parking form is
+          an ordered attribute.
+        body: |
+          UsdGeom.Xformable stores local transformations as ordered xform ops. AddTranslateOp creates
+          xformOp:translate and adds it to xformOpOrder; Set authors the vector value. Ops evaluate
+          in their declared order, so adding the same kind of op repeatedly creates a stack rather
+          than replacing the existing operation.
+        code: |
+          from pxr import Gf, Usd, UsdGeom
+
+          stage = Usd.Stage.Open("kiosk.usda")
+          UsdGeom.SetStageUpAxis(stage, UsdGeom.Tokens.y)
+          kiosk = UsdGeom.Xform.Define(
+              stage, "/City/ExchangeTerminal/ImportedKiosk"
+          )
+          kiosk.AddTranslateOp().Set(Gf.Vec3d(10, 0, -4))
+          stage.GetRootLayer().Save()
+      - kind: pitfall
+        heading: Where the switchyard derails
+        system: >-
+          A changed label does not rotate a shipment. It merely makes the accident conform to
+          paperwork.
+        body: |
+          Hierarchy and coordinate conversions affect paths and spatial meaning. Apply them in a
+          deliberate order and validate the composed result.
+        points:
+          - Capture root children before defining the destination root or you may try to parent /World beneath itself.
+          - Check ApplyEdits because namespace edits can fail when composition prevents a safe move.
+          - Changing upAxis metadata alone never rotates geometry.
+          - Calling AddTranslateOp twice creates two translate ops unless distinct suffixes and intended ordering are managed.
+      - kind: recap
+        heading: What reached the right track
+        body: |
+          Transformation can turn faithful but flat extraction into a referenceable asset by
+          reparenting prims beneath a default root. Stage up axis declares a convention, while xform
+          ops or rewritten data perform the actual spatial conversion and placement.
+    apply:
+      f8_axis_switchyard: >-
+        Declare Y-up and add one translate op placing ImportedKiosk at (10, 0, -4). The switchyard
+        accepts converted coordinates, not motivational speeches about vertical.
+
+  - source: docs/data-exchange/data-transformation/what-is-data-transformation.md
+    title: Units and Transformation
+    objective: Design reusable transformation steps that normalize linear units and adapt extracted USD for downstream workflows.
+    intro: >-
+      The Meter Gauge has found a unitless crate wearing an inches label and is preparing to make
+      it everyone's problem. Transformation is where source-faithful data becomes destination-useful
+      data. Declare the units, preserve the convention, and try not to build a hundred-meter lamp.
+    beats:
+      - kind: concept
+        heading: Transformation serves the destination
+        system: >-
+          Extraction records the crate. Transformation decides whether the client wanted the crate,
+          its contents, or a single-file monument to procurement.
+        body: |
+          Transformation applies export options, restructures content, prunes irrelevant data, and
+          performs optimizations such as mesh merging. Unlike source-specific extraction code,
+          transformations operate on OpenUSD data and can be reused across applications and
+          exporters.
+
+          DCC exporters should provide sensible defaults for predominant workflows while exposing a
+          pipeline in which developers can select, reorder, or add transformation steps.
+        points:
+          - Transformation may be in-process, a separate process, a cloud service, or a post-process.
+          - The usual default is a convenient single-file export, though organizations may require established asset structures.
+          - Sparse overrides can express one transformed workstream's contributions without duplicating a complete asset.
+      - kind: concept
+        heading: metersPerUnit declares linear scale
+        system: >-
+          One scene unit can be a meter, centimeter, or regrettable surprise. The metadata exists
+          so downstream tools need not infer scale from the size of a chair.
+        body: |
+          metersPerUnit is stage metadata that states how many meters one scene unit represents.
+          A value of 1.0 means meters, 0.01 means centimeters, and 0.0254 means inches. It is a
+          declaration used by consumers to compare and convert stages.
+
+          Authoring metersPerUnit does not numerically rescale points, extents, translations, or
+          other distances. If source values are inches and destination values must be centimeters,
+          multiply authored linear values by 2.54 and then declare 0.01, or preserve the numeric
+          values and truthfully declare 0.0254.
+        points:
+          - UsdGeom.GetStageMetersPerUnit reads the stage's resolved linear-unit declaration.
+          - UsdGeom.StageHasAuthoredMetersPerUnit distinguishes an authored opinion from fallback behavior.
+          - Up axis and linear units are independent conventions and should both remain correct.
+      - kind: api
+        heading: Author the destination unit contract
+        system: >-
+          Centimeters are 0.01 meters. The Gauge knows this, the audience knows this, and now the
+          form can stop blinking red.
+        body: |
+          UsdGeom provides free functions for geometric stage metadata. The LinearUnits constants
+          are readable numeric values, and an explicit float is also accepted.
+        code: |
+          from pxr import Usd, UsdGeom
+
+          stage = Usd.Stage.CreateNew("centimeter_asset.usda")
+          UsdGeom.SetStageUpAxis(stage, UsdGeom.Tokens.y)
+          UsdGeom.SetStageMetersPerUnit(
+              stage, UsdGeom.LinearUnits.centimeters
+          )
+
+          assert UsdGeom.GetStageUpAxis(stage) == UsdGeom.Tokens.y
+          assert UsdGeom.GetStageMetersPerUnit(stage) == 0.01
+          stage.GetRootLayer().Save()
+      - kind: concept
+        heading: Minimize transformation for round trips
+        system: >-
+          Every clever rewrite is another confession future-you must reverse. Future-you has
+          retained separate counsel.
+        body: |
+          Extensive restructuring, pruning, and optimization can be difficult or impossible to
+          invert during reimport. Round-trip workflows should minimize transformations, preserve
+          provenance and unmapped data where practical, and document any operation that loses
+          information.
+
+          Export options belong in transformation because they reflect user or destination choices,
+          not facts extracted from the source.
+        points:
+          - Pruning can improve client relevance but permanently removes data unless it is preserved elsewhere.
+          - Added data and client-specific overrides can be separate transformation steps.
+          - Stable, reusable steps make behavior consistent across source-format exporters.
+      - kind: pitfall
+        heading: Where the gauge explodes
+        system: >-
+          Declaring centimeters over inch-valued coordinates does not convert them. It only makes
+          the error professionally documented.
+        body: |
+          Unit metadata and numeric conversion must agree. Validate both the declaration and a
+          known physical dimension after transformation.
+        points:
+          - SetStageMetersPerUnit changes metadata only; it does not scale scene data.
+          - Do not modify upAxis while normalizing units unless an axis conversion is also required.
+          - Apply a scale exactly once; scaling values and also compensating with misleading metadata double-converts the asset.
+          - Unauthored units force consumers to rely on fallback assumptions that may differ across workflows.
+      - kind: recap
+        heading: What the Gauge now certifies
+        body: |
+          Transformation adapts extracted USD through reusable options, restructuring, pruning, and
+          optimization. metersPerUnit declares the scale of scene coordinates but never rescales
+          them, so numeric conversion and metadata must describe the same physical asset.
+    apply:
+      f8_unit_gauge: >-
+        Preserve Y-up and declare metersPerUnit as 0.01 for centimeters. The Gauge wants one honest
+        contract and has rejected three crates for rounding theatrically.
+
+  - source: docs/data-exchange/asset-validation/what-is-asset-validation.md
+    title: Asset Validation
+    objective: Encode and check asset contracts that make OpenUSD content structurally compliant and interoperable.
+    intro: >-
+      The Validation Warden does not inspect whether your asset feels correct. It checks contracts,
+      reports failures, and keeps the crate on the dock until every required opinion exists. I find
+      this deeply soothing and the contestants generally do not.
+    beats:
+      - kind: concept
+        heading: Validation checks interoperability contracts
+        system: >-
+          A stage can open successfully and still be unsuitable for exchange. So can a contestant,
+          according to casting.
+        body: |
+          Asset validation complements unit and integration tests by inspecting the USD output
+          itself. A validator checks defined rules so an asset is more likely to be interchangeable,
+          structurally sound, and renderable by Hydra.
+
+          usdchecker is part of the OpenUSD toolset and validates stages and USDZ packages. Omniverse
+          Asset Validator builds on usdchecker with a GUI, CLI, Python API, automatic fixes, and
+          extensible rules.
+        points:
+          - Application tests prove code paths; asset rules prove properties of the authored result.
+          - Validation should run on representative converted assets, not only hand-built fixtures.
+          - A passing parse or stage open does not establish compliance with a pipeline contract.
+      - kind: concept
+        heading: Rules turn assumptions into failures
+        system: >-
+          The Warden prefers explicit rules because "everyone knows" has never survived discovery.
+        body: |
+          A pipeline contract defines the stage and prim properties downstream consumers require.
+          Common usdchecker-style rules inspect default prim, up axis, linear units, model kind,
+          required prims, topology consistency, unresolved dependencies, and packaging constraints.
+
+          Rules should be precise, independently reportable, and tied to a reason. Pipeline-specific
+          rules can be stricter than general OpenUSD validity when a destination workflow requires
+          particular structure or metadata.
+        points:
+          - defaultPrim identifies the asset interface used by references that omit a prim path.
+          - upAxis and metersPerUnit communicate geometric conventions.
+          - kind component identifies a self-contained model in a valid model hierarchy.
+          - Required prim and metadata checks protect workflow guarantees beyond syntax.
+      - kind: api
+        heading: Author and inspect a minimal contract
+        system: >-
+          One root, Y-up, component kind. Three stamps between the crate and freedom. Four if the
+          Warden dislikes your handwriting.
+        body: |
+          Stage metadata is authored through Usd.Stage and UsdGeom APIs. Model kind is authored
+          through Usd.ModelAPI with a Kind token. Validators should reopen the saved output and
+          query composed values, matching what downstream consumers actually see.
+        code: |
+          from pxr import Kind, Usd, UsdGeom
+
+          stage = Usd.Stage.CreateNew("validated_asset.usda")
+          world = UsdGeom.Xform.Define(stage, "/World").GetPrim()
+          stage.SetDefaultPrim(world)
+          UsdGeom.SetStageUpAxis(stage, UsdGeom.Tokens.y)
+          Usd.ModelAPI(world).SetKind(Kind.Tokens.component)
+          stage.GetRootLayer().Save()
+
+          checked = Usd.Stage.Open("validated_asset.usda")
+          assert checked.GetDefaultPrim().GetPath().pathString == "/World"
+          assert UsdGeom.GetStageUpAxis(checked) == UsdGeom.Tokens.y
+          assert Usd.ModelAPI(checked.GetDefaultPrim()).GetKind() == Kind.Tokens.component
+      - kind: concept
+        heading: Validation belongs throughout intake
+        system: >-
+          Validate early enough to blame the correct step. This is not merely engineering advice;
+          it is how the broadcast assigns penalties.
+        body: |
+          Run checks after extraction to catch incorrect source mapping and after transformation to
+          catch broken destination contracts. Failures should identify the responsible rule and the
+          offending path so the implementation can be corrected rather than patched manually.
+
+          Continuous validation prevents regressions as schemas, mappings, and export options
+          evolve. Test assets should cover supported features, edge cases, and known malformed input.
+        points:
+          - Reopen file-backed output before final validation to catch missing saves and serialization differences.
+          - Separate general USD compliance rules from organization-specific policy rules.
+          - Treat automatic fixes as explicit transformation steps when they alter delivered content.
+      - kind: pitfall
+        heading: Where validation becomes theater
+        system: >-
+          Checking only that the file exists is not validation. It is attendance.
+        body: |
+          A narrow happy-path check can pass while the delivered asset violates conventions or loses
+          data. Validation must inspect composed values and meaningful relationships among them.
+        points:
+          - Do not validate only the in-memory stage when the product is a saved file.
+          - SetDefaultPrim expects a root Usd.Prim, not a path string.
+          - Kind is a model-hierarchy contract, not an arbitrary descriptive tag.
+          - A validator should report all actionable failures when possible rather than stopping at the first.
+      - kind: recap
+        heading: What satisfied the Warden
+        body: |
+          Asset validation encodes interoperability and pipeline assumptions as executable rules.
+          usdchecker-style checks supplement code tests by inspecting the delivered stage's composed
+          structure, metadata, model hierarchy, dependencies, and geometry contracts.
+    apply:
+      f8_validate_warden: >-
+        Make /World the default prim, declare Y-up, and set its kind to component. The Warden has
+        three boxes, no discretion, and excellent penmanship.
+
+  - source: docs/data-exchange/asset-validation/exercise-asset-validation-testing.md
+    title: End-to-End Intake
+    objective: Test an OBJ-to-OpenUSD pipeline from explicit extraction through provenance stamping and final contract validation.
+    intro: >-
+      The Customs Engine is the city boss because seven separate clerks became one machine and
+      discovered confidence. It expects a parsed OBJ cube, a compliant asset interface, honest
+      geometric conventions, and provenance that survives delivery. One missing stamp and the
+      terminal closes with you on the import side.
+    beats:
+      - kind: concept
+        heading: Test the delivered stage end to end
+        system: >-
+          Unit tests inspect gears. This room starts the Engine, feeds it a crate, and watches which
+          wall fails first.
+        body: |
+          An end-to-end intake test begins with representative foreign input, executes extraction
+          and transformation, saves the resulting USD, reopens it, and validates the complete
+          contract. This catches interactions that isolated parser or authoring tests cannot.
+
+          In this environment extraction begins by manually parsing OBJ text. There is no OBJ file
+          format plugin, so successful intake must not depend on Usd.Stage.Open understanding OBJ.
+        points:
+          - Use fixed input fixtures so vertex ordering and expected values are deterministic.
+          - Validate the persisted output, not only transient Python objects.
+          - Cover source mapping, authored schemas, destination conventions, and provenance in one test.
+      - kind: concept
+        heading: Separate extraction facts from transformation policy
+        system: >-
+          The Engine has two chambers. The first records what arrived. The second makes it comply.
+          Mixing them voids the maintenance agreement.
+        body: |
+          Extraction authors the source geometry and direct source conventions. Transformation
+          creates the asset interface and applies destination policy such as default prim,
+          centimeters, hierarchy, and model kind.
+
+          Provenance connects the delivered stage to its source and processing assumptions. It
+          belongs on the stable asset interface so references and downstream tools can find it
+          without knowing internal mesh paths.
+        points:
+          - Direct geometry mapping includes points and, when required, topology, normals, materials, and extent.
+          - Destination policy includes default prim, structure, up axis, units, and workflow-specific kind.
+          - customData can carry pipeline-specific provenance without inventing a schema attribute.
+      - kind: api
+        heading: Build the intake result
+        system: >-
+          Eight points, five contract opinions, one saved file. The Engine considers this a light
+          breakfast.
+        body: |
+          Parse the first eight OBJ vertex records into Gf.Vec3f values, create a root asset
+          interface and child mesh, then author the complete destination contract. SetCustomDataByKey
+          preserves any unrelated customData already present on the root.
+        code: |
+          from pathlib import Path
+          from pxr import Gf, Kind, Usd, UsdGeom
+
+          points = []
+          for line in Path("shapes.obj").read_text().splitlines():
+              if line.startswith("v "):
+                  _, x, y, z = line.split()[:4]
+                  points.append(Gf.Vec3f(float(x), float(y), float(z)))
+              if len(points) == 8:
+                  break
+
+          stage = Usd.Stage.CreateNew("intake.usda")
+          world = UsdGeom.Xform.Define(stage, "/World").GetPrim()
+          stage.SetDefaultPrim(world)
+          UsdGeom.SetStageUpAxis(stage, UsdGeom.Tokens.y)
+          UsdGeom.SetStageMetersPerUnit(stage, 0.01)
+          Usd.ModelAPI(world).SetKind(Kind.Tokens.component)
+          world.SetCustomDataByKey("sourceFormat", "OBJ")
+
+          mesh = UsdGeom.Mesh.Define(stage, "/World/Cube")
+          mesh.GetPointsAttr().Set(points)
+          stage.GetRootLayer().Save()
+      - kind: api
+        heading: Reopen and assert the contract
+        system: >-
+          Trust is not a validation strategy. It is, however, the terminal's current approach to
+          elevators.
+        body: |
+          Reopening the stage proves that every required opinion was serialized. Query schema APIs
+          and composed prims exactly as a consumer would, and include diagnostic messages that
+          identify failed paths and values.
+        code: |
+          checked = Usd.Stage.Open("intake.usda")
+          root = checked.GetDefaultPrim()
+          cube = UsdGeom.Mesh(checked.GetPrimAtPath("/World/Cube"))
+
+          assert root.GetPath().pathString == "/World"
+          assert UsdGeom.GetStageUpAxis(checked) == UsdGeom.Tokens.y
+          assert UsdGeom.GetStageMetersPerUnit(checked) == 0.01
+          assert Usd.ModelAPI(root).GetKind() == Kind.Tokens.component
+          assert root.GetCustomDataByKey("sourceFormat") == "OBJ"
+          assert cube and len(cube.GetPointsAttr().Get()) == 8
+      - kind: pitfall
+        heading: Where the Engine finds discrepancies
+        system: >-
+          The machine does not care that five of six checks passed. Neither does the city boss, the
+          sponsor, or the door.
+        body: |
+          End-to-end failures often come from correct individual calls applied to the wrong object,
+          omitted from the saved layer, or paired with inconsistent conventions.
+        points:
+          - Do not put provenance only on a child mesh when the root prim is the stable asset interface.
+          - Do not assume setting metersPerUnit scales the parsed OBJ coordinates.
+          - Do not set a default prim before defining a valid root prim.
+          - Do not validate an in-memory stage and forget stage.GetRootLayer().Save().
+          - Do not substitute polygon count or file size for contract checks such as default prim, up axis, units, kind, and required prims.
+      - kind: recap
+        heading: What defeated the Engine
+        body: |
+          End-to-end intake testing proves that foreign data was explicitly parsed, faithfully
+          authored, deliberately transformed, stamped with durable provenance, saved, reopened, and
+          accepted by the destination contract. Each assertion protects a specific interoperability
+          promise rather than a vague notion of success.
+    apply:
+      f8_customs_engine: >-
+        Complete the whole manifest: /World as default component, Y-up, centimeters, /World/Cube
+        with the first eight OBJ points, and sourceFormat OBJ on /World. The Engine is already
+        humming in a key the legal department calls admissible.

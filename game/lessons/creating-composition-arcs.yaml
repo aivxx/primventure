@@ -1,0 +1,976 @@
+lessons:
+  - source: docs/creating-composition-arcs/sublayers/working-with-sublayers.md
+    title: Authoring Sublayers
+    objective: Author an ordered list of sublayers on a stage's root layer to combine independent workstreams.
+    intro: >-
+      Geometry and shading have agreed to occupy separate files, a diplomatic triumph unmatched
+      anywhere else in the Composition. You will place both beneath one root layer and decide
+      which department gets the louder opinion. The Clerk has already prepared the appeal forms.
+    beats:
+      - kind: concept
+        heading: Sublayers include complete layers
+        system: >-
+          No remapping, no selective admission, no velvet rope. Every spec in the invited layer
+          enters the building.
+        body: |
+          A sublayer arc includes all scene description from another layer in the same layer stack.
+          Paths are not relocated: a prim spec at /World/Hull in a sublayer contributes to
+          /World/Hull on the composed stage.
+
+          This makes sublayers well suited to independent workstreams such as geometry, shading,
+          layout, and lighting. Each producer can edit a smaller document while the root layer
+          composes their work into one scene.
+        points:
+          - A layer and all of its recursively gathered sublayers form one layer stack.
+          - Sublayers can add different prims or contribute competing opinions to the same prim and property.
+          - Sublayering preserves the source files, enabling collaborative, non-destructive editing.
+      - kind: concept
+        heading: Over specs contribute without redefining
+        system: >-
+          An over is a neutral container for disagreement. The sponsors call that a meeting room.
+        body: |
+          An over specifier supplies opinions at a prim path without defining a new concrete prim.
+          A stronger over does not replace a weaker def or class as the composed prim's defining
+          specifier. It can contribute properties and children while the weaker def continues to
+          establish the prim.
+        points:
+          - "over is short for override or compose over."
+          - A shading layer can override /World/Hull while a geometry layer supplies its def and geometry.
+          - Distinct children authored in separate sublayers both appear in the composed hierarchy.
+      - kind: api
+        heading: Edit the root layer's subLayerPaths
+        system: >-
+          The list is public, mutable, and consequential. This is more authority than contestants
+          usually receive before the first commercial break.
+        body: |
+          GetRootLayer returns the Sdf.Layer anchoring the stage. Its subLayerPaths field is an
+          ordered, list-editable sequence of asset paths. Relative paths are resolved relative to
+          the layer that authors the sublayer entry.
+        code: |
+          from pathlib import Path
+          from pxr import Sdf, Usd
+
+          stage = Usd.Stage.CreateNew("assembly.usda")
+          root_layer: Sdf.Layer = stage.GetRootLayer()
+
+          # First listed is strongest.
+          root_layer.subLayerPaths.append("shading.usda")
+          root_layer.subLayerPaths.append("geometry.usda")
+
+          root_layer.Save()
+          print(list(root_layer.subLayerPaths))
+      - kind: pitfall
+        heading: Paths, order, and persistence
+        system: >-
+          Three ways to lose one room: point nowhere, rank backward, or forget to save. The
+          broadcast graphics department has animations for all three.
+        body: |
+          Appending in the wrong order reverses the intended winner when layers disagree. An
+          absolute path may work locally but makes the assembly non-portable, while a relative
+          path must be correct from the root layer's directory. The sublayer list is layer
+          metadata and must be saved with that layer.
+        points:
+          - The first appended path has the highest sublayer strength.
+          - A missing layer path produces an unresolved dependency rather than copying its content.
+          - Save the root layer after changing subLayerPaths; saving only the child layers is insufficient.
+      - kind: recap
+        heading: What you now owe the city
+        body: |
+          Sublayers combine whole layers without path remapping. Author their paths on the root
+          Sdf.Layer, list the strongest workstream first, use portable asset paths, and save the
+          root layer so the assembly can be reconstructed.
+    apply:
+      f5_sublayer_workstreams: >-
+        Append shading.usda first and geometry.usda second so both workstreams compose at
+        /World/Hull and shading remains stronger. Two departments, one hull, several pending grievances.
+
+  - source: docs/creating-composition-arcs/sublayers/what-are-sublayers.md
+    title: Sublayer Strength
+    objective: Explain sublayer inclusion semantics and order competing opinions from strongest to weakest.
+    intro: >-
+      Sublayers are an ordered stack of complete documents, because an unordered stack would
+      merely be a committee. The first layer speaks loudest. The final layer still speaks, but
+      mostly into the minutes of the meeting.
+    beats:
+      - kind: concept
+        heading: Inclusion without remapping
+        system: >-
+          A sublayer arrives exactly where it was authored. We tried relocating one floor and
+          litigation is why nobody agrees which floor is fourth.
+        body: |
+          Sublayer composition adds every spec from each listed layer to the destination layer
+          stack in an include-like fashion. It does not map a source root to a destination prim,
+          unlike references and payloads.
+
+          Matching paths combine into one composed prim. Nonmatching paths coexist, so one layer
+          can add a cube while another adds a sphere under the same hierarchy.
+        points:
+          - Sublayers are appropriate when layers describe the same namespace.
+          - Separate workstreams remain independently editable and do not block one another.
+          - New content in a sublayer appears through composition without rewriting sibling workstreams.
+      - kind: concept
+        heading: First listed is strongest
+        system: >-
+          This rule is short enough for the live audience to chant. They will still chant it backward.
+        body: |
+          subLayerPaths is ordered from strongest to weakest. When two sublayers author different
+          values for the same property, the opinion in the earlier listed layer wins. The weaker
+          opinion remains in the stack and becomes visible if the stronger opinion is removed.
+
+          Opinions authored directly in the root layer are stronger than opinions in any of its
+          sublayers. Recursive sublayers are gathered depth first while preserving this ordering.
+        points:
+          - Root layer opinions are strongest within their layer stack.
+          - Among siblings, index 0 is stronger than index 1.
+          - Strength resolves conflicts per opinion; it does not discard entire weaker layers.
+      - kind: api
+        heading: Reorder without rewriting sources
+        system: >-
+          Promote lighting by moving one string. No vertex is harmed, and geometry will still file a complaint.
+        body: |
+          Reordering subLayerPaths changes composition without editing either source layer. Replace
+          the sequence when the complete order is known, or use normal mutable-sequence operations
+          for a targeted change.
+        code: |
+          from pxr import Usd
+
+          stage = Usd.Stage.Open("city.usda")
+          root = stage.GetRootLayer()
+
+          root.subLayerPaths = ["lighting.usda", "layout.usda"]
+          assert root.subLayerPaths[0] == "lighting.usda"
+
+          sign_off = stage.GetAttributeAtPath("/World/Marquee.signOff").Get()
+          print(sign_off)  # FINAL
+          root.Save()
+      - kind: pitfall
+        heading: Local does not mean root only
+        system: >-
+          LIVRPS uses "local" with the confidence of a term that knows it will be misunderstood.
+          I admire that.
+        body: |
+          Every direct opinion in a layer stack, including opinions in recursive sublayers, is
+          local relative to arcs that connect another layer stack. Sublayer ordering decides
+          strength inside that local category before inherits, variants, references, payloads,
+          and specializes are considered.
+        points:
+          - Do not assume the last sublayer wins because it was appended last.
+          - Do not use a reference when the requirement is to preserve the same namespace without remapping.
+          - Reordering changes every conflict between the affected layers, not just the property currently inspected.
+      - kind: recap
+        heading: What you now owe the city
+        body: |
+          Sublayers include complete layers in a shared namespace. The root layer is strongest,
+          then listed sublayers proceed from first to last, recursively. Reordering the list changes
+          which competing opinions win while preserving every source document.
+    apply:
+      f5_workstream_clerk: >-
+        Put lighting.usda before layout.usda so FINAL wins at /World/Marquee.signOff without
+        touching either workstream. The Clerk accepts ordering, evidence, and no speeches.
+
+  - source: docs/creating-composition-arcs/references-payloads/working-with-references.md
+    title: Authoring References
+    objective: Author internal and external references that reuse asset hierarchies at destination prims.
+    intro: >-
+      The skyline needs three towers and has budget for two source assets. References solve this
+      without photocopying a single building, which disappoints the city's toner sponsor. Each
+      destination receives composed scene description while the source remains independently editable.
+    beats:
+      - kind: concept
+        heading: References map reusable scene description
+        system: >-
+          One asset, several towers, and only one file to blame. This is operational maturity.
+        body: |
+          A reference arc composes a source prim and its descendants onto a destination prim. An
+          external reference names another layer; an internal reference targets a prim in the
+          current layer stack.
+
+          Each destination can add stronger local opinions such as transforms or display names.
+          Those changes affect the composed instance at that destination, not the referenced
+          source layer or other destinations.
+        points:
+          - References reuse authored assets without copying their specs.
+          - References are always composed while their stage is open; they cannot be unloaded.
+          - Multiple references can be list-edited on the same prim.
+      - kind: concept
+        heading: Default prim supplies an omitted target
+        system: >-
+          If you omit the address, the source had better name its front door. The Gatekeeper
+          considers guessing beneath both of you.
+        body: |
+          An external reference consists of an asset path and, optionally, a prim path. If the
+          prim path is omitted, USD targets the referenced layer's default prim. If that layer has
+          no default prim, USD cannot automatically select the intended hierarchy.
+
+          Supplying a prim path explicitly avoids that dependency. Only the targeted prim and its
+          descendants compose at the destination; unrelated source siblings do not come along.
+        points:
+          - Relative asset paths are resolved relative to the layer authoring the reference.
+          - A reference to a default prim is concise and supports asset-level interchange.
+          - The source hierarchy is remapped beneath the destination prim.
+      - kind: api
+        heading: Add references through UsdReferences
+        system: >-
+          GetReferences returns the controls, not a list for casual browsing. Pull the correct lever.
+        body: |
+          Usd.Prim.GetReferences returns a UsdReferences editing interface. AddReference authors
+          an external reference; AddInternalReference authors a reference within the current layer
+          stack. Authoring occurs in the stage's current edit target.
+        code: |
+          from pxr import Sdf, Usd, UsdGeom
+
+          stage = Usd.Stage.CreateNew("city.usda")
+          UsdGeom.Xform.Define(stage, "/World")
+
+          tower_a = UsdGeom.Xform.Define(stage, "/World/TowerA").GetPrim()
+          tower_a.GetReferences().AddReference("skyscraperA.usd")
+
+          tower_e = UsdGeom.Xform.Define(stage, "/World/TowerE").GetPrim()
+          tower_e.GetReferences().AddReference(
+              "skyscraperE.usd", Sdf.Path("/World")
+          )
+
+          copy = UsdGeom.Xform.Define(stage, "/World/TowerCopy").GetPrim()
+          copy.GetReferences().AddInternalReference(Sdf.Path("/World/TowerA"))
+          stage.GetRootLayer().Save()
+      - kind: pitfall
+        heading: A reference is not a copy
+        system: >-
+          Editing the source changes every consumer. Surprise is not a composition arc, though
+          several contestants have attempted to register it.
+        body: |
+          Local overrides at a destination do not modify the source asset, but edits to the source
+          asset can affect every stage that references it. Missing assets, bad prim paths, and absent
+          default prims produce unresolved references rather than duplicated fallback geometry.
+        points:
+          - Do not omit primPath unless the source layer defines the intended default prim.
+          - Do not place required dependencies outside the referenced source hierarchy.
+          - Use payloads, not references, when heavy content must be loadable on demand.
+      - kind: recap
+        heading: What you now owe the city
+        body: |
+          References compose reusable source hierarchies at destination prims. Add them through
+          GetReferences, rely on a default prim only when one exists, and author destination-local
+          overrides without duplicating or mutating the source asset.
+    apply:
+      f5_skyline_references: >-
+        Define two destination prims referencing skyscraperA.usd and one referencing
+        skyscraperE.usd. The skyline wants reuse, not three independently maintained monuments to poor judgment.
+
+  - source: docs/creating-composition-arcs/encapsulation/what-is-encapsulation.md
+    title: Encapsulation
+    objective: Structure an asset so every required prim and relationship target is contained beneath its referenced root.
+    intro: >-
+      A cube arrives with its material binding and without its material. This is considered
+      avant-garde only by people who do not maintain pipelines. Put every dependency under the
+      asset's default prim before Reference Docks loses another shipment.
+    beats:
+      - kind: concept
+        heading: Composition follows the targeted subtree
+        system: >-
+          The reference brings descendants, not neighbors, cousins, or the suspicious Scope next door.
+        body: |
+          A prim is encapsulated relative to a referenced target when it lies beneath that target
+          in namespace. Referencing the target composes the target and its descendants at the
+          destination. Sibling prims outside that subtree are not included.
+
+          Asset encapsulation therefore means placing all scene description required by an asset
+          beneath the root prim intended for composition.
+        points:
+          - A default prim commonly identifies the asset root used by external references.
+          - Geometry, materials, rig data, and other private support prims should remain inside that root.
+          - Encapsulation creates a portable composition boundary.
+      - kind: concept
+        heading: Relationships must survive remapping
+        system: >-
+          A binding to a missing material is still a relationship. It is simply a relationship
+          with the emotional range of this city's procurement office.
+        body: |
+          Relationship targets such as material bindings are paths. If a cube under /World binds
+          to /Looks/Red, referencing /World brings the cube but not its sibling /Looks, leaving
+          the target unavailable in the new context.
+
+          Moving Looks to /World/Looks places both ends of the relationship inside the referenced
+          namespace. USD can then remap the complete subtree together at each destination.
+        points:
+          - Encapsulation is required for dependencies, not merely visible geometry.
+          - A valid source-stage relationship can become ineffective after composition if its target is outside the boundary.
+          - Private asset support namespaces commonly use Scope prims beneath the asset root.
+      - kind: api
+        heading: Build a self-contained asset root
+        system: >-
+          One front door, all departments inside. The fire marshal objects, but composition is delighted.
+        body: |
+          Define the asset root, set it as the layer's default prim, and place required support
+          prims beneath it. Material bindings authored through UsdShade then target scene
+          description that travels with the asset.
+        code: |
+          from pxr import Usd, UsdGeom, UsdShade
+
+          stage = Usd.Stage.CreateNew("encapsulated.usda")
+          world = UsdGeom.Xform.Define(stage, "/World").GetPrim()
+          cube = UsdGeom.Cube.Define(stage, "/World/Cube").GetPrim()
+          UsdGeom.Scope.Define(stage, "/World/Looks")
+          red = UsdShade.Material.Define(stage, "/World/Looks/Red")
+
+          UsdShade.MaterialBindingAPI.Apply(cube).Bind(red)
+          stage.SetDefaultPrim(world)
+          stage.GetRootLayer().Save()
+      - kind: pitfall
+        heading: Source validity is not portability
+        system: >-
+          It worked in the asset file is the traditional opening statement before the boss music.
+        body: |
+          Opening the asset directly may hide an encapsulation defect because every root-level
+          sibling is present on that stage. Test the asset through the same reference boundary
+          consumers will use.
+        points:
+          - Setting /World as default prim does not make sibling /Looks a descendant.
+          - Referencing a layer does not automatically include every root prim when a target prim is selected.
+          - Avoid external relationship targets unless the asset contract explicitly requires the consumer to provide them.
+      - kind: recap
+        heading: What you now owe the city
+        body: |
+          A reference composes only its targeted prim subtree. Keep geometry, materials, bindings,
+          and other required dependencies beneath the asset root, make that root the default prim,
+          and test the asset from a referencing stage.
+    apply:
+      f5_encapsulation_raid: >-
+        Make /World the default prim and define /World/Looks/Red beneath it beside the cube.
+        Anything left at /Looks misses the raid and strands the binding on live television.
+
+  - source: docs/creating-composition-arcs/references-payloads/working-with-payloads.md
+    title: Authoring Payloads
+    objective: Author payload arcs and control their loaded state through the OpenUSD Python API.
+    intro: >-
+      The harbor contains three buildings disguised as cargo and would prefer not to unpack them
+      until requested. Payloads grant that wish while preserving composition. The Harbor Master
+      calls this laziness because efficiency threatens his staffing model.
+    beats:
+      - kind: concept
+        heading: Payloads compose deferred content
+        system: >-
+          The crate remains visible in the manifest while its expensive descendants sleep. I have
+          requested the same arrangement for contestants.
+        body: |
+          A payload arc maps source scene description onto a destination prim like a reference,
+          but its contributed content can be loaded or unloaded. When unloaded, the payload arc
+          remains authored while the scene description across it is excluded from composition.
+
+          The destination prim and its local opinions remain available, providing a lightweight
+          entry point that users can discover and load.
+        points:
+          - Loaded payloads contribute their targeted hierarchy and downstream composition dependencies.
+          - Unloading recomposes affected prims and removes payload-contributed descendants from the stage.
+          - References are always composed and do not provide this load control.
+      - kind: concept
+        heading: Payload targets follow reference rules
+        system: >-
+          Same address form, different cargo policy. Even bureaucracy occasionally reuses an interface.
+        body: |
+          An external payload identifies an asset path and optional prim path. Omitting the prim
+          path targets the source layer's default prim. A payload may also target an internal prim
+          in the current layer stack.
+
+          Payload arcs are list-editable, so a prim can carry more than one. They are weaker than
+          reference arcs in LIVRPS.
+        points:
+          - Relative payload asset paths are anchored to the authoring layer.
+          - Source assets should be encapsulated beneath the targeted or default prim.
+          - Use a payload for deferrable bulk, not for essential lightweight interface data.
+      - kind: api
+        heading: Add, unload, and load
+        system: >-
+          Three methods operate the cargo doors. The harbor still employs seventeen people to lose the keys.
+        body: |
+          GetPayloads returns the UsdPayloads editing interface and AddPayload authors the arc in
+          the current edit target. Load and Unload operate on a composed prim's load state rather
+          than deleting the authored arc.
+        code: |
+          from pxr import Usd, UsdGeom
+
+          stage = Usd.Stage.CreateNew("city.usda")
+          UsdGeom.Xform.Define(stage, "/World")
+
+          building = UsdGeom.Xform.Define(stage, "/World/Building").GetPrim()
+          building.GetPayloads().AddPayload("sm_bldgF.usd")
+          assert building.HasPayload()
+
+          building.Unload()
+          assert not building.IsLoaded()
+          building.Load()
+          assert building.IsLoaded()
+
+          stage.GetRootLayer().Save()
+      - kind: pitfall
+        heading: Unload is not remove
+        system: >-
+          One closes the crate. The other throws away the shipping order. The insurers care deeply.
+        body: |
+          Unload changes stage population while preserving the payload opinion. Removing or clearing
+          the payload edits the layer and changes the asset's composition contract. Also remember
+          that stages normally open with payloads loaded unless a different initial load set is requested.
+        points:
+          - Unloading a payload removes all scene description composed across that payload arc.
+          - Local properties on the payload prim can remain available while its deferred contents are unloaded.
+          - Saving after AddPayload persists the arc; load state itself is runtime stage state.
+      - kind: recap
+        heading: What you now owe the city
+        body: |
+          Author payloads with GetPayloads().AddPayload, target a default prim or explicit prim
+          path, and use Load and Unload to control deferred composition without erasing the arc.
+    apply:
+      f5_sealed_crate: >-
+        Payload sm_bldgF.usd onto all three building destination prims and save the manifest.
+        They may sleep until summoned; the validators, regrettably, never do.
+
+  - source: docs/creating-composition-arcs/references-payloads/what-are-payloads.md
+    title: Payload Semantics
+    objective: Choose payloads for deferred scene description and manage stage load sets efficiently.
+    intro: >-
+      A city can be too large to load merely because someone opened the file. Payloads let you
+      inspect the map before manifesting every warehouse, vehicle, and regrettable statue. Memory
+      usage falls, load time improves, and the sponsors claim credit.
+    beats:
+      - kind: concept
+        heading: References with a load gate
+        system: >-
+          A reference enters immediately. A payload waits for its cue, unlike every contestant in casting.
+        body: |
+          Payloads and references both compose a targeted source hierarchy at a destination prim.
+          Their defining difference is population control: reference content is always composed,
+          while payload content can be loaded and unloaded on demand.
+
+          Loading crosses the payload arc and composes the targeted layers and further dependencies.
+          Unloading excludes that contributed scene description and recomposes the affected subtree.
+        points:
+          - Payloads retain composition structure without requiring all heavy data in memory.
+          - Payload arcs are list-editable like references.
+          - In LIVRPS, payload opinions are weaker than reference opinions and stronger than specializes.
+      - kind: concept
+        heading: Load only the working set
+        system: >-
+          Load one city block, not the entire city. The collapse is architectural, not an invitation.
+        body: |
+          A large stage can open with every payload unloaded, exposing lightweight hierarchy and
+          authored payload prims without composing bulk content. A tool or user can then load only
+          the branches needed for the current task.
+
+          This reduces initial load time, memory consumption, and rendering work. The benefit grows
+          when a stage contains many independently useful asset payloads.
+        points:
+          - "Usd.Stage.LoadNone opens a stage without initially loading payloads."
+          - "Usd.Stage.LoadAll is the normal initial load policy."
+          - Load state can be controlled at individual prims or over broader subtrees.
+      - kind: api
+        heading: Open unloaded and populate selectively
+        system: >-
+          The manifest first, the cargo second. Somewhere, a streaming service executive feels understood.
+        body: |
+          Pass a load policy when opening the stage, inspect loadable payload roots, then load the
+          required prim. Prim.Load loads payloads beneath that prim; Prim.Unload removes their
+          contributed content from the composed stage.
+        code: |
+          from pxr import Usd
+
+          stage = Usd.Stage.Open("city.usda", load=Usd.Stage.LoadNone)
+          print(stage.FindLoadable())
+
+          block = stage.GetPrimAtPath("/World/CityBlock")
+          block.Load()
+          assert block.IsLoaded()
+
+          block.Unload()
+          assert not block.IsLoaded()
+      - kind: pitfall
+        heading: Defer bulk, preserve interface
+        system: >-
+          If unloading the warehouse also erases the sign telling you where the warehouse is,
+          your interface has joined the boss faction.
+        body: |
+          Information needed to navigate or decide what to load should be authored outside the
+          deferred payload contents, usually as local opinions on the payload prim. Essential
+          always-needed assets may be better represented by references.
+        points:
+          - Load state is not a substitute for visibility; unloaded data is absent from composition, not merely hidden.
+          - A payload does not automatically make poorly structured assets efficient.
+          - Do not flatten the stage merely to avoid understanding payload population.
+      - kind: recap
+        heading: What you now owe the city
+        body: |
+          Payloads are reference-like arcs with demand loading. Open large stages with LoadNone,
+          discover or navigate to payload roots, and load only the working set while keeping
+          lightweight interface opinions available.
+    apply:
+      f5_harbor_master: >-
+        Keep the payload on /World/CargoCrate and stamp its documentation "Loaded on demand."
+        The Harbor Master may demand unpacking; the composition contract outranks his whistle.
+
+  - source: docs/creating-composition-arcs/inherits-specializes/what-is-inherits.md
+    title: Inherits and Classes
+    objective: Author class prims and inherits arcs that broadcast reusable opinions across composition contexts.
+    intro: >-
+      Every street lamp wants the same temperature and none wishes to admit it. A class prim will
+      hold the shared opinion; inherits will broadcast it. The electricians union calls this
+      collective authoring and has requested a better trailer.
+    beats:
+      - kind: concept
+        heading: Inherits broadcast through a namespace
+        system: >-
+          Change one source, update every inheritor in this composition context. The audience calls it magic; payroll calls it leverage.
+        body: |
+          An inherits arc applies prim and property specs from a source prim hierarchy to a
+          destination prim. Unlike a reference, an inherit source acts as a global namespace that
+          stronger layers can override, broadcasting those changes to all inheriting prims even
+          across referenced layer stacks.
+
+          Each inheriting prim can still receive a stronger local opinion for individual customization.
+        points:
+          - Descendant specs under the inherit source can also be applied to matching descendants at destinations.
+          - Broadcast overrides affect only the composition context in which they are authored.
+          - Editing the original asset layer itself can affect every stage that consumes that asset.
+      - kind: concept
+        heading: Class prims hold abstract data
+        system: >-
+          The class exists to influence the city, not appear in it. A management position, in other words.
+        body: |
+          A class specifier marks a prim hierarchy intended as a source for inherits or specializes
+          arcs. It communicates abstract intent and prevents Hydra from imaging the class prim or
+          its descendants.
+
+          Class prims are commonly placed in an unencapsulated root namespace such as
+          /_street_lamp_dbl so stronger layers can address and override that shared source.
+        points:
+          - A class prim can carry properties and descendants like other prim specs.
+          - Class prims do not appear in normal stage traversal and are not rendered.
+          - The underscore naming convention is common but the class specifier supplies the behavior.
+      - kind: api
+        heading: Create a class and inherit it
+        system: >-
+          One abstract lamp, one concrete lamp, and no duplicated thermostat paperwork. Riveting television.
+        body: |
+          CreateClassPrim authors a class spec. GetInherits returns the UsdInherits editing
+          interface, and AddInherit adds the source Sdf.Path to the destination's inherit list.
+        code: |
+          from pxr import Sdf, Usd
+
+          stage = Usd.Stage.CreateNew("lamps.usda")
+          lamp_class = stage.CreateClassPrim("/_street_lamp_dbl")
+          lamp_class.CreateAttribute(
+              "temperature", Sdf.ValueTypeNames.Int
+          ).Set(2700)
+
+          lamp = stage.DefinePrim("/World/StreetLamp", "Xform")
+          lamp.GetInherits().AddInherit(lamp_class.GetPath())
+
+          assert lamp.GetAttribute("temperature").Get() == 2700
+          stage.GetRootLayer().Save()
+      - kind: pitfall
+        heading: Broadcast scope has boundaries
+        system: >-
+          Global namespace is a phrase with excellent menace and several important footnotes.
+        body: |
+          A stronger override to an inherit source broadcasts within that stage's composition
+          context, not into unrelated stages. A local destination opinion also wins over the
+          inherited value because Local precedes Inherits in LIVRPS.
+        points:
+          - Do not use a def when the source should be abstract and non-imageable.
+          - Do not expect changes authored in one consuming scenario to alter another independent scenario.
+          - Use references for isolated reusable instances and inherits when coordinated broadcast behavior is required.
+      - kind: recap
+        heading: What you now owe the city
+        body: |
+          Class prims store abstract, non-imageable scene description. Inherits arcs broadcast
+          that description and stronger contextual overrides to many destinations, while local
+          destination opinions remain available for per-instance changes.
+    apply:
+      f5_inherit_lamps: >-
+        Create /_street_lamp_dbl as a class, give it temperature 2700, and make
+        /World/StreetLamp inherit it. One shared fixture policy; the union may keep its megaphone.
+
+  - source: docs/creating-composition-arcs/inherits-specializes/what-is-specializes.md
+    title: Specializes Fallbacks
+    objective: Author specializes arcs that provide globally reusable fallback opinions weaker than every other LIVRPS category.
+    intro: >-
+      Some defaults should lose gracefully whenever anyone has a more specific opinion.
+      Specializes was built for this noble surrender. It occupies the weakest seat in LIVRPS and
+      still somehow has a longer title than the floor boss.
+    beats:
+      - kind: concept
+        heading: Specializes supplies fallback specs
+        system: >-
+          The opinion applies until literally any stronger category objects. It is the city's most employable understudy.
+        body: |
+          A specializes arc broadcasts prim and property specs from a source hierarchy across
+          layer stacks, like inherits, but treats those specs as fallback values. A destination
+          receives the specialized opinion only when no stronger authored opinion supplies that spec.
+
+          Runtime or stronger-layer edits to the source continue to reach destinations that still
+          rely on the fallback. Destinations with overrides keep their stronger values.
+        points:
+          - Specializes supports class-like defaults with per-object overriding behavior.
+          - It can broadcast specs across composition contexts.
+          - Specializes is the final and weakest category in LIVRPS.
+      - kind: concept
+        heading: Inherits asserts, specializes yields
+        system: >-
+          Inherits enters second. Specializes enters last and has already signed the waiver.
+        body: |
+          Inherited opinions are stronger than variants, references, payloads, and specializes.
+          Specialized opinions are weaker than all of them. Both can source abstract class prims
+          and broadcast changes, but their intended authority differs.
+
+          Choose inherits for shared opinions that should outrank asset arcs. Choose specializes
+          for defaults that every more specific authored opinion may replace.
+        points:
+          - Local opinions beat both inherits and specializes.
+          - A reference opinion beats specializes but loses to inherits.
+          - Specializes is useful for broad semantic defaults such as imported road metadata.
+      - kind: api
+        heading: Add a specialize source
+        system: >-
+          The road inherits nothing and specializes in yielding. City planning calls this a pilot program.
+        body: |
+          CreateClassPrim can hold the fallback data. GetSpecializes returns the UsdSpecializes
+          editing interface, and AddSpecialize authors the source path on the destination prim.
+        code: |
+          from pxr import Sdf, Usd
+
+          stage = Usd.Stage.CreateNew("roads.usda")
+          fallback = stage.CreateClassPrim("/_osm_street_data")
+          fallback.CreateAttribute(
+              "osm:street:maxspeed", Sdf.ValueTypeNames.Int
+          ).Set(30)
+
+          road = stage.DefinePrim("/World/MainStreet", "Mesh")
+          road.GetSpecializes().AddSpecialize(fallback.GetPath())
+          road.CreateAttribute(
+              "osm:street:maxspeed", Sdf.ValueTypeNames.Int
+          ).Set(20)
+
+          assert road.GetAttribute("osm:street:maxspeed").Get() == 20
+          stage.GetRootLayer().Save()
+      - kind: pitfall
+        heading: Weakest does not mean absent
+        system: >-
+          The fallback remains in the stack, waiting. Patiently. Professionally. Unlike the studio audience.
+        body: |
+          A stronger local value hides the specialized value for that property but does not delete
+          the specializes arc or its other contributions. Removing the stronger opinion can expose
+          the fallback again.
+        points:
+          - Do not expect a specialized source to override a local or referenced value.
+          - Author the arc on the destination prim, not on the class source.
+          - Use GetSpecializes, not GetInherits; the interfaces encode different strength semantics.
+      - kind: recap
+        heading: What you now owe the city
+        body: |
+          Specializes broadcasts reusable fallback specs and sits last in LIVRPS. It resembles
+          inherits structurally but yields to every stronger authored category, making it suitable
+          for defaults that should survive only until something more specific is authored.
+    apply:
+      f5_specializes_fallback: >-
+        Specialize /World/MainStreet from /_osm_street_data, then author local maxspeed 20 so the
+        fallback 30 loses exactly as designed. The traffic cop composes tickets strongest first.
+
+  - source: docs/creating-composition-arcs/prim-composition.md
+    title: Prim Composition
+    objective: Explain how specs and opinions form composed prims and direct authoring to a chosen edit target.
+    intro: >-
+      A composed prim may look singular while dozens of specs argue beneath it. This is the
+      central illusion holding the city together. You will learn where opinions live, how they
+      combine, and how not to vandalize the strongest layer by accident.
+    beats:
+      - kind: concept
+        heading: Prims are composed from specs
+        system: >-
+          The prim is the verdict. Prim specs and property specs are the witnesses, several of whom have motives.
+        body: |
+          A Usd.Prim is the composed runtime object presented on a stage. Its source data is
+          authored as Sdf.PrimSpec objects in layers. Properties are likewise backed by
+          Sdf.AttributeSpec or Sdf.RelationshipSpec objects.
+
+          Specs hold authored opinions: values and metadata expressing what the final prim or
+          property should be. Composition gathers applicable specs and resolves their opinions by
+          strength into one prim and its properties.
+        points:
+          - A layer is a sparse document and need only author the specs or fields its workstream owns.
+          - Several layers can hold prim specs at the same scene path.
+          - Attributes and relationships are both properties, so each can have property specs.
+      - kind: concept
+        heading: The prim index gathers composition
+        system: >-
+          Every arc leaves paperwork. The prim index is where the city stores the complete argument.
+        body: |
+          For each composed prim, USD builds a prim index that records the composition arcs and
+          sites contributing opinions. The resulting prim stack orders applicable prim specs from
+          strongest to weakest.
+
+          References and payloads connect layer stacks and remap source namespaces. Sublayers,
+          inherits, variants, and specializes add further sites according to LIVRPS. Resolution is
+          performed per field or property, so a weaker spec can still supply data absent above it.
+        points:
+          - Stronger specs do not erase weaker specs from the composition structure.
+          - A single composed prim can draw different properties from different source layers.
+          - Inspecting stacks is more reliable than inferring a winner from filenames.
+      - kind: api
+        heading: Author references and payloads into one prim
+        system: >-
+          Two towers stay present; one warehouse sleeps. Urban planning has discovered selective consciousness.
+        body: |
+          Composition arcs are authored on destination prims through their editing interfaces.
+          The stage presents the combined result while each arc remains independently inspectable.
+        code: |
+          from pxr import Usd, UsdGeom
+
+          stage = Usd.Stage.CreateNew("block.usda")
+          block = UsdGeom.Xform.Define(stage, "/World/Block")
+
+          tower = UsdGeom.Xform.Define(stage, "/World/Block/Tower").GetPrim()
+          tower.GetReferences().AddReference("tower.usd")
+
+          warehouse = UsdGeom.Xform.Define(
+              stage, "/World/Block/Warehouse"
+          ).GetPrim()
+          warehouse.GetPayloads().AddPayload("warehouse.usd")
+
+          print([spec.layer.identifier for spec in tower.GetPrimStack()])
+          stage.GetRootLayer().Save()
+      - kind: concept
+        heading: Edit targets choose the authored layer
+        system: >-
+          The current edit target is where your next opinion lands. Check it before swinging; restoration is not in the prize budget.
+        body: |
+          A stage edit target maps scene paths to a particular layer and composition node. For
+          straightforward layer-stack editing, stage.SetEditTarget(layer) directs subsequent Usd
+          authoring calls into that Sdf.Layer. It does not make the layer's opinions stronger;
+          composition strength still follows layer ordering and arcs.
+
+          GetEditTarget reports the active Usd.EditTarget. Save every modified layer, including a
+          weaker sublayer selected for authoring.
+        code: |
+          from pathlib import Path
+          from pxr import Sdf, Usd
+
+          stage = Usd.Stage.CreateNew("root.usda")
+          stage.DefinePrim("/World", "Xform")
+
+          notes = Sdf.Layer.CreateNew("notes.usda")
+          stage.GetRootLayer().subLayerPaths.append("notes.usda")
+          stage.SetEditTarget(notes)
+
+          stage.GetPrimAtPath("/World").SetDisplayName("Authored on notes")
+          assert stage.GetEditTarget().GetLayer() == notes
+
+          notes.Save()
+          stage.GetRootLayer().Save()
+      - kind: pitfall
+        heading: Composed objects are not source specs
+        system: >-
+          Editing the verdict without checking the filing destination is how contestants become cautionary B-roll.
+        body: |
+          Usd authoring writes through the current edit target; it does not modify whichever
+          weaker spec happened to provide the resolved value. Setting an edit target to a sublayer
+          also does not save it automatically or promote its strength.
+        points:
+          - "GetPrimAtPath returns a composed Usd.Prim, while GetPrimStack returns contributing Sdf.PrimSpec objects."
+          - "SetEditTarget changes where future opinions are written, not which existing opinion wins."
+          - A layer must belong to an appropriate composition context before it can serve as a useful edit target.
+      - kind: recap
+        heading: What you now owe the city
+        body: |
+          Layers store sparse prim and property specs containing opinions. A stage builds prim
+          indexes and resolves those opinions into composed objects. Use composition arcs to
+          assemble content, inspect stacks to understand sources, and set the edit target before authoring.
+    apply:
+      f5_city_block: >-
+        Compose TowerA and TowerE by reference and Warehouse by payload beneath HighlandBlock.
+        One prim hierarchy, three arcs, and no duplicated skyline on the expense report.
+      f9_edit_target_duel: >-
+        The notes layer is already the weaker sublayer and active edit target; set /World's
+        displayName there and save both layers. Strength is not permission to write in the wrong file.
+
+  - source: docs/creating-composition-arcs/strength-ordering/tracing-through-liverps.md
+    title: Tracing Composition
+    objective: Inspect prim and property stacks to identify authored sources and explain the winning opinion.
+    intro: >-
+      The sign says five things in five composition dialects and displays one value. Guessing is
+      for game shows with smaller liability waivers. You will trace the stack, identify the
+      strongest authored opinion, and leave every weaker arc alive for evidence.
+    beats:
+      - kind: concept
+        heading: Composition resolves one opinion at a time
+        system: >-
+          A stage with thousands of prims is merely this argument repeated until the debugger asks for leave.
+        body: |
+          Composition strength is evaluated for each field and property. A strong spec may supply
+          one value while a weaker spec supplies another property that has no stronger opinion.
+          The winning value therefore cannot be inferred from the strongest layer alone.
+
+          Local opinions include direct opinions throughout the current layer stack. Connecting
+          arcs then contribute other composition contexts according to LIVRPS.
+        points:
+          - A weaker sublayer can win when stronger layers author no opinion for that property.
+          - A stronger local opinion wins without deleting inherits, variants, references, payloads, or specializes.
+          - Tracing should begin at the exact composed prim or property producing the unexpected result.
+      - kind: concept
+        heading: Prim stacks reveal structural sources
+        system: >-
+          GetPrimStack assembles the witness list. Cross-examination remains your responsibility.
+        body: |
+          Usd.Prim.GetPrimStack returns the contributing Sdf.PrimSpec objects in strength order.
+          Each spec exposes its path, specifier, and owning layer, which helps identify where the
+          prim's structural opinions were authored.
+
+          The prim stack is broad: a spec can contribute to the prim without authoring the
+          particular property being debugged.
+        points:
+          - Inspect spec.layer.identifier to locate the source document.
+          - Inspect spec.path to understand namespace mapping through composition arcs.
+          - A large prim stack is expected when multiple arc types contribute to one prim.
+      - kind: api
+        heading: Property stacks isolate competing values
+        system: >-
+          The flashlight points directly at the opinions. Do not strike the payload with it; props charges by the dent.
+        body: |
+          Usd.Property.GetPropertyStack returns the Sdf.PropertySpec objects that contribute to a
+          composed property, ordered strongest to weakest. For an attribute, the resolved Get value
+          can be compared with each spec's layer and authored default value.
+        code: |
+          from pxr import Sdf, Usd
+
+          stage = Usd.Stage.Open("labyrinth.usda")
+          prim = stage.GetPrimAtPath("/City/ArcHighlands/LabyrinthSign")
+          attr = prim.GetAttribute("floorIndex")
+
+          print("resolved:", attr.Get())
+          for spec in prim.GetPrimStack():
+              print("prim:", spec.layer.identifier, spec.path)
+
+          for spec in attr.GetPropertyStack():
+              print("property:", spec.layer.identifier, spec.path, spec.default)
+      - kind: pitfall
+        heading: Do not confuse presence with victory
+        system: >-
+          Five specs can attend. One opinion wins. This is already fairer than the auditions.
+        body: |
+          A spec's appearance in a stack proves that it contributes to composition, not that every
+          field on it wins. Conversely, a weaker arc that loses one property may still supply
+          children, metadata, or other properties.
+        points:
+          - GetPrimStack is not limited to specs that author the property under investigation.
+          - GetPropertyStack is the focused view for a specific attribute or relationship.
+          - Removing weaker arcs to make debugging simpler changes the composition and can conceal the actual cause.
+      - kind: recap
+        heading: What you now owe the city
+        body: |
+          Trace composition at property granularity. Use GetPrimStack for the contributing prim
+          specs, GetPropertyStack for the exact competing property specs, and inspect each spec's
+          layer and path in strength order before authoring a corrective opinion.
+    apply:
+      f5_liverps_labyrinth: >-
+        Author local floorIndex 4 and keep the inherit, variant, reference, payload, and
+        specializes arcs intact. The sign needs one winner and a complete audit trail for the season finale.
+
+  - source: docs/creating-composition-arcs/strength-ordering/what-is-liverps.md
+    title: LIVRPS Strength Ordering
+    objective: Apply Local, Inherits, Variant sets, References, Payloads, Specializes ordering within recursive composition contexts.
+    intro: >-
+      LIVRPS is the ordering law of the Composition and the only phrase Archivist Prime enjoys
+      hearing pronounced. It determines which opinion survives when layer stacks disagree.
+      Memorize the order, then understand the recursion, or the Archive will notice the difference.
+    beats:
+      - kind: concept
+        heading: Six categories, strongest to weakest
+        system: >-
+          Local, Inherits, Variant sets, References, Payloads, Specializes. The crowd has set it to music; counsel has intervened.
+        body: |
+          LIVRPS orders composition categories from strongest to weakest: Local opinions, Inherits,
+          Variant sets, References, Payloads, and Specializes. The acronym describes both the arc
+          categories and the order in which their opinions are applied to build prim and property stacks.
+
+          Strength ordering is necessary because multiple layers and layer stacks can author
+          conflicting opinions for the same composed object.
+        points:
+          - Local opinions outrank every composition arc category.
+          - Inherits outrank variants, references, payloads, and specializes.
+          - Specializes provide the weakest fallback opinions.
+      - kind: concept
+        heading: Local means the entire layer stack
+        system: >-
+          Local includes recursive sublayers. Language filed the ambiguity; USD denied jurisdiction.
+        body: |
+          A layer stack contains a root layer and all sublayers gathered recursively. Direct
+          opinions in any of those layers are local to that layer stack, even when authored in a
+          deeply nested sublayer.
+
+          Within the Local category, the root layer is strongest. Sublayers follow their listed
+          strength order, first to last, and recursive sublayers are gathered depth first.
+        points:
+          - The first sublayer is stronger than later sibling sublayers.
+          - Descendants of an earlier sublayer branch are gathered before the next sibling branch.
+          - A local opinion in a weak sublayer still outranks reference opinions from another layer stack.
+      - kind: concept
+        heading: LIVRPS applies recursively
+        system: >-
+          Every connected layer stack runs its own hearing before the appeals reach yours. The legal budget is spectacular.
+        body: |
+          References and payloads connect multiple layer stacks. LIVRPS evaluates opinions in the
+          context of each layer stack and applies recursively as composition traverses arcs.
+          Internal inherits, variants, references, payloads, and specializes are therefore
+          interpreted relative to the layer stack where they are authored.
+
+          The result is a strength-ordered prim index and property stacks, not a single global
+          sorting of files by name or creation time.
+        points:
+          - Composition operations are evaluated in layer-stack context, not per file in isolation.
+          - A stronger category can beat a numerically larger or later-authored value.
+          - Weaker opinions remain available to fill fields with no stronger authored value.
+      - kind: api
+        heading: Verify order through the stacks
+        system: >-
+          Recitation impresses the Archive. Inspection clears the room.
+        body: |
+          Author representative arcs with their dedicated interfaces, then inspect the composed
+          prim and property stacks. The returned Sdf specs are strength ordered, allowing code to
+          verify the source of a resolved opinion rather than relying on memory.
+        code: |
+          from pxr import Sdf, Usd
+
+          stage = Usd.Stage.CreateNew("order.usda")
+          fallback = stage.CreateClassPrim("/_Fallback")
+          fallback.CreateAttribute("rank", Sdf.ValueTypeNames.Int).Set(0)
+
+          prim = stage.DefinePrim("/World/Probe", "Xform")
+          prim.GetSpecializes().AddSpecialize(fallback.GetPath())
+          prim.CreateAttribute("rank", Sdf.ValueTypeNames.Int).Set(6)
+
+          rank = prim.GetAttribute("rank")
+          assert rank.Get() == 6  # Local beats Specializes.
+          for spec in rank.GetPropertyStack():
+              print(spec.layer.identifier, spec.path)
+      - kind: pitfall
+        heading: LIVRPS is not value resolution alone
+        system: >-
+          TfDebug can narrate runtime diagnostics. It cannot replace reading the authored stack, despite its excellent stage voice.
+        body: |
+          LIVRPS builds strength-ordered prim and property stacks. Value resolution then considers
+          the relevant authored values, time samples, and schema fallbacks. A schema fallback is
+          not a stronger authored LIVRPS opinion.
+
+          Arc category also does not override internal ordering rules such as sublayer order or
+          list-edit composition.
+        points:
+          - Do not rank opinions by file timestamp, file size, or the order in which Python calls executed.
+          - An external reference without a prim path requires a default prim in the referenced layer.
+          - Use stack inspection, not generic runtime tracing, to identify authored opinion strength.
+      - kind: recap
+        heading: What you now owe the city
+        body: |
+          LIVRPS orders Local, Inherits, Variant sets, References, Payloads, and Specializes from
+          strongest to weakest. Local spans the root and recursive sublayers of one layer stack,
+          internal order still matters, and the algorithm applies recursively across connected stacks.
+    apply:
+      f9_archivist_prime: >-
+        Seal the CertificationArchive only after answering from the actual rules: LIVRPS order,
+        default-prim targeting, stack inspection, and customization boundaries. Archivist Prime can smell memorized incantations.

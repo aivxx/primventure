@@ -1,0 +1,722 @@
+lessons:
+  - source: docs/asset-modularity-instancing/authoring-scenegraph-instancing/exercise-authoring-scenegraph-instancing.md
+    title: Authoring Scenegraph Instances
+    objective: Author repeated instanceable prims that reference one shared component asset and verify the resulting optimization.
+    intro: >-
+      Welcome to the Instance Wilds, where the scenery repeats and the memory bill does not have
+      to. Give several prims the same referenced asset, mark them instanceable, and OpenUSD can
+      make their shared structure somebody else's problem. The Mirror Forge calls this imitation.
+      Engineering calls it surviving the floor.
+    beats:
+      - kind: concept
+        heading: Repeated assets can share one prototype
+        system: >-
+          Three benches with three full hierarchies is not abundance. It is a memory leak wearing
+          municipal furniture.
+        body: |
+          Scenegraph instancing turns repeated prim subgraphs into shared runtime prototypes.
+          Each repeated object remains an explicit instance prim in the scenegraph, while its
+          composed descendants can be represented once and shared.
+
+          This is most effective for modular component assets that are referenced many times.
+          The source exercise reduced a warehouse from 44,408 total prims to 1,711 by making
+          1,450 component models instanceable, with only three prototypes for three distinct
+          component compositions.
+        points:
+          - "An instance prim is still addressable and can have its own transform and root-level opinions."
+          - "The shared prototype represents the repeated composed subgraph below the instance root."
+          - "Instancing can reduce stage population cost, memory use, traversal work, and time to first frame."
+      - kind: concept
+        heading: References provide the reusable structure
+        system: >-
+          The Forge can only mirror something that exists. Even its fraud has prerequisites.
+        body: |
+          Author each copy as a prim with a reference to the same asset, then set the prim's
+          instanceable metadata to true. The reference is the composition arc from which OpenUSD
+          derives the shared structure. Merely creating several similar local prim hierarchies
+          does not give OpenUSD a reusable composition arc.
+
+          Instanceable prims with equivalent composition can share a prototype. Different asset
+          references, variant selections, or other composition differences can require different
+          prototypes even when the resulting objects look similar.
+        points:
+          - "Usd.Prim.GetReferences().AddReference(assetPath) authors the reference arc."
+          - "Usd.Prim.SetInstanceable(True) authors instanceable metadata on the prim."
+          - "A single occurrence may still produce a prototype, so instanceable should target genuinely reusable structures."
+      - kind: api
+        heading: Reference and mark every copy
+        system: >-
+          One loop, three benches, no artisanal duplication. The sponsors briefly believe this
+          show has standards.
+        body: |
+          Define each instance root, add the same asset reference, and mark the root instanceable.
+          Save the layer after all metadata and composition arcs are authored.
+        code: |
+          from pathlib import Path
+          from pxr import Usd, UsdGeom
+
+          bench_asset = Path("assets/bench.usda").as_posix()
+          stage = Usd.Stage.CreateNew("benches.usda")
+          UsdGeom.Xform.Define(stage, "/City/InstanceWilds")
+
+          for name in ("BenchA", "BenchB", "BenchC"):
+              prim = UsdGeom.Xform.Define(
+                  stage, f"/City/InstanceWilds/{name}"
+              ).GetPrim()
+              prim.GetReferences().AddReference(bench_asset)
+              prim.SetInstanceable(True)
+
+          stage.GetRootLayer().Save()
+      - kind: pitfall
+        heading: Similar is not shared
+        system: >-
+          Painting three objects the same color does not make them instances. It does make the
+          audience easier to fool, but the validator is sober.
+        body: |
+          Instanceable metadata is a request to instance composition-derived content, not a
+          command to deduplicate arbitrary local prims. Without a composition arc on the
+          instanceable prim, OpenUSD has no source subgraph from which to derive a prototype.
+        points:
+          - "SetInstanceable(True) without a reference, payload, or other relevant composition arc may create no instance or prototype."
+          - "Author instanceable metadata on the root that owns the asset composition arc, not on an arbitrary descendant."
+          - "Performance measurements vary by hardware and renderer; compare stage statistics and repeated timings rather than one startup."
+          - "Use UsdUtils.ComputeUsdStageStats(stage) to inspect totalPrimCount, totalInstanceCount, and prototypeCount."
+      - kind: recap
+        heading: What you now owe the city
+        body: |
+          Repeated component prims can reference one asset and set instanceable to true so OpenUSD
+          shares their composed descendants through prototypes. Correctly placed composition arcs
+          are the basis of sharing, and stage statistics reveal whether the optimization occurred.
+    apply:
+      f7_repeat_benches: >-
+        Add the bench.usda reference to BenchA, BenchB, and BenchC, then make all three
+        instanceable. The Wilds ordered three seats; the memory allocator authorized one design.
+
+  - source: docs/asset-modularity-instancing/authoring-scenegraph-instancing/scenegraph-instancing-intro.md
+    title: Scenegraph Instancing
+    objective: Explain implicit prototypes, instance proxies, and which opinions remain editable on an instance root.
+    intro: >-
+      Scenegraph instancing is a contract with the Mirror Forge: you name the copies, OpenUSD
+      decides which hidden structure they share. The roots remain yours to move and label. Reach
+      into their reflected descendants, however, and the Sentinel introduces you to immutability
+      with all the warmth of a sealed floor.
+    beats:
+      - kind: concept
+        heading: Four roles define the system
+        system: >-
+          Four nouns for one optimization. The legal department demanded nine, so consider this
+          mercy.
+        body: |
+          A prototype is a unique shared substructure. An instance is one repetition of that
+          prototype in the scene. The instanceable prim, also called the instance prim, is the
+          mutable root of that repetition. Instance proxies are read-only, addressable stand-ins
+          for the prototype prims below an instance root.
+
+          For an instance rooted at /Robot_01, an instance proxy such as /Robot_01/Gripper lets a
+          reader query the gripper through the instance's namespace without manually mapping to
+          the prototype.
+        points:
+          - "Prototype: the shared composed subgraph."
+          - "Instance: a repetition that uses a prototype."
+          - "Instanceable prim: the mutable root carrying instanceable metadata."
+          - "Instance proxy: a read-only addressable view of a prototype descendant."
+      - kind: concept
+        heading: Explicit instances create implicit prototypes
+        system: >-
+          You nominate the mirrors. OpenUSD decides which reflections are secretly the same.
+        body: |
+          Scenegraph instancing follows the rule "explicit instances, implicit prototypes."
+          Authors mark candidate prims instanceable, but do not author scenegraph prototype prims
+          directly. OpenUSD groups compatible instanceable prims according to their composition
+          arcs and creates prototypes at runtime.
+
+          Two instanceable prims referencing the same asset with compatible composition can share
+          one prototype. A prim referencing a different asset or carrying composition differences
+          may use another prototype. Prototypes are an implementation detail of the composed
+          stage and their paths are not stable authoring targets.
+        points:
+          - "Setting instanceable to true is an explicit promise that descendants will not receive sparse overrides."
+          - "References and other composition arcs supply the structure used to derive prototypes."
+          - "Three locally defined, instanceable Xforms with no composition arcs produce no useful prototype."
+      - kind: api
+        heading: Edit the root, inspect the proxies
+        system: >-
+          You may move the mirror and engrave its frame. You may not repaint one reflected bolt
+          and call it a harmless adjustment.
+        body: |
+          The instance root remains mutable so every copy can carry a distinct transform and
+          root-level metadata. Descendants represented by instance proxies remain read-only.
+          Traversal can include instance proxies when a tool values a simple read model over the
+          performance benefit of skipping repeated descendants.
+        code: |
+          from pxr import Usd, UsdGeom
+
+          stage = Usd.Stage.CreateNew("robots.usda")
+          robot = UsdGeom.Xform.Define(stage, "/World/Robot_01")
+          prim = robot.GetPrim()
+          prim.GetReferences().AddReference("RobotArm.usda")
+          prim.SetInstanceable(True)
+
+          # Root-level opinions remain legal and unique per instance.
+          robot.AddTranslateOp().Set((10.0, 20.0, 0.0))
+          prim.SetDisplayName("Assembly Line Robot")
+
+          print(prim.IsInstanceable())
+          print(prim.IsInstance())
+          for descendant in Usd.PrimRange(
+              prim, Usd.TraverseInstanceProxies()
+          ):
+              print(descendant.GetPath(), descendant.IsInstanceProxy())
+
+          stage.GetRootLayer().Save()
+      - kind: pitfall
+        heading: Descendant overrides break the promise
+        system: >-
+          The shared descendant is read-only because it is shared. This sentence has ended more
+          appeals than any judge on the broadcast.
+        body: |
+          Sparse opinions below an active instance root cannot be authored because those paths are
+          instance proxies, not independent editable prims. Root-level transform, metadata, and
+          other properties are allowed because the root is not part of the shared prototype
+          subgraph.
+        points:
+          - "Do not author against prototype paths; prototypes are implicit runtime objects with unstable paths."
+          - "A reference alone does not enable scenegraph instancing; instanceable metadata must also be true."
+          - "Instance proxy traversal is convenient for readers but gives up traversal savings and does not make proxies editable."
+          - "A root-level displayName is legal and does not require clearing instanceable."
+      - kind: recap
+        heading: What you now owe the city
+        body: |
+          Authors create explicit instance roots and OpenUSD derives implicit prototypes from
+          compatible composition arcs. Instance roots remain mutable for placement and metadata,
+          while instance proxies expose shared descendants for read-only inspection.
+    apply:
+      f7_prototype_sentinel: >-
+        Set BenchB's displayName to Shared Foundry Bench and leave it instanceable. Name the mirror
+        by its frame; the Sentinel becomes tiresome when contestants attack the reflection.
+
+  - source: docs/asset-modularity-instancing/refining-scenegraph-instances/scenegraph-deinstance-refinement.md
+    title: Selective Deinstancing
+    objective: Deinstance one repeated asset for unique edits while preserving prototype sharing among its siblings.
+    intro: >-
+      Occasionally one copy develops a personality, usually after exposure to stickers. Clear
+      instanceable on that copy and its descendants become editable again. The other mirrors keep
+      sharing, the city keeps most of its savings, and the Forge files a narrowly scoped complaint.
+    beats:
+      - kind: concept
+        heading: Deinstancing restores descendant editability
+        system: >-
+          Freedom is available. It costs prims.
+        body: |
+          Deinstancing means authoring instanceable false on one instance root. That prim no longer
+          participates as an instance, so its composed descendants become ordinary editable prims
+          instead of read-only instance proxies.
+
+          This is the simplest refinement technique when one copy needs a unique descendant
+          override, such as hiding a decal or opening one box. The reference and other composition
+          arcs remain intact, so asset reuse and composition still apply.
+        points:
+          - "SetInstanceable(False) disables scenegraph instancing for that prim."
+          - "The deinstanced copy keeps its referenced content and can receive descendant opinions."
+          - "A stronger downstream layer can deinstance without modifying the source asset."
+      - kind: concept
+        heading: Siblings keep sharing
+        system: >-
+          One bench leaves the mirror cult. The other two retain their group rate.
+        body: |
+          Instanceable metadata is evaluated per prim. Clearing it on one copy does not clear it on
+          siblings, and compatible siblings can continue sharing their existing prototype.
+
+          The source exercise moved from 1,450 instances to 1,449 after one box was deinstanced,
+          while the prototype count stayed at three. Total prim count rose from 1,711 to 1,741
+          because the unique box hierarchy had to be represented separately.
+        points:
+          - "Deinstancing one prim reduces the instance count by one, not by the size of the prototype."
+          - "The prototype can remain while any compatible instance still uses it."
+          - "The prim-count cost depends on the size and complexity of the deinstanced asset."
+      - kind: api
+        heading: Deinstance before editing descendants
+        system: >-
+          Order matters. First leave the hall of mirrors, then redecorate. The reverse order is
+          merely televised failure.
+        body: |
+          Clear instanceable on the selected root before retrieving and editing its descendants.
+          Root-level metadata can also be authored after deinstancing, although root-level metadata
+          alone would not have required deinstancing.
+        code: |
+          from pxr import Usd, UsdGeom
+
+          stage = Usd.Stage.Open("benches.usda")
+          bench = stage.GetPrimAtPath("/City/InstanceWilds/BenchC")
+
+          bench.SetInstanceable(False)
+          bench.SetDisplayName("Unique Sticker Bench")
+
+          sticker = bench.GetChild("Sticker")
+          if sticker:
+              sticker.GetAttribute("visibility").Set(
+                  UsdGeom.Tokens.invisible
+              )
+
+          stage.GetRootLayer().Save()
+      - kind: pitfall
+        heading: Too many exceptions defeat sharing
+        system: >-
+          A unique exception is refinement. Nine hundred unique exceptions are a new asset library
+          assembled during a panic.
+        body: |
+          Deinstancing trades some optimization for complete control. Its cost scales as more
+          copies leave the prototype, so it is best for a small number of genuinely unique edits.
+          If many copies need the same refinement, authoring another reusable asset configuration
+          that can form its own shared prototype is usually more efficient.
+        points:
+          - "Do not clear instanceable on every sibling when only one needs a unique edit."
+          - "Trying to edit an instance proxy before deinstancing will fail because the proxy is read-only."
+          - "Repeated identical deinstances duplicate work that could be represented by a second shared prototype."
+          - "Root-only changes such as displayName or transform do not require deinstancing."
+      - kind: recap
+        heading: What you now owe the city
+        body: |
+          Deinstancing one prim restores full descendant editability while leaving its referenced
+          asset composition intact. Compatible siblings remain instances and continue sharing, so
+          use this technique for targeted exceptions rather than widespread variation.
+    apply:
+      f7_deinstance_sticker: >-
+        Set only BenchC instanceable false and give it the displayName Unique Sticker Bench.
+        BenchA and BenchB stay in the mirror arrangement; their union has excellent counsel.
+
+  - source: docs/asset-modularity-instancing/authoring-point-instancing/exercise-authoring-point-instancing.md
+    title: Authoring a Point Instancer
+    objective: Create a UsdGeom.PointInstancer with explicit prototypes, prototype indices, and local-space positions.
+    intro: >-
+      A thousand cargo copies do not each deserve a speaking role in the scenegraph. Point
+      instancing packs them into arrays, which is efficient, compact, and deeply unpopular with
+      anyone hoping to click every crate. The Point Wastes respect throughput, not sentiment.
+    beats:
+      - kind: concept
+        heading: One prim can represent vast repetition
+        system: >-
+          One prim, hundreds of thousands of objects. The casting department has been dissolved.
+        body: |
+          UsdGeom.PointInstancer is a typed schema for representing large numbers of repeated
+          objects compactly. Instead of defining one scenegraph prim for every copy, it stores
+          per-instance data in arrays on a single PointInstancer prim.
+
+          This vectorized representation is suited to simulation exports, scatters, particles,
+          leaves, debris, and other massive collections whose individual copies do not need
+          independent prim paths.
+        points:
+          - "Point instancing can represent hundreds of thousands of objects with low scenegraph overhead."
+          - "Prototype prim hierarchies are explicit relationship targets, not implicit runtime prototypes."
+          - "The source exercise reads positions, orientations, and prototype choices from exported JSON data."
+      - kind: concept
+        heading: Three properties are required
+        system: >-
+          Prototypes, indices, positions. Three arrays stand between you and an empty warehouse.
+          The audience has started a countdown without authorization.
+        body: |
+          The prototypes relationship lists the prim hierarchies available for repetition.
+          protoIndices contains one integer per instance and selects an entry in that ordered
+          relationship target list. positions contains one local-space point per instance.
+
+          For targets [Crate, Pallet], protoIndices [0, 0, 1] creates two crate instances and one
+          pallet instance. The corresponding positions array supplies the location of each.
+        points:
+          - "The prototypes relationship target order defines the numeric meaning of protoIndices."
+          - "protoIndices[i] selects the prototype for instance i."
+          - "positions[i] places instance i in the PointInstancer's local coordinate space."
+          - "protoIndices and positions must describe the same number of instances."
+      - kind: api
+        heading: Define, target, index, and place
+        system: >-
+          The incantation is short. The resulting cargo field is not. Please distinguish those
+          facts before the camera pans wide.
+        body: |
+          Define the PointInstancer, create a prototype prim with a reference, target it through
+          CreatePrototypesRel, then author matching protoIndices and positions arrays.
+        code: |
+          from pxr import Gf, Usd, UsdGeom
+
+          stage = Usd.Stage.CreateNew("scatter.usda")
+          scatter = UsdGeom.PointInstancer.Define(
+              stage, "/World/Scatter"
+          )
+
+          crate = stage.DefinePrim(
+              "/World/Scatter/Prototypes/Crate", "Xform"
+          )
+          crate.GetReferences().AddReference("cargo.usda")
+
+          scatter.CreatePrototypesRel().SetTargets([crate.GetPath()])
+          scatter.CreateProtoIndicesAttr([0, 0, 0, 0])
+          scatter.CreatePositionsAttr([
+              Gf.Vec3f(0.0, 0.0, 0.0),
+              Gf.Vec3f(2.0, 0.0, 0.0),
+              Gf.Vec3f(4.0, 0.0, 0.0),
+              Gf.Vec3f(6.0, 0.0, 0.0),
+          ])
+
+          stage.GetRootLayer().Save()
+      - kind: pitfall
+        heading: Arrays must agree
+        system: >-
+          Index 1 cannot select the only prototype at index 0. Arithmetic remains undefeated on
+          all ten floors.
+        body: |
+          Every protoIndices value must be a valid zero-based index into the ordered prototypes
+          relationship. Per-instance arrays must align by element index; mismatched lengths or an
+          invalid prototype index produce incomplete or invalid instance data.
+        points:
+          - "With one prototype target, every protoIndices value must be 0."
+          - "Positions are local to the PointInstancer, not world-space coordinates."
+          - "Defining prototype prims does nothing until the prototypes relationship targets them."
+          - "Forgetting to save leaves the authored arrays only in memory."
+      - kind: recap
+        heading: What you now owe the city
+        body: |
+          A PointInstancer represents many copies through explicit prototype targets and aligned
+          per-instance arrays. prototypes supplies the choices, protoIndices selects a choice for
+          each instance, and positions places each instance in local space.
+    apply:
+      f7_point_scatter: >-
+        Target the cargo prototype, author four zero protoIndices, and place four crates at X
+        positions 0, 2, 4, and 6. The Wastes accept arrays; individual crate biographies were cut.
+
+  - source: docs/asset-modularity-instancing/authoring-point-instancing/point-instancing-intro.md
+    title: Point Instancing
+    objective: Choose and control multiple explicit prototypes in a PointInstancer, including optional per-instance transforms and identifiers.
+    intro: >-
+      The Point Wastes have upgraded from one kind of repetition to several, which management
+      insists counts as biodiversity. One relationship supplies the ordered prototype roster.
+      protoIndices assigns the roles, and the transform arrays arrange the cast without granting
+      any of them a prim trailer.
+    beats:
+      - kind: concept
+        heading: Point instancing is vectorized scene description
+        system: >-
+          The data is hidden in giant arrays. It is efficient, exact, and hostile to dramatic
+          clicking.
+        body: |
+          A PointInstancer stores repetitions as array attributes rather than one prim per copy.
+          Its prototypes are explicit prim hierarchies targeted by a relationship. This makes it
+          compact enough for enormous populations of simple repeated objects.
+
+          Compared with scenegraph instances, point instances are less individually addressable
+          and harder to refine. They are appropriate when separate scenegraph names provide little
+          value, such as leaves, packing material, debris, or dense simulation results.
+        points:
+          - "Point instances do not have independent prim paths."
+          - "Readers query or modify an individual instance by indexing the PointInstancer's arrays."
+          - "Scenegraph instancing is often friendlier for assets that need per-copy scenegraph interaction."
+      - kind: concept
+        heading: Multiple prototypes share one index space
+        system: >-
+          Crate is zero. Bench is one. The Forge calls this identity theft; computer science calls
+          it an index.
+        body: |
+          The prototypes relationship is an ordered list. Every element of protoIndices is a
+          zero-based index into that list, so changing target order changes what existing index
+          values mean.
+
+          With targets [Crate, Bench], protoIndices [0, 1, 0, 1] alternates crate and bench
+          instances at the four corresponding positions. Each target can be a locally defined
+          hierarchy or a prim that references a modular asset.
+        points:
+          - "Target order and protoIndices values form one contract and must be maintained together."
+          - "Explicit prototypes are commonly placed below the PointInstancer under a Prototypes Scope."
+          - "Using an over Scope can keep prototype definitions out of default prim traversal, signaling that consumers should render the instances."
+      - kind: api
+        heading: Author a mixed scatter
+        system: >-
+          Two prototypes, four placements, zero duplicated warehouses. The sponsor logo will be
+          added to all of them in post.
+        body: |
+          Create both prototype prims, set the ordered relationship targets once, and use
+          protoIndices to choose the prototype at each point. orientations, scales, and ids are
+          optional aligned arrays.
+        code: |
+          from pxr import Gf, Usd, UsdGeom
+
+          stage = Usd.Stage.CreateNew("mixed_scatter.usda")
+          scatter = UsdGeom.PointInstancer.Define(
+              stage, "/World/Scatter"
+          )
+
+          crate = stage.DefinePrim(
+              "/World/Scatter/Prototypes/Crate", "Xform"
+          )
+          crate.GetReferences().AddReference("cargo.usda")
+          bench = stage.DefinePrim(
+              "/World/Scatter/Prototypes/Bench", "Xform"
+          )
+          bench.GetReferences().AddReference("bench.usda")
+
+          scatter.CreatePrototypesRel().SetTargets([
+              crate.GetPath(), bench.GetPath()
+          ])
+          scatter.CreateProtoIndicesAttr([0, 1, 0, 1])
+          scatter.CreatePositionsAttr([
+              Gf.Vec3f(0, 0, 0), Gf.Vec3f(2, 0, 0),
+              Gf.Vec3f(4, 0, 0), Gf.Vec3f(6, 0, 0),
+          ])
+          scatter.CreateScalesAttr([
+              Gf.Vec3f(1, 1, 1) for _ in range(4)
+          ])
+          scatter.CreateIdsAttr([100, 101, 102, 103])
+
+          stage.GetRootLayer().Save()
+      - kind: concept
+        heading: Transform order is defined
+        system: >-
+          The transformations proceed in order. Chaos may be the floor theme, but matrix
+          multiplication declined the invitation.
+        body: |
+          Each instance begins with the prototype root's local-to-parent transform. OpenUSD then
+          applies instance-specific scale, orientation, and position, in that most-local to
+          least-local order. Finally, the PointInstancer prim's own transform is applied least
+          locally.
+
+          positions are therefore expressed in the PointInstancer's local space. Moving the
+          PointInstancer moves the entire population, while moving a prototype root affects every
+          point that selects that prototype.
+        points:
+          - "Per-instance order is scales[i], orientations[i], then positions[i]."
+          - "The prototype root transform is more local than the per-instance transform."
+          - "The PointInstancer prim transform is least local and affects the complete scatter."
+          - "Without authored ids, instance ids are inferred from protoIndices element indices."
+      - kind: pitfall
+        heading: One edit rewrites an array
+        system: >-
+          Move one peanut, rewrite the positions array. The city tried sparse array opinions once.
+          We now refer to that district in the past tense.
+        body: |
+          OpenUSD does not provide sparse overrides for array attributes. Moving one point requires
+          authoring the complete positions array in the stronger opinion. Animated overrides can
+          require full arrays at every time sample, making binary USDC layers preferable to
+          human-readable USDA for large data.
+        points:
+          - "Point instances are compact to represent but less convenient for one-off downstream edits."
+          - "Changing prototype relationship order without remapping protoIndices changes instance types."
+          - "orientations, scales, and ids are optional, but any authored per-instance array must align with the instance population."
+          - "Use scenegraph instances when individual copies need frequent path-based edits."
+      - kind: recap
+        heading: What you now owe the city
+        body: |
+          Point instancing combines explicit prototype targets with aligned, vectorized arrays.
+          protoIndices selects among multiple prototypes, transform order determines final
+          placement, and compactness comes at the cost of sparse per-instance editability.
+    apply:
+      f7_point_wastes_boss: >-
+        Target Crate first and Bench second, alternate protoIndices 0 and 1 across four X
+        positions, and preserve both references. The boss counts from zero and prosecutes reorderings.
+
+  - source: docs/asset-modularity-instancing/asset-modularity/exercise-assets-overview.md
+    title: Modular Assets at Scale
+    objective: Combine reusable components into assemblies and choose scenegraph or point instancing according to how each repeated asset must be used.
+    intro: >-
+      The Warehouse District contains 44,408 prims assembled from five useful assets and one
+      alarming confidence in reuse. Your task is not to eliminate complexity. It is to package
+      complexity where higher-level work can reference it, instance it, and remain blissfully
+      unaware of the bolts.
+    beats:
+      - kind: concept
+        heading: Components build assemblies
+        system: >-
+          A box joins a pallet, pallets join a rack, and suddenly the city calls it infrastructure
+          instead of a pile.
+        body: |
+          Asset modularity builds complex scenes from reusable, independently maintained assets.
+          A component is a leaf-level model such as a box, pallet, rack, or bench. An assembly
+          combines components, and assemblies can themselves be reused inside larger assemblies.
+
+          In the source warehouse, BoxPallet_A01 contains 18 box components and one pallet
+          component. Rack_BoxPallet_A01 contains three BoxPallet assemblies and one rack component.
+          Referencing and arranging the completed rack 25 times produces the full warehouse.
+        points:
+          - "Modular references hide internal prim complexity from higher-level layout workflows."
+          - "A component can be reused directly and as a descendant of several assemblies."
+          - "Nested assembly structure keeps authoring responsibility at the appropriate asset boundary."
+      - kind: concept
+        heading: Reuse multiplies into scale
+        system: >-
+          Twenty-five rack references became 1,350 boxes. The procurement office called it magic
+          and approved no additional budget.
+        body: |
+          A small asset library can produce a large composed stage. The exercise warehouse uses 25
+          rack components, 75 pallet components, and 1,350 box components, totaling 44,408 prims
+          before instancing optimization.
+
+          Layout authors only need to reference and arrange the high-level rack asset. Changes to
+          a reused component can propagate through assemblies and all referencing scenes without
+          copying its scene description into each placement.
+        points:
+          - "Asset modularity is the prerequisite for efficient instancing because repetition must be expressed through reusable composition."
+          - "References preserve asset boundaries and allow source assets to evolve independently."
+          - "Assemblies reduce the amount of scene structure a layout author must manage directly."
+      - kind: api
+        heading: Match the representation to the asset
+        system: >-
+          Benches get names. Crates get indices. This is the closest the Warehouse District comes
+          to a social hierarchy.
+        body: |
+          Use scenegraph instances for moderate counts of asset hierarchies that need distinct prim
+          paths, root metadata, transforms, or selective deinstancing. Use a PointInstancer for
+          very large populations whose per-copy state fits aligned arrays and whose members do not
+          need independent prim paths.
+
+          The two techniques can coexist in one assembly. An office can hold named instanceable
+          benches while a neighboring crate field uses one PointInstancer.
+        code: |
+          from pxr import Gf, Usd, UsdGeom
+
+          stage = Usd.Stage.CreateNew("warehouse.usda")
+          warehouse = "/City/InstanceWilds/Warehouse"
+          UsdGeom.Xform.Define(stage, warehouse)
+
+          for name in ("BenchA", "BenchB"):
+              prim = UsdGeom.Xform.Define(
+                  stage, f"{warehouse}/Office/{name}"
+              ).GetPrim()
+              prim.GetReferences().AddReference("bench.usda")
+              prim.SetInstanceable(True)
+
+          field = UsdGeom.PointInstancer.Define(
+              stage, f"{warehouse}/CrateField"
+          )
+          crate = stage.DefinePrim(
+              f"{warehouse}/CrateField/Prototypes/Crate", "Xform"
+          )
+          crate.GetReferences().AddReference("cargo.usda")
+          field.CreatePrototypesRel().SetTargets([crate.GetPath()])
+          field.CreateProtoIndicesAttr([0] * 6)
+          field.CreatePositionsAttr([
+              Gf.Vec3f(float(i * 2), 0.0, 0.0) for i in range(6)
+          ])
+
+          stage.GetRootLayer().Save()
+      - kind: pitfall
+        heading: Optimization follows workflow
+        system: >-
+          There is no universal instancer. There is only the correct tradeoff and the contestant
+          currently applying one tool to every visible object.
+        body: |
+          Point instancing is not automatically better because it supports larger counts.
+          Array-based copies are difficult to inspect and refine individually. Scenegraph instances
+          cost one instance root per copy but preserve meaningful paths and legal root opinions.
+
+          Choose at the asset boundary according to count, granularity, expected overrides, and
+          downstream interaction. A warehouse can use both without compromising modularity.
+        points:
+          - "Prefer scenegraph instancing for named, selectable assets that need per-copy root metadata or occasional unique refinement."
+          - "Prefer point instancing for huge similar populations controlled naturally by arrays."
+          - "Do not flatten assemblies merely to reduce visible hierarchy; flattening discards reusable composition structure."
+          - "Do not create scenegraph prims for hundreds of thousands of simple copies when no workflow needs those paths."
+      - kind: recap
+        heading: What you now owe the city
+        body: |
+          Components compose into assemblies, assemblies scale through references, and instancing
+          optimizes the resulting repetition. Scenegraph instances preserve named roots and
+          selective editability; point instancers maximize compactness for array-driven populations.
+    apply:
+      f7_warehouse_district: >-
+        Build two instanceable office benches from bench.usda and a six-copy cargo PointInstancer
+        at CrateField. Recapture the district with both tools; monopolies are how floors collapse.
+
+  - source: docs/asset-modularity-instancing/authoring-scenegraph-instancing/nested-instancing.md
+    title: Nested Instancing
+    objective: Build instanceable aggregates whose contents also use instancing while managing prototype complexity and memory tradeoffs.
+    intro: >-
+      The Mirror Forge has placed mirrors inside mirrors and submitted the result as an assembly.
+      This is nested instancing, and unlike most boss tactics it can be an excellent optimization.
+      Used deliberately, it scales cities. Used indiscriminately, it scales prototype complexity
+      until the memory graph becomes the real final boss.
+    beats:
+      - kind: concept
+        heading: Instances can contain instances
+        system: >-
+          The reflection contains smaller reflections. The Forge calls this depth. Accounting calls
+          it a reason to schedule a meeting.
+        body: |
+          Nested instancing occurs when an instance subgraph contains additional instances. A
+          common pattern is an instanceable assembly built from instanceable components, such as
+          an instanceable rack containing instanceable pallets and boxes.
+
+          Each level shares structure at a useful asset boundary. The assembly can be repeated as
+          one aggregate while its recurring components continue to share their own prototypes.
+        points:
+          - "Nested instancing supports large-scale scene aggregation without expanding every component hierarchy."
+          - "Instanced assemblies with instanced components are a standard nesting pattern."
+          - "The inner and outer instance roots remain explicit authored candidates; their prototypes remain implicit."
+      - kind: concept
+        heading: Nesting crosses instancing systems
+        system: >-
+          Scenegraph instances may contain PointInstancers, and PointInstancer prototypes may
+          contain scenegraph instances. The mirrors have learned diplomacy.
+        body: |
+          Nesting is not limited to scenegraph instances. A scenegraph instance can contain a
+          PointInstancer, and a PointInstancer prototype hierarchy can contain scenegraph
+          instances. The useful boundary is determined by the asset and its repetition pattern,
+          not by a prohibition on mixing systems.
+
+          Material networks are another common nested target. A component may reference and
+          instance a shared material network; instancing that component then creates nested
+          instancing beneath the component instance.
+        points:
+          - "Complex material networks can contain more prims than geometry and may benefit substantially from sharing."
+          - "Referenced library material networks can be candidates for scenegraph instancing."
+          - "Mixing point and scenegraph instancing is valid when each level matches its access pattern."
+      - kind: api
+        heading: Instance the aggregate boundary
+        system: >-
+          bench_row.usda already contains the inner arrangement. Your job is one outer promise,
+          not an archaeological expedition through its seats.
+        body: |
+          When an aggregate asset already contains instanceable descendants, reference that asset
+          at a new prim and mark the aggregate root instanceable. OpenUSD composes the nested
+          structure and derives the needed prototypes.
+        code: |
+          from pxr import Usd, UsdGeom
+
+          stage = Usd.Stage.CreateNew("instance_wilds.usda")
+          row = UsdGeom.Xform.Define(
+              stage, "/City/InstanceWilds/BenchRow"
+          ).GetPrim()
+          row.GetReferences().AddReference("assets/bench_row.usda")
+          row.SetInstanceable(True)
+
+          # Root opinions remain unique even though the aggregate is shared.
+          row.SetDisplayName("Mirror Forge Bench Row")
+          print(row.IsInstanceable())
+
+          stage.GetRootLayer().Save()
+      - kind: pitfall
+        heading: More levels are not always cheaper
+        system: >-
+          Every unique composition can demand another prototype. The Forge considers this a
+          collection. Your profiler will use stronger language.
+        body: |
+          Nested instancing adds indirection and can increase the number of distinct prototypes
+          when nested assemblies have different composition arcs, variant selections, or asset
+          configurations. The technique saves memory when many copies actually share each level;
+          unique configurations reduce that sharing.
+
+          Deinstancing outer or inner copies also materializes more unique scene description.
+          Repeated unique deinstances beneath nested aggregates can multiply the amount of
+          separately represented content and erase the intended memory advantage.
+        points:
+          - "Instance boundaries should align with asset boundaries that repeat in practice."
+          - "Variant and composition differences can split otherwise similar aggregates into separate prototypes."
+          - "Frequent unique deinstancing under nested structures defeats sharing and raises prim and memory costs."
+          - "Profile stage statistics and memory rather than assuming every additional nesting level is beneficial."
+          - "Do not author against implicit prototype paths; maintain the referenced assets and explicit instance roots."
+      - kind: recap
+        heading: What you now owe the city
+        body: |
+          Nested instancing lets instanceable assemblies share outer structure while their
+          components, point populations, or material networks share inner structure. It is most
+          effective when each level corresponds to genuinely repeated modular content and unique
+          refinements remain exceptional.
+    apply:
+      f7_mirror_forge: >-
+        Mark the BenchRow prim instanceable and preserve its bench_row.usda reference. The Forge
+        built mirrors inside mirrors; defeat it by making the arrangement intentional.

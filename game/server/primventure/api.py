@@ -78,7 +78,10 @@ def get_state() -> dict[str, Any]:
 @app.get("/api/quests")
 def get_quests() -> list[dict[str, Any]]:
     state = saves.load()
-    return [quest_view(quest, state) for quest in quests.all()]
+    return [
+        quest_view(quest, state, quests.lesson_for(quest))
+        for quest in quests.all()
+    ]
 
 
 @app.get("/api/quests/{quest_id}")
@@ -87,7 +90,7 @@ def get_quest(quest_id: str) -> dict[str, Any]:
         quest = quests.get(quest_id)
     except KeyError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
-    return quest_view(quest, saves.load())
+    return quest_view(quest, saves.load(), quests.lesson_for(quest))
 
 
 @app.get("/api/recipes")

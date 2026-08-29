@@ -6,6 +6,7 @@ from pydantic import BaseModel, Field
 
 
 QuestKind = Literal["orientation", "room", "neighborhood_boss", "city_boss", "floor_boss"]
+LessonBeatKind = Literal["concept", "api", "pitfall", "recap"]
 
 
 class Question(BaseModel):
@@ -14,6 +15,26 @@ class Question(BaseModel):
     answer: int | None = None
     answer_key: str = ""
     explanation: str = ""
+
+
+class LessonBeat(BaseModel):
+    kind: LessonBeatKind
+    heading: str
+    # The System narrates; `body` and `points` stay in neutral instructional
+    # voice so the host's commentary never has to carry the technical load.
+    system: str = ""
+    body: str = ""
+    points: list[str] = Field(default_factory=list)
+    code: str = ""
+
+
+class LessonCard(BaseModel):
+    source: str
+    title: str
+    objective: str
+    intro: str
+    beats: list[LessonBeat] = Field(min_length=1)
+    apply: dict[str, str] = Field(default_factory=dict)
 
 
 class Quest(BaseModel):
