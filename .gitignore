@@ -19,3 +19,4 @@ game/save.json
 game/web/node_modules/
 world/.preview/
 *.tsbuildinfo
+.tmp-shot/

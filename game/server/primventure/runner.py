@@ -11,7 +11,7 @@ from typing import Any
 from pxr import Sdf, Usd, UsdGeom
 
 from .models import PlayerState, Quest, RunRequest, RunResponse, ValidationResult
-from .store import ROOT, WORLD_DIR, SaveStore, level_for_xp
+from .store import ROOT, WORLD_DIR, SaveStore, level_for_xp, opinion_points_for
 
 
 TAUNTS = [
@@ -427,8 +427,7 @@ class QuestRunner:
             reward = quest.reward if isinstance(quest.reward, dict) else {}
             if isinstance(quest.reward, str) and quest.reward:
                 state.inventory[quest.reward] = state.inventory.get(quest.reward, 0) + 1
-            points = int(reward.get("opinion_points", 1 if quest.kind.endswith("boss") else 0))
-            state.opinion_points += points
+            state.opinion_points += opinion_points_for(quest)
             achievement = reward.get("achievement")
             if achievement and achievement not in state.achievements:
                 state.achievements.append(achievement)

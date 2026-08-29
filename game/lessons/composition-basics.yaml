@@ -37,12 +37,12 @@ lessons:
           geometric properties such as extent and displayColor through its schema hierarchy.
 
           A schema accessor can return an attribute whose value is supplied by a schema fallback
-          even when no opinion is authored in any layer. Calling Set or CreateXxxAttr authors a
+          even when no opinion is authored in any layer. Calling Set on that accessor authors a
           real opinion, which then participates in value resolution and appears in the layer.
         points:
           - GetTypeName reports the prim's authored type token, such as Cube.
-          - GetXxxAttr returns a Usd.Attribute; call Get to read its resolved value.
-          - CreateXxxAttr can author a value using the schema's correct name and Sdf value type.
+          - GetSizeAttr returns a Usd.Attribute; call Get to read its resolved value.
+          - Prefer schema-specific methods when they exist; they are clearer and less brittle.
       - kind: api
         heading: Define through the schema class
         system: >-

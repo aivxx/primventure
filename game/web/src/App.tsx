@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import Editor from "@monaco-editor/react";
 import {
-  ArrowRight, Backpack, Boxes, BookOpen, ChevronRight, CircleDollarSign, Code2,
-  FlaskConical, Gem, HelpCircle, LockKeyhole, Play, RefreshCw, Shield,
-  ShoppingCart, Skull, Sparkles, Swords, TerminalSquare, Trophy, X, Zap,
+  ArrowRight, Backpack, Boxes, BookOpen, CheckCircle2, ChevronRight, Circle,
+  CircleDollarSign, Code2, Eye, FlaskConical, Gem, HelpCircle, Lightbulb,
+  ListChecks, LockKeyhole, Play, RefreshCw, Shield, ShoppingCart, Skull,
+  Sparkles, Swords, TerminalSquare, Trophy, X, XCircle, Zap,
 } from "lucide-react";
 import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
@@ -24,8 +25,12 @@ type Quest = {
   brief: string; language: Language; starter: string; xp: number; reward?: string | object;
   cookbook: string; unlocked: boolean; completed: boolean; exam_tasks: string[];
   stats: Record<string, number>; questions?: Question[]; lesson?: Lesson | null;
+  opinion_points: number; expects: string[];
 };
-type ShopItem = { name: string; description: string; cost: number; repeatable?: boolean };
+type ShopItem = {
+  name: string; description: string; cost: number; repeatable?: boolean;
+  kind?: "consumable" | "upgrade";
+};
 type PlayerState = {
   contestant: string; title: string; level: number; xp: number; next_level_xp: number;
   opinion_points: number; completed_quests: string[]; stats: Record<string, number>;
@@ -38,6 +43,12 @@ type RunResult = {
   results: Array<{ rule: string; passed: boolean; message: string }>; state: PlayerState;
 };
 type Toast = { kind: "success" | "error" | "info"; title: string; message: string };
+type AssistResult = { kind: "hint" | "peek"; title: string; message: string };
+type HintResponse = { hint: string; state: PlayerState };
+type PeekResponse = {
+  peek: { layer: string; sublayers: string[]; message: string };
+  state: PlayerState;
+};
 
 const CLASS_PATHS = [
   {
@@ -61,12 +72,12 @@ const ONBOARDED_KEY = "primventure.onboarded.v2";
 const GUIDED_KEY = "primventure.guided";
 const LESSONS_READ_KEY = "primventure.lessons-read.v1";
 
-type GuideTarget = "lesson" | "editor" | "run" | "map";
+type GuideTarget = "lesson" | "editor" | "run" | "map" | "payout" | "consumables";
 const GUIDE_STEPS: Array<{ target: GuideTarget; title: string; body: string }> = [
   {
     target: "lesson",
     title: "Learn this room",
-    body: "The System compresses the official lesson into one objective, one concept, and one API example. Read the beats, then acknowledge the briefing.",
+    body: "The System introduces the official lesson, then hands you the concepts, API calls, and traps this room needs. Read the beats, then acknowledge the briefing.",
   },
   {
     target: "editor",
@@ -81,7 +92,17 @@ const GUIDE_STEPS: Array<{ target: GuideTarget; title: string; body: string }> =
   {
     target: "map",
     title: "Move through the floors",
-    body: "Clear the rooms to learn the floor. The boss is the exit exam, and your cleared work stacks up as a real USD city in world/.",
+    body: "Clear the rooms to learn the floor. The boss is the exit exam, and your cleared work stacks up as a real USD city in world/. Rooms tagged +OP on the map pay Opinion Points the first time you clear them.",
+  },
+  {
+    target: "payout",
+    title: "Get paid in Opinion Points",
+    body: "Opinion Points are the only currency, and boss rooms are what pay them. This counter holds your balance and names the next room that will top it up.",
+  },
+  {
+    target: "consumables",
+    title: "Spend it on consumables",
+    body: "Hint Tokens buy you a clue for the room you are stuck on. Opinion X-Rays show the composed layer stack after you clear a room. Click one here to use it, and hit SAFEROOM to buy more once a boss has paid you.",
   },
 ];
 
@@ -436,6 +457,10 @@ export default function App() {
   const [answers, setAnswers] = useState<Array<number | string>>([]);
   const [activeTab, setActiveTab] = useState<"map" | "skills" | "kiosk">("map");
   const [running, setRunning] = useState(false);
+  const [assistBusy, setAssistBusy] = useState<"hint" | "peek" | null>(null);
+  const [assistResult, setAssistResult] = useState<AssistResult | null>(null);
+  const [pendingSpend, setPendingSpend] = useState<"hint_tokens" | "system_peeks" | null>(null);
+  const [checks, setChecks] = useState<boolean[]>([]);
   const [revision, setRevision] = useState(0);
   const [toast, setToast] = useState<Toast | null>(null);
   const [showLanding, setShowLanding] = useState(() => localStorage.getItem(ONBOARDED_KEY) !== "1");
@@ -450,6 +475,8 @@ export default function App() {
   const focusEditor = useRef<(() => void) | null>(null);
   const runRef = useRef<HTMLButtonElement>(null);
   const mapRef = useRef<HTMLElement>(null);
+  const payoutRef = useRef<HTMLElement>(null);
+  const consumablesRef = useRef<HTMLElement>(null);
 
   const refresh = async (advance = false) => {
     const [nextState, nextQuests, nextRecipes] = await Promise.all([
@@ -495,6 +522,9 @@ export default function App() {
     if (!activeQuest) return;
     setCode(activeQuest.starter || "");
     setAnswers(activeQuest.questions?.map(() => "") || []);
+    setAssistResult(null);
+    setPendingSpend(null);
+    setChecks([]);
     if (!showLanding && activeQuest.lesson && !activeQuest.completed && !lessonsRead().has(activeQuest.id)) {
       setLessonOpen(true);
     }
@@ -513,6 +543,17 @@ export default function App() {
     return () => window.removeEventListener("keydown", closeOnEscape);
   }, [lessonOpen]);
 
+  // Reveal what each step describes. Keyed on the step alone: reacting to
+  // `lessonOpen` here would reopen the drawer the instant anyone closed it.
+  useEffect(() => {
+    if (guideStep === null) return;
+    const target = GUIDE_STEPS[guideStep].target;
+    if (target === "map") setActiveTab("map");
+    // The drawer covers the screen, so it has to step aside once the tour
+    // moves on to the terminal behind it.
+    setLessonOpen(target === "lesson");
+  }, [guideStep]);
+
   // Park the arrow just outside the left edge of whatever the tutorial is
   // describing, so the callout and the outline agree on the target.
   useEffect(() => {
@@ -521,13 +562,13 @@ export default function App() {
       return;
     }
     const target = GUIDE_STEPS[guideStep].target;
-    if (target === "map" && activeTab !== "map") setActiveTab("map");
-    if (target === "lesson" && !lessonOpen) setLessonOpen(true);
     const node = () => ({
       lesson: lessonRef.current,
       editor: editorRef.current,
       run: runRef.current,
       map: mapRef.current,
+      payout: payoutRef.current,
+      consumables: consumablesRef.current,
     } as Record<GuideTarget, HTMLElement | null>)[target];
     const measure = () => {
       const rect = node()?.getBoundingClientRect();
@@ -570,6 +611,10 @@ export default function App() {
     () => quests.find((quest) => quest.unlocked && !quest.completed) || null,
     [quests],
   );
+  const nextPayingQuest = useMemo(
+    () => quests.find((quest) => !quest.completed && quest.opinion_points > 0) || null,
+    [quests],
+  );
   const focusFloor = activeQuest?.floor ?? nextQuest?.floor ?? 0;
   const visibleFloors = mapScope === "all" ? floors : floors.filter(([floor]) => floor === focusFloor);
   const focusRooms = floors.find(([floor]) => floor === focusFloor)?.[1] || [];
@@ -587,10 +632,15 @@ export default function App() {
         method: "POST", body: JSON.stringify({ code, language: activeQuest.language, answers }),
       });
       setState(result.state);
+      // Stage rules come back in the order the room declares them, so they line
+      // up with the checklist as long as the stage opened at all.
+      const stageChecks = result.results.filter((item) => !item.rule.startsWith("question_"));
+      setChecks(stageChecks.length === activeQuest.expects.length ? stageChecks.map((item) => item.passed) : []);
+      const payout = result.state.opinion_points - state.opinion_points;
       setToast({
         kind: result.success ? "success" : "error",
         title: result.success ? "ROOM CLEARED" : "VALIDATION FAILED",
-        message: `${!result.success && !lessonRead ? "SYSTEM: You skipped the briefing. The lesson remains available. " : ""}${result.system_message} ${result.results.filter((item) => !item.passed).map((item) => item.message).join(" ")}`,
+        message: `${!result.success && !lessonRead ? "SYSTEM: You skipped the briefing. The lesson remains available. " : ""}${result.system_message} ${result.results.filter((item) => !item.passed).map((item) => item.message).join(" ")}${payout > 0 ? ` Payout: +${payout} Opinion Points, spendable on consumables in the Saferoom.` : ""}`,
       });
       await refresh(result.success);
       if (result.success) setRevision((value) => value + 1);
@@ -598,6 +648,49 @@ export default function App() {
       setToast({ kind: "error", title: "SIGNAL LOST", message: error instanceof Error ? error.message : "The API did not answer." });
     } finally {
       setRunning(false);
+    }
+  };
+
+  const useHint = async () => {
+    if (!activeQuest || assistBusy) return;
+    setAssistBusy("hint");
+    try {
+      const result = await api<HintResponse>(`/quests/${activeQuest.id}/hint`, { method: "POST" });
+      setState(result.state);
+      setAssistResult({ kind: "hint", title: "SYSTEM HINT", message: result.hint });
+    } catch (error) {
+      setToast({
+        kind: "error",
+        title: "HINT DENIED",
+        message: error instanceof Error ? error.message : "The System declined to elaborate.",
+      });
+    } finally {
+      setAssistBusy(null);
+    }
+  };
+
+  const useSystemPeek = async () => {
+    if (!activeQuest || assistBusy) return;
+    setAssistBusy("peek");
+    try {
+      const result = await api<PeekResponse>(`/quests/${activeQuest.id}/peek`, { method: "POST" });
+      setState(result.state);
+      const sublayers = result.peek.sublayers.length
+        ? ` Sublayers, strongest first: ${result.peek.sublayers.join(", ")}.`
+        : " No sublayers are authored.";
+      setAssistResult({
+        kind: "peek",
+        title: "OPINION X-RAY",
+        message: `${result.peek.message} Layer: ${result.peek.layer}.${sublayers}`,
+      });
+    } catch (error) {
+      setToast({
+        kind: "error",
+        title: "PEEK DENIED",
+        message: error instanceof Error ? error.message : "The layer stack remained opaque.",
+      });
+    } finally {
+      setAssistBusy(null);
     }
   };
 
@@ -626,14 +719,33 @@ export default function App() {
 
   const buyUpgrade = async (id: string) => {
     try {
-      setState(await api<PlayerState>(`/shop/${id}`, { method: "POST" }));
-      setToast({ kind: "success", title: "UPGRADE INSTALLED", message: "No refunds after the screaming starts." });
+      const next = await api<PlayerState>(`/shop/${id}`, { method: "POST" });
+      setState(next);
+      const restock = next.shop[id]?.kind === "consumable";
+      setToast({
+        kind: "success",
+        title: restock ? "CONSUMABLE RESTOCKED" : "UPGRADE INSTALLED",
+        message: restock
+          ? "Delivered to Consumables on the left rail. Saferoom restocks are final."
+          : "No refunds after the screaming starts.",
+      });
     } catch (error) {
       setToast({ kind: "error", title: "PURCHASE DENIED", message: error instanceof Error ? error.message : "The kiosk ate your points." });
     }
   };
 
   const inventory = Object.entries(state.inventory);
+  const hintTokens = state.inventory.hint_tokens || 0;
+  const systemPeeks = state.inventory.system_peeks || 0;
+  const consumables = [
+    { id: "hint_tokens" as const, quantity: hintTokens, cost: state.shop?.hint_refill?.cost },
+    { id: "system_peeks" as const, quantity: systemPeeks, cost: state.shop?.system_peek?.cost },
+  ];
+  const keyItems = inventory.filter(([name]) => name !== "hint_tokens" && name !== "system_peeks");
+  const shopSections = [
+    { id: "consumable" as const, heading: "CONSUMABLES // RESTOCK HERE", items: Object.entries(state.shop || {}).filter(([, item]) => item.kind === "consumable") },
+    { id: "upgrade" as const, heading: "UPGRADES // PERMANENT AND COSMETIC", items: Object.entries(state.shop || {}).filter(([, item]) => item.kind !== "consumable") },
+  ];
   const status = activeQuest ? questStatus(activeQuest) : "locked";
 
   if (showLanding) {
@@ -663,19 +775,72 @@ export default function App() {
     </header>
     <main>
       <aside className="left-rail">
-        <section className="player-card panel">
+        <section className={`player-card panel ${spotlight === "payout" ? "spotlight" : ""}`} ref={payoutRef}>
           <div className="panel-heading"><span><Swords size={15} /> RUN STATUS</span><em>{state.completed_quests.length}/{quests.length}</em></div>
           <div className="stat-line"><span><Trophy size={15} /> CITY CONTROL</span><b>{quests.length ? Math.round(state.completed_quests.length / quests.length * 100) : 0}%</b></div>
           <div className="meter health"><i style={{ width: `${quests.length ? state.completed_quests.length / quests.length * 100 : 0}%` }} /></div>
           <div className="stat-line"><span><Zap size={15} /> EXPERIENCE</span><b>{state.xp}/{state.next_level_xp}</b></div>
           <div className="meter xp"><i style={{ width: `${xpProgress}%` }} /></div>
           <div className="currency"><CircleDollarSign size={18} /><div><small>OPINION POINTS</small><b>{state.opinion_points}</b></div></div>
+          <p className="currency-note">
+            Earned by clearing boss rooms. {nextPayingQuest
+              ? <>Next payout: <b>{nextPayingQuest.title}</b> (+{nextPayingQuest.opinion_points} OP).</>
+              : "Every paying room on this route is cleared."}
+          </p>
           {(state.specialization || state.level >= 2) && <div className="stat-line"><span><Shield size={15} /> CLASS PATH</span><b>{state.specialization || "UNDECLARED"}</b></div>}
         </section>
-        {inventory.length > 0 && <section className="inventory panel">
-          <div className="panel-heading"><span><Backpack size={15} /> LOADOUT</span><em>{inventory.length}</em></div>
-          {inventory.map(([name, quantity]) => <div className="inventory-item" key={name}>
-            <span className="item-icon rare"><FlaskConical size={17} /></span><div><strong>{name.replaceAll("_", " ")}</strong><small>System-issued gear</small></div><b>×{quantity}</b>
+        <section className={`inventory panel ${spotlight === "consumables" ? "spotlight" : ""}`} ref={consumablesRef}>
+          <div className="panel-heading"><span><FlaskConical size={15} /> CONSUMABLES</span><button className="restock-link" onClick={() => setActiveTab("kiosk")}>SAFEROOM</button></div>
+          {consumables.map(({ id, quantity, cost }) => {
+            const isHint = id === "hint_tokens";
+            const unavailable = quantity < 1 || assistBusy !== null || (!isHint && !activeQuest?.completed);
+            const label = isHint ? "Hint Token" : "Opinion X-Ray";
+            const detail = quantity < 1
+              ? `Out of stock · ${cost ?? "?"} OP in Saferoom`
+              : isHint
+                ? "Tap to use · room-level clue"
+                : activeQuest?.completed ? "Tap to use · reads the published layer" : "Clear this room to use";
+            const icon = (isHint && assistBusy === "hint") || (!isHint && assistBusy === "peek")
+              ? <RefreshCw className="spin" />
+              : isHint ? <Lightbulb size={17} /> : <Eye size={17} />;
+            // Spending is irreversible, so the first click only arms the item.
+            if (pendingSpend === id) {
+              return <div className="inventory-item confirming" key={id}>
+                <span className={`item-icon ${isHint ? "rare" : "epic"}`}>{icon}</span>
+                <div><strong>Spend 1 {isHint ? "Hint" : "X-Ray"}?</strong><small>{quantity - 1} would be left</small></div>
+                <div className="confirm-actions">
+                  <button className="yes" onClick={() => { setPendingSpend(null); (isHint ? useHint : useSystemPeek)(); }}>SPEND</button>
+                  <button className="no" onClick={() => setPendingSpend(null)} aria-label={`Keep the ${label}`}><X size={13} /></button>
+                </div>
+              </div>;
+            }
+            return <button
+              className="inventory-item usable"
+              key={id}
+              disabled={unavailable}
+              onClick={() => setPendingSpend(id)}
+              title={detail}
+            >
+              <span className={`item-icon ${isHint ? "rare" : "epic"}`}>{icon}</span>
+              <div><strong>{label}</strong><small>{detail}</small></div>
+              <b>{quantity} LEFT</b>
+            </button>;
+          })}
+          {consumables.some((item) => item.quantity < 1) && <p className="currency-note">
+            Restocking costs Opinion Points, and boss rooms are what pay them out. You have <b>{state.opinion_points} OP</b>.
+          </p>}
+          {assistResult && <div className={`assist-result ${assistResult.kind}`}>
+            <button onClick={() => setAssistResult(null)} aria-label="Dismiss assistance"><X /></button>
+            <span>{assistResult.title}</span>
+            <p>{assistResult.message}</p>
+          </div>}
+        </section>
+        {keyItems.length > 0 && <section className="inventory panel key-items">
+          <div className="panel-heading"><span><Backpack size={15} /> KEY ITEMS</span><em>{keyItems.length}</em></div>
+          {keyItems.map(([name, quantity]) => <div className="inventory-item passive" key={name}>
+            <span className="item-icon legendary"><Backpack size={17} /></span>
+            <div><strong>{name.replaceAll("_", " ")}</strong><small>Room-clear trophy</small></div>
+            <b>× {quantity}</b>
           </div>)}
         </section>}
         <ScenePreview revision={revision} />
@@ -691,7 +856,7 @@ export default function App() {
             <div>
               <span>{mapScope === "floor" ? `FLOOR ${String(focusFloor).padStart(2, "0")} · ${focusCleared}/${focusRooms.length} CLEARED` : "CONTESTANT PATH // FLOORS 00–09"}</span>
               <h1>{mapScope === "floor" ? focusRooms[0]?.floor_name || "RECAPTURE PROTOCOL" : "RECAPTURE PROTOCOL"}</h1>
-              <p>{nextQuest ? <>Clear the rooms to learn the floor. The boss is the exit exam. Next: <b>{nextQuest.title}</b>.</> : "Every room on this route is cleared."}</p>
+              <p>{nextQuest ? <>Clear the rooms to learn the floor. The boss is the exit exam, and it pays the Opinion Points you spend on consumables. Next: <b>{nextQuest.title}</b>.</> : "Every room on this route is cleared."}</p>
               <div className="map-scope">
                 <button className={mapScope === "floor" ? "active" : ""} onClick={() => setMapScope("floor")}>THIS FLOOR</button>
                 <button className={mapScope === "all" ? "active" : ""} onClick={() => setMapScope("all")}>ALL FLOORS</button>
@@ -709,10 +874,11 @@ export default function App() {
                   {roomStatus === "locked" ? <LockKeyhole /> : roomStatus === "boss" ? <Skull /> : roomStatus === "complete" ? <Trophy /> : <Code2 />}
                   <span>{quest.kind.endsWith("boss") ? "BOSS" : `0${index + 1}`}</span>
                 </button><small>{quest.title}</small>
+                {quest.opinion_points > 0 && <b className={`room-pay ${roomStatus === "complete" ? "spent" : ""}`}>{roomStatus === "complete" ? `PAID ${quest.opinion_points} OP` : `+${quest.opinion_points} OP`}</b>}
               </div>;
             })}</div>
           </div>)}</div>
-          <div className="legend"><span><i className="complete" /> CLEARED</span><span><i className="available" /> OPEN</span><span><i className="boss" /> BOSS</span><span><i className="locked" /> LOCKED</span></div>
+          <div className="legend"><span><i className="complete" /> CLEARED</span><span><i className="available" /> OPEN</span><span><i className="boss" /> BOSS</span><span><i className="locked" /> LOCKED</span><span>+OP PAYS OPINION POINTS FOR THE SAFEROOM</span></div>
         </div>}
         {activeTab === "skills" && <div className="skill-tree panel">
           <div className="section-hero"><span>THE COOKBOOK INDEX</span><h1>RECIPES OF POWER</h1><p>Glossary nodes from the Cookbook graph. Clear rooms that name them. SYSTEM: collecting terms is not the same as composing them.</p><small className="recipe-count">{masteredRecipes}/{recipes.length} MASTERED</small></div>
@@ -724,7 +890,7 @@ export default function App() {
           </section>)}
         </div>}
         {activeTab === "kiosk" && <div className="kiosk panel">
-          <div className="section-hero"><span>SAFEROOM KIOSK // OPINIONS FINAL</span><h1>SPEND TO SURVIVE</h1><p>SYSTEM: {state.specialization ? `${state.specialization} still pays rent in Opinion Points.` : "Pick a class path after level 2. The dungeon does not get easier. The flavor does."} Upgrades never clear rooms for you.</p></div>
+          <div className="section-hero"><span>SAFEROOM KIOSK // OPINIONS FINAL</span><h1>SPEND TO SURVIVE</h1><p>SYSTEM: Everything here costs Opinion Points, and Opinion Points come from clearing boss rooms. {nextPayingQuest ? `Your next payout is ${nextPayingQuest.title}, worth ${nextPayingQuest.opinion_points}.` : "You have cleared every paying room on this route."} Consumables land in the left rail. Upgrades never clear rooms for you.</p><small className="recipe-count">{state.opinion_points} OP BANKED</small></div>
           <div className="class-grid">{CLASS_PATHS.map((path) => {
             const selected = state.specialization === path.id;
             const lockedOut = Boolean(state.specialization) && !selected;
@@ -736,23 +902,36 @@ export default function App() {
               </button>
             </article>;
           })}</div>
-          <div className="shop-grid">{Object.entries(state.shop).map(([id, item], index) => {
-            const owned = state.upgrades.includes(id) && !item.repeatable;
-            return <article className={owned ? "owned" : ""} key={id}><div className="shop-number">0{index + 1}</div><Shield size={34} /><h3>{item.name}</h3><p>{item.description}</p>
-              <button disabled={owned || state.opinion_points < item.cost} onClick={() => buyUpgrade(id)}>{owned ? "INSTALLED" : <><CircleDollarSign size={15} /> {item.cost} OP</>}</button>
-            </article>;
-          })}</div><small className="fine-print">*Saferoom status void during syntax errors and certification deadlines.</small>
+          {shopSections.map((section) => <div className="shop-section" key={section.id}>
+            <div className="shop-heading">{section.heading}</div>
+            <div className="shop-grid">{section.items.map(([id, item], index) => {
+              const owned = state.upgrades.includes(id) && !item.repeatable;
+              return <article className={owned ? "owned" : ""} key={id}><div className="shop-number">0{index + 1}</div>{item.kind === "consumable" ? <FlaskConical size={34} /> : <Shield size={34} />}<h3>{item.name}</h3><p>{item.description}</p>
+                <button disabled={owned || state.opinion_points < item.cost} onClick={() => buyUpgrade(id)}>{owned ? "INSTALLED" : state.opinion_points < item.cost ? `NEED ${item.cost - state.opinion_points} MORE OP` : item.repeatable ? <><CircleDollarSign size={15} /> {item.cost} OP · RESTOCK</> : <><CircleDollarSign size={15} /> {item.cost} OP</>}</button>
+              </article>;
+            })}</div>
+          </div>)}<small className="fine-print">*Saferoom status void during syntax errors and certification deadlines.</small>
         </div>}
       </section>
       <aside className="editor-rail">
         <section className="challenge-card">
-          <div className="eyebrow"><span>{activeQuest?.kind.replaceAll("_", " ").toUpperCase() || "NO SIGNAL"}</span><b>+{activeQuest?.xp || 0} XP</b></div>
+          <div className="eyebrow"><span>{activeQuest?.kind.replaceAll("_", " ").toUpperCase() || "NO SIGNAL"}</span><b>+{activeQuest?.xp || 0} XP{activeQuest?.opinion_points ? ` · +${activeQuest.opinion_points} OP` : ""}</b></div>
           <h2>{activeQuest?.title || "Waiting for the System"}</h2><p>{activeQuest?.brief}</p>
           <div className="objective"><ChevronRight size={16} /><span><small>NEIGHBORHOOD</small>{activeQuest?.neighborhood}</span></div>
           {activeQuest && <div className="learning-route">
             <span className={lessonRead ? "done" : "current"}><b>1</b> LEARN</span><i /><span className={lessonRead ? "current" : ""}><b>2</b> AUTHOR</span><i /><span><b>3</b> VALIDATE</span>
           </div>}
           {activeQuest && <button className="cookbook-link" onClick={() => setLessonOpen(true)}><BookOpen size={15} /> {lessonRead ? "REVIEW LESSON" : "LEARN THIS ROOM"}</button>}
+          {activeQuest && activeQuest.expects.length > 0 && <div className="expectations">
+            <span className="expect-heading"><ListChecks size={14} /> THE TERMINAL CHECKS FOR</span>
+            <ol>{activeQuest.expects.map((line, index) => {
+              const verdict = checks[index];
+              return <li className={verdict === undefined ? "" : verdict ? "passed" : "failed"} key={line}>
+                <i>{verdict === undefined ? <Circle size={12} /> : verdict ? <CheckCircle2 size={12} /> : <XCircle size={12} />}</i>
+                <span>{line}</span>
+              </li>;
+            })}</ol>
+          </div>}
           {activeQuest?.questions?.map((question, index) => <label className="boss-question" key={question.prompt}>{question.prompt}
             {question.choices?.length ? <select value={String(answers[index] ?? "")} onChange={(event) => setAnswers((current) => current.map((answer, i) => i === index ? Number(event.target.value) : answer))}>
               <option value="">Choose…</option>{question.choices.map((choice, choiceIndex) => <option value={choiceIndex} key={choice}>{choice}</option>)}

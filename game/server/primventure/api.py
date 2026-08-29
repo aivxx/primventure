@@ -17,28 +17,40 @@ from .store import ROOT, WORLD_DIR, QuestStore, SaveStore, quest_view
 
 
 UPGRADES: dict[str, dict[str, Any]] = {
-    "deeper_hints": {
-        "name": "Contextual Menace",
-        "description": "Unlock a second hint that points at the relevant API, never the answer.",
-        "cost": 2,
+    "hint_refill": {
+        "name": "Hint Token",
+        "description": "Restocks two Hint Tokens in Consumables. Points at the room's lesson, never the answer.",
+        "cost": 1,
+        "inventory": {"hint_tokens": 2},
+        "repeatable": True,
+        "kind": "consumable",
     },
     "system_peek": {
         "name": "Opinion X-Ray",
-        "description": "Adds two layer-stack inspection consumables.",
+        "description": "Restocks two Opinion X-Rays in Consumables. Inspects a cleared room's published layer.",
         "cost": 2,
         "inventory": {"system_peeks": 2},
         "repeatable": True,
+        "kind": "consumable",
+    },
+    "deeper_hints": {
+        "name": "Contextual Menace",
+        "description": "Hints also name the relevant API. The answer still stays behind the curtain.",
+        "cost": 2,
+        "kind": "upgrade",
     },
     "boss_patience": {
         "name": "Executive Delay",
         "description": "The System pretends boss timers are longer. Timers remain flavor-only.",
         "cost": 1,
+        "kind": "upgrade",
     },
     "title_licensed": {
         "name": "Licensed Opinionator",
         "description": "A cosmetic title of dubious regulatory standing.",
         "cost": 3,
         "title": "Licensed Opinionator",
+        "kind": "upgrade",
     },
 }
 
@@ -77,6 +89,7 @@ def get_state() -> dict[str, Any]:
 
 @app.get("/api/quests")
 def get_quests() -> list[dict[str, Any]]:
+    quests.refresh()
     state = saves.load()
     return [
         quest_view(quest, state, quests.lesson_for(quest))
@@ -86,6 +99,7 @@ def get_quests() -> list[dict[str, Any]]:
 
 @app.get("/api/quests/{quest_id}")
 def get_quest(quest_id: str) -> dict[str, Any]:
+    quests.refresh()
     try:
         quest = quests.get(quest_id)
     except KeyError as exc:
@@ -110,15 +124,21 @@ def get_recipes() -> list[dict[str, Any]]:
 
 @app.post("/api/quests/{quest_id}/run")
 def run_quest(quest_id: str, request: RunRequest) -> dict[str, Any]:
+    quests.refresh()
     try:
         quest = quests.get(quest_id)
     except KeyError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
-    return runner.run(quest, request).model_dump()
+    response = runner.run(quest, request).model_dump()
+    # The runner only knows the saved player; clients expect the same enriched
+    # state every other endpoint hands back, shop and level curve included.
+    response["state"] = get_state()
+    return response
 
 
 @app.post("/api/quests/{quest_id}/hint")
 def buy_hint(quest_id: str) -> dict[str, Any]:
+    quests.refresh()
     try:
         quest = quests.get(quest_id)
     except KeyError as exc:
@@ -147,29 +167,39 @@ def buy_hint(quest_id: str) -> dict[str, Any]:
 
 @app.post("/api/quests/{quest_id}/peek")
 def use_system_peek(quest_id: str) -> dict[str, Any]:
+    quests.refresh()
     try:
         quest = quests.get(quest_id)
     except KeyError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     state = saves.load()
+    if quest.id not in state.completed_quests:
+        raise HTTPException(
+            status_code=409,
+            detail="Clear this room before inspecting its published layer.",
+        )
     if state.inventory.get("system_peeks", 0) < 1:
         raise HTTPException(status_code=409, detail="No System peeks remain.")
-    state.inventory["system_peeks"] -= 1
-    saves.save(state)
-    relative = (
-        quest.world_target
-        if quest.world_target and not quest.world_target.startswith("/")
-        else f"workstreams/{quest.id}.usd"
-    )
-    target = WORLD_DIR / relative
+    if quest.world_target and not quest.world_target.startswith("/"):
+        target = WORLD_DIR / quest.world_target
+    else:
+        bundle = WORLD_DIR / "workstreams" / quest.id
+        target = next(
+            (path for path in sorted(bundle.glob("submission.*")) if path.suffix in {".usd", ".usda", ".usdc"}),
+            bundle / "submission.usd",
+        )
     from pxr import Sdf
 
     layer = Sdf.Layer.FindOrOpen(str(target)) if target.exists() else None
+    if layer is None:
+        raise HTTPException(status_code=409, detail="The published layer could not be inspected.")
+    state.inventory["system_peeks"] -= 1
+    saves.save(state)
     return {
         "peek": {
             "layer": str(target.relative_to(ROOT)),
-            "sublayers": list(layer.subLayerPaths) if layer else [],
-            "message": "No cleared artifact exists yet." if layer is None else "Authored layer inspected.",
+            "sublayers": list(layer.subLayerPaths),
+            "message": "Authored layer inspected.",
         },
         "state": get_state(),
     }

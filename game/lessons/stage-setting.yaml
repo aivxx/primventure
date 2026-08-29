@@ -135,9 +135,9 @@ lessons:
           The generic API is a crowbar. The schema API is a key. Both open the door. Only one gets
           you invited back.
         body: |
-          Schema types expose GetXxxAttr and CreateXxxAttr methods that return a Usd.Attribute
-          object. The accessor returns the attribute, not the value, so Get and Set are separate
-          calls. When no schema owns the data, CreateAttribute takes an explicit value type.
+          Each schema-specific API has methods that grab its own attributes. GetRadiusAttr returns
+          a Usd.Attribute object, not the value. Call Get to read the resolved value and Set to
+          author one. When no schema owns the data, CreateAttribute takes an explicit value type.
         code: |
           from pxr import Sdf, Usd, UsdGeom
 
@@ -174,8 +174,9 @@ lessons:
           CreateAttribute with an explicit Sdf value type covers everything else.
     apply:
       f0_nameplate: >-
-        Author cityName as a string set to Primventure, then set the documentation metadata the
-        Registrar demands. A city that cannot state its own name does not persist.
+        Author cityName as a string attribute set to Primventure, then set /City's documentation
+        metadata to "The persistent city portfolio." — exactly, punctuation included, because the
+        Registrar reads it aloud. A city that cannot state its own name does not persist.
       f1_lamp_post: >-
         Define the SphereLight, then use its schema-provided intensity input and set it to 750.
         The alley has been dark since the last contestant, who is also still in there.

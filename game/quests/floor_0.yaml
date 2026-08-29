@@ -15,7 +15,7 @@ quests:
     starter: |
       from pxr import Usd
       stage = Usd.Stage.CreateNew(STAGE_PATH)
-      # Define /City as a typed Xform, then save.
+      # Define /City as a typed Xform. The save below writes it to disk.
     language: python
     validator:
       assertions:
@@ -42,7 +42,10 @@ quests:
       from pxr import Sdf, Usd
       stage = Usd.Stage.Open(STAGE_PATH)
       city = stage.GetPrimAtPath("/City")
-      # Create string attribute cityName = "Primventure" and set documentation metadata.
+      # 1. Create a string attribute named cityName on /City and set it to "Primventure".
+      #    Sdf.ValueTypeNames.String is the type; CreateAttribute returns the attribute,
+      #    and Set() writes the value.
+      # 2. Set the prim's documentation metadata to "The persistent city portfolio."
       stage.GetRootLayer().Save()
     language: python
     validator:

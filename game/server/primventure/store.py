@@ -1,12 +1,14 @@
 from __future__ import annotations
 
 import json
+import re
 import threading
 from pathlib import Path
 from typing import Any
 
 import yaml
 
+from .expectations import describe_assertions
 from .models import LessonCard, PlayerState, Quest
 
 
@@ -18,13 +20,89 @@ SAVE_PATH = GAME_DIR / "save.json"
 WORLD_DIR = ROOT / "world"
 
 
+SAVE_LINE = "stage.GetRootLayer().Save()"
+STEP_COMMENT = re.compile(r"^\s*#\s*\d+[.)]\s")
+
+
+def space_out_steps(starter: str, language: str) -> str:
+    """Leave a blank line under every instruction so there is somewhere to type.
+
+    Consecutive comment lines are one instruction unless the next one opens a
+    numbered step, which keeps wrapped explanations attached to their step.
+    """
+    if language == "none" or not starter.strip():
+        return starter
+    lines = starter.rstrip("\n").split("\n")
+    spaced: list[str] = []
+    for index, line in enumerate(lines):
+        following = lines[index + 1] if index + 1 < len(lines) else None
+        # `#usda 1.0` is a file header, not an instruction to write under.
+        is_comment = line.lstrip().startswith("#") and not line.lstrip().startswith("#usda")
+        if is_comment and spaced and spaced[-1].strip() and not spaced[-1].lstrip().startswith("#"):
+            spaced.append("")
+        spaced.append(line)
+        if not is_comment or following is None or not following.strip():
+            continue
+        continues_block = following.lstrip().startswith("#") and not STEP_COMMENT.match(following)
+        if not continues_block:
+            spaced.append("")
+    return "\n".join(spaced) + "\n"
+
+
+def with_save_line(starter: str, language: str) -> str:
+    """Persisting the stage is plumbing, not the lesson, so the terminal ships it.
+
+    Rooms that already save, write their own layer, or hand-author USDA are left
+    exactly as their author wrote them.
+    """
+    if language != "python" or not starter.strip():
+        return starter
+    if "Save(" in starter or "Export(" in starter:
+        return starter
+    if "stage" not in starter:
+        return starter
+    return starter.rstrip("\n") + "\n" + SAVE_LINE + "\n"
+
+
+def normalize_starter(starter: str, language: str) -> str:
+    return space_out_steps(with_save_line(starter, language), language)
+
+
+def opinion_points_for(quest: Quest) -> int:
+    """Boss rooms pay by default, and any room can override it in its reward."""
+    reward = quest.reward if isinstance(quest.reward, dict) else {}
+    return int(reward.get("opinion_points", 1 if quest.kind.endswith("boss") else 0))
+
+
+def content_stamp(directory: Path, recursive: bool = False) -> tuple[tuple[str, int, int], ...]:
+    """Identity of a content directory, so edited YAML can be noticed on the fly."""
+    if not directory.exists():
+        return ()
+    paths = directory.rglob("*.y*ml") if recursive else directory.glob("*.y*ml")
+    stamped = []
+    for path in sorted(paths):
+        stat = path.stat()
+        # Size joins mtime because edits saved inside one filesystem clock tick
+        # would otherwise look unchanged.
+        stamped.append((str(path), stat.st_mtime_ns, stat.st_size))
+    return tuple(stamped)
+
+
 class LessonStore:
     def __init__(self, lesson_dir: Path = LESSON_DIR):
         self.lesson_dir = lesson_dir
         self._lessons: dict[str, LessonCard] = {}
+        self._stamp: tuple[tuple[str, int, int], ...] = ()
+        self._lock = threading.Lock()
         self.reload()
 
+    def refresh(self) -> None:
+        with self._lock:
+            if content_stamp(self.lesson_dir, recursive=True) != self._stamp:
+                self.reload()
+
     def reload(self) -> None:
+        self._stamp = content_stamp(self.lesson_dir, recursive=True)
         lessons: dict[str, LessonCard] = {}
         if self.lesson_dir.exists():
             for path in sorted(self.lesson_dir.rglob("*.y*ml")):
@@ -58,9 +136,19 @@ class QuestStore:
             lesson_dir = LESSON_DIR if quest_dir == QUEST_DIR else quest_dir.parent / "lessons"
         self.lessons = LessonStore(lesson_dir)
         self._quests: dict[str, Quest] = {}
+        self._stamp: tuple[tuple[str, int, int], ...] = ()
+        self._lock = threading.Lock()
         self.reload()
 
+    def refresh(self) -> None:
+        """Pick up authored rooms and lesson cards without restarting the server."""
+        with self._lock:
+            if content_stamp(self.quest_dir) != self._stamp:
+                self.reload()
+        self.lessons.refresh()
+
     def reload(self) -> None:
+        self._stamp = content_stamp(self.quest_dir)
         quests: dict[str, Quest] = {}
         if self.quest_dir.exists():
             for path in sorted(self.quest_dir.glob("*.y*ml")):
@@ -72,6 +160,7 @@ class QuestStore:
                     quest = Quest.model_validate(record)
                     if quest.id in quests:
                         raise ValueError(f"Duplicate quest id {quest.id!r}")
+                    quest.starter = normalize_starter(quest.starter, quest.language)
                     quests[quest.id] = quest
         self._quests = quests
 
@@ -136,6 +225,8 @@ def quest_view(
     prereqs_met = all(item in state.completed_quests for item in quest.prerequisites)
     data["unlocked"] = prereqs_met and state.level >= quest.level_required
     data["completed"] = quest.id in state.completed_quests
+    data["opinion_points"] = opinion_points_for(quest)
+    data["expects"] = describe_assertions(quest.validator)
     data["lesson"] = lesson
     return data
 
