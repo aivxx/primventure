@@ -10,8 +10,8 @@ lessons:
       - kind: concept
         heading: Primvars are attributes with geometric semantics
         system: >-
-          The hedge does not merely want a color. It wants a color accompanied by legally binding
-          instructions about where that color applies.
+          The hedge wants a color accompanied by legally binding instructions about where that
+          color applies. Anything less gets returned to the sender.
         body: |
           Primitive variables, or primvars, are special attributes designed to bind user data to
           geometric primitives for rendering. They can provide shader inputs, associate values
@@ -74,8 +74,8 @@ lessons:
       - kind: pitfall
         heading: Value count must match interpolation
         system: >-
-          A face color for every vertex is not generous. It is malformed evidence, and the judges
-          have learned to count.
+          A face color for every vertex reads as malformed evidence, and the judges have learned
+          to count.
         body: |
           An array-valued primvar still needs an array when constant interpolation requires only
           one logical value. The array length and interpolation must agree with topology. A
@@ -110,17 +110,17 @@ lessons:
           The city permits improvisation. It merely asks that your improvisation have a type,
           documentation, and enough provenance to identify the department responsible.
         body: |
-          A custom property is a user-defined attribute or relationship that is not declared by a
+          A custom property is a user-defined attribute or relationship declared outside any
           built-in schema. Custom attributes use the same typed value system as schema attributes,
           can hold defaults or time samples, and can support metadata, animation controls,
           simulation parameters, sensor readings, and arbitrary end-user data.
 
-          Setting custom=True authors metadata identifying the property as custom. It does not
-          change value resolution or otherwise make OpenUSD treat the attribute differently.
+          Setting custom=True authors metadata identifying the property as custom, and value
+          resolution proceeds exactly as it would for any other attribute of that type.
           Custom properties are often preferable to customData during prototyping because each
           property composes independently, while customData is a composable dictionary.
         points:
-          - "Usd.Prim.CreateAttribute creates attributes not supplied by a schema."
+          - "Usd.Prim.CreateAttribute adds attributes beyond those a schema supplies."
           - "Every attribute has one declared Sdf.ValueTypeName that its authored values must match."
           - "Usd.Object.SetDocumentation can explain a custom property's meaning and units to tools and users."
       - kind: concept
@@ -134,12 +134,13 @@ lessons:
           acme:sensor:pressure.
 
           USD has no native struct property type, so related namespace-prefixed attributes are the
-          standard way to map fields from records or compound data. The namespace changes the
-          property name and organization, not the attribute's value type or resolution rules.
+          standard way to map fields from records or compound data. The namespace shapes the
+          property name and organization while the attribute's value type and resolution rules
+          stay exactly as declared.
         points:
           - "Nested namespaces follow an organization:group:property pattern."
           - "Namespacing makes ownership and conceptual grouping visible during data exchange."
-          - "A name beginning primvars: follows the primvar namespace convention, but a generic custom attribute is not automatically given interpolation metadata."
+          - "A name beginning primvars: follows the primvar namespace convention, while interpolation metadata still has to be authored for a generic custom attribute."
       - kind: concept
         heading: Use schemas for stable shared contracts
         system: >-
@@ -157,8 +158,8 @@ lessons:
       - kind: api
         heading: Create, retrieve, and batch attributes
         system: >-
-          Three edits can produce one consolidated round of notices. Even the Composition knows
-          not to send a separate memo for every integer.
+          Three edits can produce one consolidated round of notices. Even the Composition draws
+          the line at a separate memo for every integer.
         body: |
           CreateAttribute takes the property name, an Sdf value type, and an optional custom flag.
           GetAttribute retrieves the property later. Sdf.ChangeBlock is a context manager for
@@ -186,19 +187,20 @@ lessons:
           assert prim.GetAttribute("a").Get() == 1
           stage.GetRootLayer().Save()
       - kind: pitfall
-        heading: Flexibility is not a contract
+        heading: Custom fields leave meaning to convention
         system: >-
           The live broadcast loves arbitrary fields. Downstream departments prefer knowing whether
           temperature means Celsius, kelvin, or a contestant's emotional state.
         body: |
-          Custom attributes do not provide the standardized behavior of a schema. Producers can
-          independently choose conflicting names, types, units, or meanings, and custom=True does
-          not validate any of them. Change blocks should wrap a coherent batch and must not be
-          treated as a transaction or undo mechanism.
+          Schemas supply standardized behavior that custom attributes leave to local convention.
+          Producers can independently choose conflicting names, types, units, or meanings, and
+          custom=True validates none of them. A change block should wrap one coherent batch of
+          edits; its guarantees cover change notification alone, with no transaction or undo
+          semantics.
         points:
           - "A value whose Python type is incompatible with the declared Sdf type will fail to author."
-          - "Sdf.ChangeBlock coalesces change processing; it does not roll back edits if later code fails."
-          - "Do not keep a change block open while performing unrelated queries or expensive work."
+          - "Sdf.ChangeBlock coalesces change processing; edits already authored survive a later failure inside the block."
+          - "Keep a change block short and free of unrelated queries or expensive work."
       - kind: recap
         heading: What you now owe the city
         body: |
@@ -235,7 +237,7 @@ lessons:
           as non-destructive deletion from the stage. A stronger layer can author active=true on
           the same prim to reactivate the subtree.
         points:
-          - "Deactivation does not erase a prim spec or its descendants from contributing layers."
+          - "Prim specs and their descendants remain in the contributing layers after deactivation."
           - "The active opinion participates in layer strength and can be overridden."
           - "Pruning unused branches can reduce composition and traversal work on complex stages."
       - kind: concept
@@ -277,18 +279,18 @@ lessons:
           assert "/City/BeyondTheWalls/Topiary/Draft" not in paths
           stage.GetRootLayer().Save()
       - kind: pitfall
-        heading: Inactive is not invisible
+        heading: Activation differs from visibility
         system: >-
           Visibility hides an actor from the camera. Activation removes the actor and the entire
-          family tree from rehearsal. Casting asks that you stop confusing these.
+          family tree from rehearsal. Casting asks that you keep the two straight.
         body: |
-          Activation controls composition and traversal, not only rendering. Use visibility to
+          Activation reaches past rendering into composition and traversal. Use visibility to
           hide renderable geometry while preserving its composed subtree for processing. Use
           RemovePrim or layer-spec editing only when scene description should actually be erased
           from a particular layer.
         points:
           - "Deactivating a parent prunes every descendant, even if a child has an active=true opinion."
-          - "SetActive authors into the current edit target; it does not necessarily modify the layer that originally defined the prim."
+          - "SetActive authors into the current edit target, which may leave the layer that originally defined the prim untouched."
           - "A stronger active=true opinion can restore a prim that a weaker layer deactivated."
       - kind: recap
         heading: What you now owe the city
@@ -323,7 +325,7 @@ lessons:
           uses a broader predicate. Constructing Usd.PrimRange from a particular prim limits the
           walk to that prim and its descendants.
         points:
-          - "Usd.Stage.Traverse starts from the stage pseudo-root and does not yield the pseudo-root itself."
+          - "Usd.Stage.Traverse starts at the stage pseudo-root and yields the prims beneath it."
           - "Usd.PrimRange(startPrim) begins at startPrim and walks only that subtree."
           - "PreAndPostVisit mode visits each prim when entering and again when exiting its subtree."
       - kind: concept
@@ -336,9 +338,10 @@ lessons:
           Usd.PrimIsLoaded, Usd.PrimIsModel, Usd.PrimIsGroup, Usd.PrimIsAbstract, and
           Usd.PrimIsDefined correspond to common Usd.Prim queries.
 
-          Combine predicates with bitwise &, |, and ~ operators. Python's and, or, and not evaluate
-          truthiness and do not construct the intended predicate expression. The default traversal
-          predicate is equivalent to the conjunction of active, loaded, defined, and non-abstract.
+          Combine predicates with the bitwise &, |, and ~ operators. Python's and, or, and not
+          evaluate truthiness, which yields a boolean instead of the intended predicate
+          expression. The default traversal predicate is equivalent to the conjunction of active,
+          loaded, defined, and non-abstract.
       - kind: api
         heading: Count prims by schema type
         system: >-
@@ -366,10 +369,10 @@ lessons:
           assert mesh_count == 2
           stage.GetRootLayer().Save()
       - kind: concept
-        heading: Prune branches you do not need
+        heading: Prune branches outside the query
         system: >-
-          If Environment is irrelevant, do not tour every shrub to prove your dedication. The
-          broadcast has sponsors, not patience.
+          If Environment is irrelevant, skip its shrubbery entirely. The broadcast has sponsors
+          and a commercial break waiting.
         body: |
           Usd.PrimRange.PruneChildren skips the current prim's descendants while continuing with
           later siblings. Iterator control methods belong to the iterator, so call iter() on the
@@ -389,15 +392,14 @@ lessons:
       - kind: pitfall
         heading: Default traversal is selective
         system: >-
-          The missing class prim was not stolen. It was excluded by policy, which is theft wearing
-          a lanyard.
+          Policy excluded the missing class prim, which is theft wearing a lanyard.
         body: |
-          Traverse does not mean every authored prim spec. Default traversal excludes class prims
-          because they are abstract, inactive prims, undefined over-only prims, and unloaded
-          payload descendants. Choose TraverseAll or a custom predicate only when those prims are
-          intentionally required.
+          Traverse reports the stage through the default predicate, which is narrower than the full
+          set of authored prim specs. That view excludes class prims because they are abstract,
+          inactive prims, undefined over-only prims, and unloaded payload descendants. Choose
+          TraverseAll or a custom predicate when those prims are intentionally required.
         points:
-          - "Use bitwise predicate operators; Python boolean operators do not combine Usd predicates."
+          - "Combine Usd predicates with the bitwise operators; Python's boolean operators evaluate truthiness instead."
           - "GetChildren is one level deep and cannot replace a recursive PrimRange."
           - "Checking GetTypeName() text is less robust than prim.IsA(schemaType) for schema inheritance."
       - kind: recap
@@ -413,7 +415,7 @@ lessons:
 
   - source: docs/beyond-basics/units.md
     title: Stage Units
-    objective: Declare stage-wide spatial conventions and account for which unit differences USD does and does not reconcile.
+    objective: Declare stage-wide spatial conventions and account for which unit differences composition reconciles.
     intro: >-
       A number without a unit is how lamp posts become cathedral spires and legal teams become
       recurring characters. Measure Yard requires centimeters and Y-up. The contract is two lines;
@@ -437,10 +439,10 @@ lessons:
           - "The fallback upAxis is Y."
           - "Author conventions explicitly even when they equal fallbacks so pipeline intent survives exchange."
       - kind: concept
-        heading: Geometry units are not converted by composition
+        heading: Composition carries authored geometry values through unchanged
         system: >-
-          USD composes the number you authored. It does not ask whether your six means meters,
-          centimeters, or six excellent reasons to fail inspection.
+          USD composes the number you authored and asks nothing further about whether your six
+          means meters, centimeters, or six excellent reasons to fail inspection.
         body: |
           References, payloads, and sublayers copy geometric values into composition without
           automatically reconciling metersPerUnit or upAxis. A source value of 100 remains 100 in
@@ -460,8 +462,8 @@ lessons:
           payloads. During value resolution, USD scales time samples so a two-second animation
           authored at 60 time codes per second remains two seconds in a stage running at 24.
 
-          This automatic temporal scaling does not extend to metersPerUnit, upAxis, or
-          kilogramsPerUnit.
+          Automatic scaling of this kind covers time alone. metersPerUnit, upAxis, and
+          kilogramsPerUnit remain the pipeline's responsibility.
       - kind: api
         heading: Set and query stage conventions
         system: >-
@@ -486,24 +488,24 @@ lessons:
           assert stage.GetTimeCodesPerSecond() == 24
           stage.GetRootLayer().Save()
       - kind: pitfall
-        heading: Metadata does not resize geometry
+        heading: Changing conventions requires changing content
         system: >-
-          Relabeling a hundred-unit wall as meters does not politely scale it down. It merely makes
-          the error official.
+          Relabeling a hundred-unit wall as meters leaves the wall exactly as enormous as before
+          and makes the error official.
         body: |
-          Changing metersPerUnit changes the interpretation of authored distances but does not
-          rewrite values or add scale transforms. Likewise, changing upAxis does not rotate
-          geometry. Corrective transforms or conversion tools must alter the content when changing
-          conventions.
+          Changing metersPerUnit changes how authored distances are interpreted while the authored
+          values and transforms stay precisely as written. Changing upAxis likewise leaves geometry
+          in its original orientation. Corrective transforms or conversion tools must alter the
+          content when changing conventions.
         points:
-          - "Do not expect a reference to convert centimeters into the root stage's meters."
-          - "Do not confuse framesPerSecond, a playback hint, with timeCodesPerSecond, the authored temporal scale."
+          - "A reference carries centimeter values across as authored; the root stage's metersPerUnit only reinterprets them."
+          - "framesPerSecond is a playback hint, while timeCodesPerSecond is the authored temporal scale."
           - "Validate referenced assets before assembly because stage metadata alone cannot repair mismatched content."
       - kind: recap
         heading: What you now owe the city
         body: |
-          metersPerUnit and upAxis declare stage-wide spatial conventions, but composition does not
-          reconcile their differences. Pipelines must correct spatial and physics mismatches;
+          metersPerUnit and upAxis declare stage-wide spatial conventions, and composition leaves
+          their differences intact. Pipelines must correct spatial and physics mismatches;
           timeCodesPerSecond differences are automatically scaled during value resolution.
     apply:
       f4_unit_contract: >-
@@ -515,11 +517,11 @@ lessons:
     objective: Classify prim roles in a valid model hierarchy with standard kind tokens and model queries.
     intro: >-
       A prim type says what data an object carries. Kind says what role it plays in the model
-      hierarchy. The Lamp Post is a component, not an assembly, group, or metaphor for the
-      production schedule.
+      hierarchy. The Lamp Post plays the component role. It petitioned for assembly, group, and
+      metaphor for the production schedule, and lost all three hearings.
     beats:
       - kind: concept
-        heading: Kind classifies role, not schema type
+        heading: Kind classifies role independently of schema type
         system: >-
           Xform describes capabilities. Component describes social position. The Composition is
           rigidly class-conscious and exposes an API for it.
@@ -530,7 +532,8 @@ lessons:
 
           Tools use kind for model-aware selection, traversal, asset management, and high-level
           reasoning through helpers such as IsModel, IsGroup, IsComponent, and IsSubComponent.
-          Kind.Tokens.model is an abstract base category and should not be authored directly.
+          Kind.Tokens.model is an abstract base category, so author one of the concrete tokens
+          derived from it.
       - kind: concept
         heading: The standard taxonomy has distinct roles
         system: >-
@@ -541,8 +544,9 @@ lessons:
           a complete, reusable, referenceable leaf asset. A group organizes related models. An
           assembly is a group that combines parts or assets into a larger entity.
 
-          subcomponent does not inherit from model. It identifies an important interior prim within
-          a component without turning that prim into a separately referenceable model.
+          subcomponent stands outside that inheritance chain. It marks an important interior prim
+          within a component, and the marked prim remains part of the component instead of becoming
+          a separately referenceable model.
         points:
           - "The hierarchy is model -> component and model -> group -> assembly; subcomponent is separate."
           - "A component cannot contain component descendants."
@@ -562,8 +566,8 @@ lessons:
       - kind: api
         heading: Author and query kind
         system: >-
-          One token turns LampPost into a recognized model. It does not improve the lamp, but it
-          finally gives management something searchable.
+          One token turns LampPost into a recognized model. The lamp remains as dim as ever,
+          though management finally has something searchable.
         body: |
           Wrap a prim in Usd.ModelAPI to set or retrieve kind metadata. Use registered Kind.Tokens
           rather than arbitrary strings for standard roles, then query the prim through model
@@ -587,15 +591,16 @@ lessons:
       - kind: pitfall
         heading: Labels must obey hierarchy
         system: >-
-          Calling the lamp an assembly does not make it impressive. It makes the model hierarchy
+          Calling the lamp an assembly leaves the lamp unimproved and the model hierarchy
           inaccurate in a way that downstream tools can automate.
         body: |
-          Kind is not a free-form tag. Authoring a registered token in an invalid hierarchy can
-          cause model predicates and asset tools to omit or misclassify content. Use custom
-          metadata for arbitrary labels, and reserve kind for model hierarchy semantics.
+          Kind carries model hierarchy semantics, so registered tokens must appear in a valid
+          hierarchy. A token authored in an invalid one can cause model predicates and asset tools
+          to omit or misclassify content. Use custom metadata for arbitrary labels, and reserve
+          kind for model hierarchy semantics.
         points:
-          - "Do not author the abstract model kind on a prim."
-          - "Do not place a component beneath another component; use subcomponent for important interior nodes."
+          - "Reserve authoring for concrete tokens such as group, assembly, and component; model is an abstract base."
+          - "Components sit at the leaves of the model hierarchy; mark important interior nodes with subcomponent."
           - "A custom kind normally requires registry plugin configuration in a full OpenUSD installation."
       - kind: recap
         heading: What you now owe the city
@@ -612,9 +617,9 @@ lessons:
     title: Hydra Architecture
     objective: Explain how Hydra decouples scene description from rendering through delegates and the render index.
     intro: >-
-      Hydra is not usdview, Storm, or a viewport. It is the architecture between scene data and a
-      rendering backend. This basement cannot draw a frame, but it can still detect when a
-      contestant has mistaken the bridge for one of the vehicles crossing it.
+      Hydra is the architecture between scene data and a rendering backend. Contestants keep
+      answering usdview, Storm, or viewport, and the buzzer keeps disagreeing. This basement
+      cannot draw a frame, but it can detect when someone mistakes the bridge for the traffic.
     beats:
       - kind: concept
         heading: Hydra is the rendering bridge
@@ -651,35 +656,35 @@ lessons:
       - kind: concept
         heading: Render delegates and full-install boundaries
         system: >-
-          Storm ships with OpenUSD. Your hypothetical custom delegate does not, despite the
-          confidence of its slide deck.
+          Storm ships with OpenUSD. Your hypothetical custom delegate ships with a slide deck.
         body: |
           HdStorm is the real-time render delegate included with OpenUSD and used by usdview and
           many other applications. It supports OpenGL, Metal, and Vulkan paths. HdTiny and HdEmbree
           are also shipped as examples of render delegate implementation.
 
           Other renderers, including Arnold and RenderMan, can integrate through render delegate
-          plugins. Hydra therefore supports rasterization and ray tracing without defining a
-          single mandatory renderer.
+          plugins. Hydra therefore supports rasterization and ray tracing while leaving the choice
+          of renderer open.
 
-          A plain usd-core Python installation provides core scene description APIs but not a full
-          OpenUSD build and plugin development toolchain. usdGenSchema code generation generally
-          belongs to a full build environment and often produces C++ schema code.
+          A plain usd-core Python installation provides core scene description APIs. A full
+          OpenUSD build supplies the plugin development toolchain, and usdGenSchema code generation
+          generally belongs to that environment, where it often produces C++ schema code.
 
           Asset resolvers are Ar plugins that map asset identifiers or custom URI schemes to
-          locatable resources. Hydra 2.0 scene indexes filter and transform imaging scene data and
-          do not replace USD composition or LIVRPS. Value clips are a composition feature that
-          streams time samples from sequences of clip layers, commonly for animation caches; they
-          are not render delegates or variant sets.
+          locatable resources. Hydra 2.0 scene indexes filter and transform imaging scene data,
+          while USD composition and LIVRPS remain a separate system. Value clips belong to
+          composition as well: they stream time samples from sequences of clip layers, commonly for
+          animation caches, which places them well outside render delegates and variant sets.
       - kind: api
         heading: Core USD can prepare renderable data
         system: >-
-          This code authors what a Hydra-enabled application could consume. It does not summon a
-          renderer into the basement, and the basement appreciates your restraint.
+          This code authors what a Hydra-enabled application could consume. No renderer will
+          materialize in the basement, and the basement appreciates your restraint.
         body: |
           Core pxr APIs can author and inspect scene description independently of Hydra. Rendering
-          requires an application with imaging support and a selected render delegate; opening a
-          Usd.Stage alone does not create a render index or produce pixels.
+          requires an application with imaging support and a selected render delegate; an open
+          Usd.Stage composes scene description and leaves the render index and the pixels to that
+          application.
         code: |
           from pxr import Usd, UsdGeom
 
@@ -695,19 +700,20 @@ lessons:
           ]
           assert renderable_prims == [cube.GetPath()]
       - kind: pitfall
-        heading: Architecture is not an application
+        heading: Applications use Hydra; delegates do the rendering
         system: >-
-          Hydra is not the viewport, the renderer, the stage, or the button labeled Render. The
-          sponsors insisted I list all four after last season.
+          Contestants have answered viewport, renderer, stage, and the button labeled Render. The
+          sponsors insisted I recite all four wrong answers after last season.
         body: |
-          Hydra does not replace USD composition and is not itself a renderer. usdview is an
-          application that uses Hydra, and HdStorm is a render delegate used through Hydra.
-          Scene indexes belong to Hydra scene processing, while asset resolvers and value clips
-          solve asset location and time-sampled composition respectively.
+          Hydra coordinates rendering while USD composition remains a separate system, and the
+          actual image comes from a render delegate. usdview is an application that uses Hydra,
+          and HdStorm is a render delegate used through Hydra. Scene indexes belong to Hydra scene
+          processing, while asset resolvers and value clips solve asset location and time-sampled
+          composition respectively.
         points:
           - "A scene delegate adapts source scene data; a render delegate implements a backend."
           - "The render index coordinates and tracks the renderable scene between those delegates."
-          - "Installing usd-core does not provide usdGenSchema codegen, custom plugin compilation, or a rendering application."
+          - "usdGenSchema codegen, custom plugin compilation, and a rendering application all require more than a usd-core install."
       - kind: recap
         heading: What you now owe the city
         body: |
@@ -743,7 +749,8 @@ lessons:
           Composition builds and caches a prim-level index of contributing sites and orders them
           by composition strength. Value resolution is performed when a property or metadata value
           is requested; it walks those ordered sources and applies rules appropriate to the data
-          type. Final property values are not all precalculated or cached.
+          type. Final property values are computed on demand rather than precalculated or cached
+          in advance.
 
           For repeated attribute queries, Usd.AttributeQuery can cache information needed to
           resolve the attribute efficiently. This distinction keeps stage composition responsive
@@ -814,8 +821,8 @@ lessons:
           stage.Flatten() produces an anonymous Sdf.Layer containing the stage's composed scene
           description. Exporting that layer creates a self-contained delivery layer with
           composition arcs resolved into explicit data and no original sublayer stack. Flattening
-          is appropriate for interchange, inspection, or delivery, not as a replacement for the
-          editable layered source.
+          suits interchange, inspection, and delivery, while the editable layered source remains
+          the working representation.
         code: |
           from pxr import Sdf, Usd
 
@@ -838,12 +845,12 @@ lessons:
           The value 4 is correct and almost useless as an explanation. The boss requires both
           competence and receipts.
         body: |
-          Reading an attribute does not reveal which layer or arc supplied it. Inspect the property
-          stack before changing composition or deleting weaker opinions. Flatten only after the
-          editable source is preserved, and remember that layer offsets affect time mapping rather
-          than rewriting source samples.
+          A resolved value arrives without a citation, so the layer or arc behind it stays hidden
+          until you look. Inspect the property stack before changing composition or deleting weaker
+          opinions. Flatten only after the editable source is preserved, and remember that layer
+          offsets affect time mapping rather than rewriting source samples.
         points:
-          - "Do not assume attr.Get() returns animation; it requests Usd.TimeCode.Default()."
+          - "attr.Get() requests Usd.TimeCode.Default(), so animated values need an explicit time code."
           - "GetPropertyStack is property-specific; GetPrimStack includes all contributing prim specs."
           - "A local authored value is stronger than the same property arriving through a reference."
           - "Flattening removes the authored composition structure needed for non-destructive collaboration."

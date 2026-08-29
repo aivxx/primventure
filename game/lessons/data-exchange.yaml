@@ -9,7 +9,7 @@ lessons:
       the paperwork.
     beats:
       - kind: concept
-        heading: Exchange maps data models, not just files
+        heading: Exchange maps data models
         system: >-
           Renaming a crate does not change its contents. Customs learned this after the glTF incident
           and the resulting sponsor inquiry.
@@ -19,15 +19,15 @@ lessons:
           entities such as meshes, materials, lights, and cameras, and extensible schemas can cover
           domains such as physics, robotics, and synthetic data.
 
-          Translation is usually lossy because formats do not share identical data models,
-          structures, or fidelity. A faithful implementation documents unsupported concepts and
-          chooses mappings based on the needs of its consumers rather than assuming one output
-          structure serves every pipeline.
+          Translation is usually lossy because formats differ in their data models, structures, and
+          fidelity. A faithful implementation documents unsupported concepts and chooses mappings
+          based on the needs of its consumers, since one output structure rarely serves every
+          pipeline.
         points:
           - An importer translates OpenUSD into an application's runtime representation.
           - An exporter translates an application's runtime representation into OpenUSD.
           - A standalone converter is a script, executable, or service that translates files in one or both directions.
-          - Good mapping preserves meaning and structure where possible, not merely recognizable geometry.
+          - Good mapping carries the source's meaning and structure across wherever the destination can express them.
       - kind: concept
         heading: File format plugins compose foreign sources
         system: >-
@@ -40,13 +40,13 @@ lessons:
           of truth, plugins may support reading and writing, and tools such as usdcat can use them as
           converters.
 
-          This floor's usd-core build has no OBJ file format plugin. An OBJ file therefore cannot be
-          passed to Usd.Stage.Open. The intake implementation must parse OBJ text itself and author
-          equivalent USD schema data on a new stage.
+          This floor's usd-core build has no OBJ file format plugin, so Usd.Stage.Open cannot read
+          an OBJ file. The intake implementation must parse OBJ text itself and author equivalent
+          USD schema data on a new stage.
         points:
           - Runtime formats often favor application importers and exporters.
           - File-backed or procedural sources may be candidates for file format plugins.
-          - Plugin availability is build-dependent and must not be assumed.
+          - Plugin availability is build-dependent, so confirm it before relying on one.
       - kind: concept
         heading: Extract first, transform second
         system: >-
@@ -91,16 +91,16 @@ lessons:
       - kind: pitfall
         heading: Where customs rejects the crate
         system: >-
-          "Universal" does not mean "telepathic." OpenUSD still requires you to explain what the
-          foreign numbers mean.
+          "Universal" stops well short of "telepathic." OpenUSD still requires you to explain what
+          the foreign numbers mean.
         body: |
-          A successful parse is not a successful exchange. The result must preserve relevant
+          A successful exchange reaches past a successful parse. The result must preserve relevant
           meaning, declare assumptions, and remain useful to its intended consumers.
         points:
-          - Do not call Usd.Stage.Open on OBJ when no OBJ file format plugin is installed.
-          - Do not treat a filename extension as durable provenance; author metadata on the asset interface.
+          - Parse OBJ text directly in builds where no OBJ file format plugin is installed.
+          - Author provenance metadata on the asset interface, where it survives copying and renaming.
           - SetCustomData replaces the complete dictionary, while SetCustomDataByKey preserves sibling entries.
-          - Do not bury client-specific restructuring in extraction when it belongs in a transformation.
+          - Keep client-specific restructuring in a transformation step where it can be reused or skipped.
       - kind: recap
         heading: What cleared customs
         body: |
@@ -124,8 +124,8 @@ lessons:
       - kind: concept
         heading: Extraction preserves the source representation
         system: >-
-          We are translating evidence, not improving it. Improvements happen later, under brighter
-          lights and with more waivers.
+          We are translating evidence. Improvements happen later, under brighter lights and with
+          more waivers.
         body: |
           Geometry extraction reads the source representation and writes the closest corresponding
           OpenUSD schema data. For OBJ, vertex records begin with "v", object names begin with "o",
@@ -138,7 +138,7 @@ lessons:
         points:
           - Preserve source ordering unless an explicit remapping updates every dependent index.
           - Sanitize foreign object names before using them as prim identifiers.
-          - Extraction should not silently add workflow-specific hierarchy or optimization.
+          - Leave workflow-specific hierarchy and optimization to the transformation phase.
       - kind: concept
         heading: Mesh topology uses two ordered arrays
         system: >-
@@ -188,12 +188,12 @@ lessons:
       - kind: api
         heading: Author complete polygonal topology
         system: >-
-          A pile of points is not a mesh. It is cargo arranged with suspicious confidence.
+          A pile of points is cargo arranged with suspicious confidence. A mesh requires topology.
         body: |
           Flatten each source face's indices and append its length to faceVertexCounts. OBJ face
           indices are one-based in text and must be converted to zero-based indices if the parser
-          has not already done so. Set subdivisionScheme to none because OBJ polygon meshes do not
-          carry OpenSubdiv subdivision behavior. Author normals only when the source supplies them
+          has not already done so. Set subdivisionScheme to none because OBJ polygon meshes arrive
+          without OpenSubdiv subdivision behavior. Author normals only when the source supplies them
           so smooth and faceted artistic intent is retained.
         code: |
           face_vertex_counts = []
@@ -220,8 +220,8 @@ lessons:
           - OBJ text indices are one-based; UsdGeom.Mesh indices are zero-based.
           - Global OBJ vertices may require remapping into each mesh's local points array.
           - The sum of faceVertexCounts must equal the number of entries in faceVertexIndices.
-          - Omitting subdivisionScheme none may let consumers treat polygonal source geometry as a subdivision surface.
-          - Do not invent normals when the source omits them; preserve the distinction.
+          - Authoring subdivisionScheme none tells consumers to treat the source geometry as polygonal.
+          - Author normals only from source data so the difference between supplied and absent normals survives.
       - kind: recap
         heading: What left steerage
         body: |
@@ -237,9 +237,9 @@ lessons:
     title: Complete Extraction
     objective: Evaluate whether extracted geometry is faithful, complete, legible, and suitable as a foundation for later transformations.
     intro: >-
-      The Overseer does not count intentions. It counts authored data, checks the bounds, and files
-      discrepancies in triplicate. A mesh must contain enough information for consumers to
-      understand what was extracted, not merely enough information to earn a promising thumbnail.
+      The Overseer counts authored data, checks the bounds, and files discrepancies in triplicate.
+      Intentions are filed elsewhere. A mesh must carry enough information for consumers to
+      understand what was extracted; a promising thumbnail earns nothing at this window.
     beats:
       - kind: concept
         heading: Extraction is the fidelity baseline
@@ -269,11 +269,11 @@ lessons:
           extent stores the local-space, axis-aligned bounding box as exactly two vectors: minimum
           and maximum.
 
-          Extent can accelerate bounds queries because consumers need not scan every point. It must
-          enclose the authored geometry and must be updated when the default or time-sampled points
-          change.
+          Extent can accelerate bounds queries because consumers read two vectors in place of
+          scanning every point. It must enclose the authored geometry and must be updated when the
+          default or time-sampled points change.
         points:
-          - points alone can satisfy a vertex extraction task but do not define polygon faces.
+          - points alone can satisfy a vertex extraction task, while polygon faces additionally require the topology arrays.
           - extent is ordered [minimum, maximum], with one coordinate triple in each entry.
           - faceVertexIndices indexes into points; faceVertexCounts partitions that flattened array by face.
           - Normals, primvars, materials, and subdivision behavior may also be required for source fidelity.
@@ -291,7 +291,7 @@ lessons:
           namespace-prefixed custom attributes when no schema models them directly. The mapping
           should be revised as the source format, OpenUSD schemas, or implementation changes.
         points:
-          - Easy syntactic conversion does not guarantee equivalent semantics.
+          - Equivalent semantics deserve review even when the syntactic conversion is easy.
           - Schema gaps should be documented and may motivate new schemas.
           - Namespaced attributes conventionally group related custom properties.
       - kind: api
@@ -329,10 +329,10 @@ lessons:
           Completeness is measured against the source and the extraction contract. Authoring an
           attribute name is insufficient when its value is stale, partial, or semantically wrong.
         points:
-          - Extent is local-space and does not include ancestor transforms.
+          - Extent is measured in local space, before ancestor transforms apply.
           - A stale extent can cause incorrect culling and bounds even when points are correct.
           - Topology arrays must remain consistent with points and with one another.
-          - Do not discard useful transient data before downstream transformations have consumed it.
+          - Retain useful transient data until downstream transformations have consumed it.
       - kind: recap
         heading: What the Overseer counted
         body: |
@@ -359,14 +359,15 @@ lessons:
           compromise.
         body: |
           A direct OBJ extraction can produce several root prims because OBJ has no OpenUSD-style
-          scenegraph root. Without a common ancestor, no single prim represents the complete asset.
-          Without defaultPrim metadata, a reference must also name a target prim explicitly.
+          scenegraph root. Until a common ancestor exists, no single prim represents the complete
+          asset, and until defaultPrim is authored, every reference must name its target prim
+          explicitly.
 
           A mandatory transformation can define a root Xform, reparent extracted prims beneath it,
-          and set it as the default prim. The result remains recognizable but becomes easy to
+          and set it as the default prim. The result remains recognizable and becomes easy to
           reference as one asset.
         points:
-          - The stage pseudo-root is not an authored prim and cannot be used as defaultPrim.
+          - The stage pseudo-root lives outside the authored scene description, so defaultPrim must name a real root prim.
           - A default prim must be a root prim.
           - Reparenting changes prim paths, so path-based relationships and pipeline records require care.
       - kind: api
@@ -375,8 +376,8 @@ lessons:
           Move the cargo under /World, then stamp /World as the entrance. Even customs can
           understand one front door on a favorable day.
         body: |
-          Capture the existing pseudo-root children before defining /World so the new root is not
-          included in the move list. Usd.NamespaceEditor queues namespace edits; ApplyEdits applies
+          Capture the existing pseudo-root children before defining /World so the move list holds
+          only the prims that arrived from extraction. Usd.NamespaceEditor queues namespace edits; ApplyEdits applies
           the pending edit. SetDefaultPrim takes the root Usd.Prim, not its path.
         code: |
           from pxr import Usd, UsdGeom
@@ -396,12 +397,12 @@ lessons:
       - kind: concept
         heading: Up axis is a stage-wide convention
         system: >-
-          Vertical is not subjective in this room. Legal settled that after Floor Four rotated
+          Vertical is settled law in this room. Legal handled that after Floor Four rotated
           ninety degrees and claimed artistic intent.
         body: |
           upAxis metadata declares which stage axis consumers should treat as vertical. OpenUSD
-          permits Y or Z. Changing the token declares a convention; it does not rotate existing
-          points or transforms.
+          permits Y or Z. Changing the token declares a convention, while existing points and
+          transforms keep their authored values.
 
           A real Z-up to Y-up conversion must transform authored spatial data or introduce an
           appropriate conversion transform, then declare Y-up. If the geometry is already expressed
@@ -409,7 +410,7 @@ lessons:
         points:
           - UsdGeom.GetStageUpAxis reads the resolved convention.
           - UsdGeom.SetStageUpAxis(stage, UsdGeom.Tokens.y) authors Y-up metadata.
-          - Do not relabel Z-up coordinates as Y-up without converting the data they describe.
+          - Convert the spatial data whenever the declared up axis changes.
       - kind: api
         heading: Xform ops place the converted asset
         system: >-
@@ -433,15 +434,15 @@ lessons:
       - kind: pitfall
         heading: Where the switchyard derails
         system: >-
-          A changed label does not rotate a shipment. It merely makes the accident conform to
-          paperwork.
+          A changed label leaves the shipment exactly where it stood, though the accident now
+          conforms to paperwork.
         body: |
           Hierarchy and coordinate conversions affect paths and spatial meaning. Apply them in a
           deliberate order and validate the composed result.
         points:
           - Capture root children before defining the destination root or you may try to parent /World beneath itself.
           - Check ApplyEdits because namespace edits can fail when composition prevents a safe move.
-          - Changing upAxis metadata alone never rotates geometry.
+          - upAxis metadata declares the convention, while transformed data or a conversion transform performs the rotation.
           - Calling AddTranslateOp twice creates two translate ops unless distinct suffixes and intended ordering are managed.
       - kind: recap
         heading: What reached the right track
@@ -483,14 +484,14 @@ lessons:
         heading: metersPerUnit declares linear scale
         system: >-
           One scene unit can be a meter, centimeter, or regrettable surprise. The metadata exists
-          so downstream tools need not infer scale from the size of a chair.
+          so downstream tools can read the scale directly and leave the furniture out of it.
         body: |
           metersPerUnit is stage metadata that states how many meters one scene unit represents.
           A value of 1.0 means meters, 0.01 means centimeters, and 0.0254 means inches. It is a
           declaration used by consumers to compare and convert stages.
 
-          Authoring metersPerUnit does not numerically rescale points, extents, translations, or
-          other distances. If source values are inches and destination values must be centimeters,
+          The declaration stands on its own: points, extents, translations, and other distances keep
+          their authored numbers. If source values are inches and destination values must be centimeters,
           multiply authored linear values by 2.54 and then declare 0.01, or preserve the numeric
           values and truthfully declare 0.0254.
         points:
@@ -528,8 +529,8 @@ lessons:
           provenance and unmapped data where practical, and document any operation that loses
           information.
 
-          Export options belong in transformation because they reflect user or destination choices,
-          not facts extracted from the source.
+          Export options belong in transformation because they reflect user and destination choices,
+          while extraction records the facts of the source.
         points:
           - Pruning can improve client relevance but permanently removes data unless it is preserved elsewhere.
           - Added data and client-specific overrides can be separate transformation steps.
@@ -537,22 +538,23 @@ lessons:
       - kind: pitfall
         heading: Where the gauge explodes
         system: >-
-          Declaring centimeters over inch-valued coordinates does not convert them. It only makes
-          the error professionally documented.
+          Declaring centimeters over inch-valued coordinates leaves the error intact and
+          professionally documented.
         body: |
           Unit metadata and numeric conversion must agree. Validate both the declaration and a
           known physical dimension after transformation.
         points:
-          - SetStageMetersPerUnit changes metadata only; it does not scale scene data.
-          - Do not modify upAxis while normalizing units unless an axis conversion is also required.
+          - SetStageMetersPerUnit writes metadata, while numeric scaling is a separate edit to the authored values.
+          - Leave upAxis as authored while normalizing units unless an axis conversion is also required.
           - Apply a scale exactly once; scaling values and also compensating with misleading metadata double-converts the asset.
           - Unauthored units force consumers to rely on fallback assumptions that may differ across workflows.
       - kind: recap
         heading: What the Gauge now certifies
         body: |
           Transformation adapts extracted USD through reusable options, restructuring, pruning, and
-          optimization. metersPerUnit declares the scale of scene coordinates but never rescales
-          them, so numeric conversion and metadata must describe the same physical asset.
+          optimization. metersPerUnit declares the scale of scene coordinates while those
+          coordinates keep their authored values, so numeric conversion and metadata must describe
+          the same physical asset.
     apply:
       f8_unit_gauge: >-
         Preserve Y-up and declare metersPerUnit as 0.01 for centimeters. The Gauge wants one honest
@@ -562,9 +564,9 @@ lessons:
     title: Asset Validation
     objective: Encode and check asset contracts that make OpenUSD content structurally compliant and interoperable.
     intro: >-
-      The Validation Warden does not inspect whether your asset feels correct. It checks contracts,
-      reports failures, and keeps the crate on the dock until every required opinion exists. I find
-      this deeply soothing and the contestants generally do not.
+      The Validation Warden checks contracts, reports failures, and keeps the crate on the dock
+      until every required opinion exists. How the asset feels is filed under entertainment. I find
+      the whole procedure deeply soothing and the contestants generally do not.
     beats:
       - kind: concept
         heading: Validation checks interoperability contracts
@@ -581,8 +583,8 @@ lessons:
           extensible rules.
         points:
           - Application tests prove code paths; asset rules prove properties of the authored result.
-          - Validation should run on representative converted assets, not only hand-built fixtures.
-          - A passing parse or stage open does not establish compliance with a pipeline contract.
+          - Validation should run on representative converted assets alongside hand-built fixtures.
+          - Pipeline compliance is established by rule checks, with a successful parse or stage open as the starting point.
       - kind: concept
         heading: Rules turn assumptions into failures
         system: >-
@@ -626,8 +628,8 @@ lessons:
       - kind: concept
         heading: Validation belongs throughout intake
         system: >-
-          Validate early enough to blame the correct step. This is not merely engineering advice;
-          it is how the broadcast assigns penalties.
+          Validate early enough to blame the correct step. Engineering calls this hygiene; the
+          broadcast calls it how penalties get assigned.
         body: |
           Run checks after extraction to catch incorrect source mapping and after transformation to
           catch broken destination contracts. Failures should identify the responsible rule and the
@@ -642,14 +644,15 @@ lessons:
       - kind: pitfall
         heading: Where validation becomes theater
         system: >-
-          Checking only that the file exists is not validation. It is attendance.
+          Checking only that the file exists is attendance, and attendance has never cleared a
+          crate.
         body: |
           A narrow happy-path check can pass while the delivered asset violates conventions or loses
           data. Validation must inspect composed values and meaningful relationships among them.
         points:
-          - Do not validate only the in-memory stage when the product is a saved file.
+          - Validate the saved file itself whenever that file is the delivered product.
           - SetDefaultPrim expects a root Usd.Prim, not a path string.
-          - Kind is a model-hierarchy contract, not an arbitrary descriptive tag.
+          - Kind is a model-hierarchy contract with defined tokens and structural rules.
           - A validator should report all actionable failures when possible rather than stopping at the first.
       - kind: recap
         heading: What satisfied the Warden
@@ -682,10 +685,10 @@ lessons:
           contract. This catches interactions that isolated parser or authoring tests cannot.
 
           In this environment extraction begins by manually parsing OBJ text. There is no OBJ file
-          format plugin, so successful intake must not depend on Usd.Stage.Open understanding OBJ.
+          format plugin, so intake succeeds only when the implementation reads that text itself.
         points:
           - Use fixed input fixtures so vertex ordering and expected values are deterministic.
-          - Validate the persisted output, not only transient Python objects.
+          - Validate the persisted output alongside the transient Python objects.
           - Cover source mapping, authored schemas, destination conventions, and provenance in one test.
       - kind: concept
         heading: Separate extraction facts from transformation policy
@@ -739,8 +742,8 @@ lessons:
       - kind: api
         heading: Reopen and assert the contract
         system: >-
-          Trust is not a validation strategy. It is, however, the terminal's current approach to
-          elevators.
+          Trust remains the terminal's current approach to elevators and has no place in a
+          validation strategy.
         body: |
           Reopening the stage proves that every required opinion was serialized. Query schema APIs
           and composed prims exactly as a consumer would, and include diagnostic messages that
@@ -765,18 +768,18 @@ lessons:
           End-to-end failures often come from correct individual calls applied to the wrong object,
           omitted from the saved layer, or paired with inconsistent conventions.
         points:
-          - Do not put provenance only on a child mesh when the root prim is the stable asset interface.
-          - Do not assume setting metersPerUnit scales the parsed OBJ coordinates.
-          - Do not set a default prim before defining a valid root prim.
-          - Do not validate an in-memory stage and forget stage.GetRootLayer().Save().
-          - Do not substitute polygon count or file size for contract checks such as default prim, up axis, units, kind, and required prims.
+          - Stamp provenance on the root prim, which is the stable asset interface downstream tools find first.
+          - Remember that the parsed OBJ coordinates keep their values when metersPerUnit is declared.
+          - Define a valid root prim first, then set it as the default prim.
+          - Call stage.GetRootLayer().Save() before validating so the checks inspect the delivered file.
+          - Check the contract terms of default prim, up axis, units, kind, and required prims, alongside coarse signals such as polygon count or file size.
       - kind: recap
         heading: What defeated the Engine
         body: |
           End-to-end intake testing proves that foreign data was explicitly parsed, faithfully
           authored, deliberately transformed, stamped with durable provenance, saved, reopened, and
-          accepted by the destination contract. Each assertion protects a specific interoperability
-          promise rather than a vague notion of success.
+          accepted by the destination contract. Each assertion protects one specific
+          interoperability promise.
     apply:
       f8_customs_engine: >-
         Complete the whole manifest: /World as default component, Y-up, centimeters, /World/Cube

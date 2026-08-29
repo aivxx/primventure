@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="docs/images/primventure/banner.svg" alt="Primventure — an OpenUSD dungeon crawl judged by usd-core. Ten floor markers, the first three cleared." width="100%">
+</p>
+
 # Primventure
 
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)

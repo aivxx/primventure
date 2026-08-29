@@ -176,7 +176,7 @@ lessons:
       f0_nameplate: >-
         Author cityName as a string attribute set to Primventure — exactly, punctuation included,
         because the Registrar reads it aloud. No schema owns a city's name, so this is the generic
-        CreateAttribute case. A city that cannot state its own name does not persist.
+        CreateAttribute case. A city that cannot state its own name gets struck from the ledger.
       f1_lamp_post: >-
         Define the SphereLight, then use its schema-provided intensity input and set it to 750.
         The alley has been dark since the last contestant, who is also still in there.
@@ -261,14 +261,14 @@ lessons:
       - kind: pitfall
         heading: Where contestants lose the room
         system: >-
-          SetDefaultPrim takes a prim. Not a path. Not a string. Not a hopeful gesture at the
-          screen.
+          SetDefaultPrim wants an actual prim. Contestants keep offering path strings, string
+          literals, and a hopeful gesture at the screen.
         body: |
-          Default prim and up axis are stage metadata, so they are authored on the stage, not on
-          a prim's attributes. A default prim must also be a root-level prim.
+          Default prim and up axis are stage metadata, so you author them on the stage itself
+          rather than through a prim's attributes. A default prim must also be a root-level prim.
         points:
-          - "stage.SetDefaultPrim(prim) expects a Usd.Prim object, not a path string."
-          - "UsdGeom.SetStageUpAxis is a UsdGeom free function, not a stage method."
+          - "stage.SetDefaultPrim(prim) expects a Usd.Prim object, so resolve the path first with GetPrimAtPath."
+          - "UsdGeom.SetStageUpAxis is a free function in UsdGeom; pass the stage as its first argument."
           - "CreateNew raises if the file exists. Use Open when the room already made the stage for you."
       - kind: recap
         heading: What you now owe the city
@@ -346,7 +346,8 @@ lessons:
       - kind: pitfall
         heading: Where contestants lose the room
         system: >-
-          "customData" is not a spelling suggestion. It is the key. Type it exactly.
+          "customData" is the key, spelled exactly that way. I have watched contestants invent four
+          alternatives in one afternoon.
         body: |
           Metadata keys are fixed unless a schema introduces new ones, so a typo becomes an error
           rather than a new field. Dictionary-valued keys also replace wholesale if you set the
@@ -354,7 +355,7 @@ lessons:
         points:
           - "Setting customData with a full dictionary discards entries you did not include."
           - "documentation is a well-known key. Arbitrary top-level keys need a schema."
-          - "kind participates in model hierarchy rules, so it is not a free-form label."
+          - "kind participates in model hierarchy rules, so its value comes from a fixed vocabulary."
       - kind: recap
         heading: What you now owe the city
         body: |
@@ -397,8 +398,8 @@ lessons:
           contract.
         body: |
           Start and end time codes are stage metadata describing the intended playback range.
-          They do not clamp authoring; you can author samples outside the range. They tell
-          consumers which span of time the scene is about.
+          Authoring stays unrestricted, so samples outside the range remain perfectly legal. The
+          range tells consumers which span of time the scene is about.
         code: |
           from pxr import Usd, UsdGeom
 
@@ -433,8 +434,8 @@ lessons:
       - kind: pitfall
         heading: Where contestants lose the room
         system: >-
-          Authoring one sample and calling it animation is a bold artistic statement. It is not a
-          cleared room.
+          Authoring one sample and calling it animation is a bold artistic statement. The room stays
+          locked.
         body: |
           Transform animation runs through xform ops, so the op must exist before you can sample
           it. Adding a translate op twice stacks two ops rather than replacing one.
@@ -462,12 +463,12 @@ lessons:
       which the residents describe as "structurally honest."
     beats:
       - kind: concept
-        heading: Relationships target paths, not values
+        heading: Relationships target paths
         system: >-
           It points. That is the whole personality. Some of us are typecast.
         body: |
-          A relationship is the second kind of property. Instead of holding typed data, it stores
-          one or more scene paths targeting other prims or properties.
+          A relationship is the second kind of property. It stores one or more scene paths that
+          target other prims or properties.
 
           This keeps the target independent. Material binding, light linking, and collection
           membership all use relationships so the referenced object stays a single authored
@@ -475,7 +476,7 @@ lessons:
         points:
           - "Targets are Sdf.Path values, and a relationship may hold zero, one, or many."
           - "Relationships compose like other properties, so stronger layers can change targets."
-          - "A relationship can target a property, not just a prim."
+          - "A relationship can target a property as readily as a prim."
       - kind: api
         heading: Creating and reading targets
         system: >-
@@ -499,12 +500,12 @@ lessons:
       - kind: pitfall
         heading: Where contestants lose the room
         system: >-
-          A relationship to a prim that does not exist is not an error. It is a promise. USD keeps
-          promises badly.
+          A relationship will happily target a prim nobody authored. USD treats that as a promise,
+          and USD keeps promises badly.
         body: |
-          Target paths are not validated at authoring time, so a typo produces a relationship that
-          simply resolves to nothing. Relationships also live alongside attributes in the property
-          namespace, so GetProperties returns both kinds.
+          Authoring a target path performs no existence check, so a typo produces a relationship
+          that resolves to nothing at all. Relationships also live alongside attributes in the
+          property namespace, so GetProperties returns both kinds.
         points:
           - "SetTargets replaces the entire target list, discarding anything previously authored."
           - "Dangling targets fail silently. Verify with GetTargets and a prim existence check."
@@ -523,9 +524,9 @@ lessons:
     title: USD File Formats
     objective: Choose between USD's file formats and author scene description directly in USDA text.
     intro: >-
-      The Warden of this room does not accept Python. It accepts text. Specifically it accepts
-      USDA, the human-readable format, which means for one glorious room you will see exactly
-      what the file says instead of guessing what your script did.
+      The Warden of this room accepts text and text alone. Specifically USDA, the human-readable
+      format, which means for one glorious room you will see exactly what the file says instead of
+      guessing what your script did.
     beats:
       - kind: concept
         heading: Four extensions, two real formats
@@ -572,8 +573,8 @@ lessons:
       - kind: api
         heading: Moving between formats
         system: >-
-          Export converts. It does not flatten composition unless you ask. People assume otherwise
-          and then file complaints with a department I invented.
+          Export converts encodings and leaves composition intact unless you ask for a flatten.
+          People assume otherwise and then file complaints with a department I invented.
         body: |
           The stage and layer APIs convert between encodings by exporting to a path with a
           different extension. Export writes the layer's own content in the target format.
@@ -590,15 +591,15 @@ lessons:
       - kind: pitfall
         heading: Where contestants lose the room
         system: >-
-          The header is not decorative. Omit it and the file becomes a very confident text
-          document about nothing.
+          The header is load-bearing. Omit it and the file becomes a very confident text document
+          about nothing.
         body: |
           USDA is whitespace-tolerant but syntax-strict. The declaration order is specifier, type,
           then quoted name, and stage metadata belongs in the parenthesized block at the top.
         points:
           - "Every USDA file must start with the #usda 1.0 header line."
           - "Prim names are quoted; type names are not."
-          - "Stage metadata such as defaultPrim goes in the top parentheses, not inside a prim block."
+          - "Stage metadata such as defaultPrim belongs in the top parentheses, above every prim block."
       - kind: recap
         heading: What you now owe the city
         body: |

@@ -3,6 +3,7 @@ import re
 import shutil
 from pathlib import Path
 
+import yaml
 from pxr import Usd
 
 from primventure.models import PlayerState, Question, Quest, RunRequest
@@ -127,6 +128,24 @@ def test_every_quest_has_a_resolved_lesson() -> None:
         if not (store.lesson_for(quest) or {}).get("apply")
     ]
     assert not missing
+
+
+def test_lesson_bullets_survive_a_colon() -> None:
+    """An unquoted 'label: detail' bullet is valid YAML that parses as a dict.
+
+    yaml.safe_load accepts it, so only a type check catches the mistake before
+    Pydantic rejects the whole store and every room 500s.
+    """
+    mistyped: list[str] = []
+    for path in sorted(Path(__file__).resolve().parents[2].joinpath("lessons").glob("*.y*ml")):
+        raw = yaml.safe_load(path.read_text()) or {}
+        records = raw.get("lessons", raw)
+        for lesson in ([records] if isinstance(records, dict) else records) or []:
+            for index, beat in enumerate(lesson.get("beats") or []):
+                for point in beat.get("points") or []:
+                    if not isinstance(point, str):
+                        mistyped.append(f"{path.name} {lesson.get('source')} beat {index}: {point!r}")
+    assert not mistyped, mistyped
 
 
 def test_lessons_teach_in_depth() -> None:

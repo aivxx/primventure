@@ -1,0 +1,87 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 360" width="1280" height="360" role="img" aria-label="Primventure - an OpenUSD dungeon crawl judged by usd-core">
+  <title>Primventure</title>
+  <desc>Broadcast-style title card: PRIMVENTURE, an OpenUSD dungeon crawl judged by usd-core, with ten floor markers.</desc>
+
+  <defs>
+    <radialGradient id="glow" cx="50%" cy="0%" r="62%">
+      <stop offset="0%" stop-color="#38204b" stop-opacity="0.95"/>
+      <stop offset="55%" stop-color="#231732" stop-opacity="0.35"/>
+      <stop offset="100%" stop-color="#0c0b0e" stop-opacity="0"/>
+    </radialGradient>
+    <pattern id="grid" width="32" height="32" patternUnits="userSpaceOnUse">
+      <path d="M32 0V32M0 32H32" fill="none" stroke="#ffffff" stroke-opacity="0.03" stroke-width="1"/>
+    </pattern>
+    <pattern id="scan" width="4" height="4" patternUnits="userSpaceOnUse">
+      <rect width="4" height="1" fill="#ffffff" fill-opacity="0.022"/>
+    </pattern>
+  </defs>
+
+  <rect width="1280" height="360" fill="#0c0b0e"/>
+  <rect width="1280" height="360" fill="url(#grid)"/>
+  <rect width="1280" height="360" fill="url(#glow)"/>
+
+  <rect x="16" y="16" width="1248" height="328" fill="none" stroke="#37313c" stroke-width="1"/>
+  <rect x="23" y="23" width="1234" height="314" fill="none" stroke="#ffffff" stroke-opacity="0.03" stroke-width="1"/>
+
+  <g stroke="#ffcb2e" stroke-opacity="0.55" stroke-width="2" fill="none">
+    <path d="M34 62V34H62"/>
+    <path d="M1218 34h28v28"/>
+    <path d="M1246 298v28h-28"/>
+    <path d="M62 326H34v-28"/>
+  </g>
+
+  <g transform="translate(60 36)">
+    <polygon points="5,0 46,0 41,44 0,44" fill="#ffcb2e"/>
+    <text x="23" y="33" font-family="'Barlow Condensed','Arial Narrow',Haettenschweiler,Impact,sans-serif" font-size="34" font-weight="900" font-style="italic" fill="#0c0b0e" text-anchor="middle">P</text>
+  </g>
+
+  <g font-family="'IBM Plex Mono',ui-monospace,SFMono-Regular,Menlo,monospace" font-size="12">
+    <circle cx="126" cy="58" r="5" fill="#ff4c5f"/>
+    <text x="140" y="63" fill="#f5f0df" font-weight="700" letter-spacing="2.6">LIVE</text>
+    <text x="640" y="63" fill="#99919f" text-anchor="middle" letter-spacing="3.4">SYSTEM // THE COMPOSITION IS LIVE</text>
+    <text x="1194" y="63" fill="#99919f" text-anchor="end" letter-spacing="2.2">REC 00:00:14:07</text>
+  </g>
+
+  <g font-family="'Barlow Condensed','Arial Narrow',Haettenschweiler,Impact,sans-serif" font-size="128" font-weight="900" font-style="italic" letter-spacing="2" text-anchor="middle">
+    <text x="716" y="196" fill="#9f54ff" fill-opacity="0.55">PRIMVENTURE</text>
+    <text x="724" y="190" fill="#ffcb2e" fill-opacity="0.35">PRIMVENTURE</text>
+    <text x="720" y="193" fill="#f5f0df">PRIMVENTURE</text>
+  </g>
+
+  <g font-family="'IBM Plex Mono',ui-monospace,SFMono-Regular,Menlo,monospace" text-anchor="middle">
+    <text x="640" y="232" font-size="14" font-weight="700" fill="#ffcb2e" letter-spacing="4.6">AN OPENUSD DUNGEON CRAWL &#183; JUDGED BY usd-core</text>
+    <text x="640" y="255" font-size="11" fill="#8d8592" letter-spacing="2.4">WRITE THE LAYER &#183; CLEAR THE ROOM &#183; KEEP THE CITY</text>
+  </g>
+
+  <g>
+    <g fill="#173329" stroke="#5df2a3">
+      <rect x="141" y="283" width="26" height="26" transform="rotate(45 154 296)"/>
+      <rect x="249" y="283" width="26" height="26" transform="rotate(45 262 296)"/>
+      <rect x="357" y="283" width="26" height="26" transform="rotate(45 370 296)"/>
+    </g>
+    <rect x="465" y="283" width="26" height="26" transform="rotate(45 478 296)" fill="#342b12" stroke="#ffcb2e" stroke-width="2"/>
+    <g fill="#201d23" stroke="#4a434e" opacity="0.75">
+      <rect x="573" y="283" width="26" height="26" transform="rotate(45 586 296)"/>
+      <rect x="681" y="283" width="26" height="26" transform="rotate(45 694 296)"/>
+      <rect x="789" y="283" width="26" height="26" transform="rotate(45 802 296)"/>
+      <rect x="897" y="283" width="26" height="26" transform="rotate(45 910 296)"/>
+      <rect x="1005" y="283" width="26" height="26" transform="rotate(45 1018 296)"/>
+    </g>
+    <rect x="1113" y="283" width="26" height="26" transform="rotate(45 1126 296)" fill="#3d151e" stroke="#a83549"/>
+
+    <g font-family="'IBM Plex Mono',ui-monospace,SFMono-Regular,Menlo,monospace" font-size="10" text-anchor="middle" fill="#6e6872" letter-spacing="1">
+      <text x="154" y="330">00</text>
+      <text x="262" y="330">01</text>
+      <text x="370" y="330">02</text>
+      <text x="478" y="330" fill="#ffcb2e">03</text>
+      <text x="586" y="330">04</text>
+      <text x="694" y="330">05</text>
+      <text x="802" y="330">06</text>
+      <text x="910" y="330">07</text>
+      <text x="1018" y="330">08</text>
+      <text x="1126" y="330" fill="#ff6677">09</text>
+    </g>
+  </g>
+
+  <rect width="1280" height="360" fill="url(#scan)"/>
+</svg>
