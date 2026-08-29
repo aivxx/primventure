@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import Editor from "@monaco-editor/react";
 import {
-  ArrowRight, Backpack, Boxes, BookOpen, CheckCircle2, ChevronLeft, ChevronRight,
-  Circle, CircleDollarSign, Clapperboard, Code2, Eye, FlaskConical, Gem, HelpCircle,
-  Lightbulb, ListChecks, LockKeyhole, Play, RefreshCw, Shield, ShoppingCart,
-  Skull, Sparkles, Swords, TerminalSquare, Trophy, Tv, X, XCircle, Zap,
+  ArrowRight, Backpack, Boxes, BookOpen, Building2, CheckCircle2, ChevronLeft,
+  ChevronRight, Circle, CircleDollarSign, Clapperboard, Code2, Eye, FlaskConical,
+  Gem, HelpCircle, Lightbulb, ListChecks, LockKeyhole, Play, RefreshCw, Shield,
+  ShoppingCart, Skull, Sparkles, Swords, TerminalSquare, Trash2, Trophy, Tv, X,
+  XCircle, Zap,
 } from "lucide-react";
 import * as THREE from "three";
 
@@ -69,12 +70,32 @@ const CLASS_PATHS = [
   },
 ] as const;
 
+const RESET_OPTIONS = [
+  {
+    scope: "city",
+    title: "Demolish the City",
+    blurb: "Deletes every layer you published and empties world/root.usda. Your record, level, and Opinion Points survive.",
+    confirm: "The skyline goes. Cleared rooms stay cleared, so any episode can be rerun to rebuild its block.",
+    action: "DEMOLISH",
+  },
+  {
+    scope: "all",
+    title: "Wipe the Whole Crawl",
+    blurb: "Demolishes the city and clears the save. Back to Floor 00, level 1, nothing banked.",
+    confirm: "Everything goes: skyline, level, XP, Opinion Points, items, and every cleared room.",
+    action: "WIPE IT ALL",
+  },
+] as const satisfies readonly { scope: ResetScope; title: string; blurb: string; confirm: string; action: string }[];
+
 const ONBOARDED_KEY = "primventure.onboarded.v2";
 const GUIDED_KEY = "primventure.guided";
 const LESSONS_READ_KEY = "primventure.lessons-read.v1";
 const USDA_REVIEW_KEY = "primventure.usda-review";
 
 type Tab = "map" | "skills" | "kiosk";
+// "city" tears down what was published and leaves the record standing; "all"
+// takes the save with it.
+type ResetScope = "city" | "all";
 type GuideTarget = "lesson" | "editor" | "run" | "usda" | "map" | "payout" | "consumables" | "saferoom" | "recipes" | "feed";
 // Panels on the left edge have no room for an arrow beside them, and the
 // tutorial card owns the bottom left, so those targets get pointed at from the
@@ -738,6 +759,8 @@ export default function App() {
   const [assistBusy, setAssistBusy] = useState<"hint" | "peek" | null>(null);
   const [assistResult, setAssistResult] = useState<AssistResult | null>(null);
   const [pendingSpend, setPendingSpend] = useState<"hint_tokens" | "system_peeks" | null>(null);
+  const [pendingReset, setPendingReset] = useState<ResetScope | null>(null);
+  const [resetting, setResetting] = useState(false);
   const [checks, setChecks] = useState<boolean[]>([]);
   const [usdaView, setUsdaView] = useState<USDAView>({ before_usda: "", after_usda: "" });
   const [usdaMode, setUsdaMode] = useState<"before" | "after">("before");
@@ -1113,6 +1136,45 @@ export default function App() {
     }
   };
 
+  const runReset = async (scope: ResetScope) => {
+    setPendingReset(null);
+    setResetting(true);
+    try {
+      await api<PlayerState>(`/reset?scope=${scope}`, { method: "POST" });
+      // Every panel is pointing at a city that no longer exists, so clear the
+      // pointers before reloading. The review key especially: it would send
+      // refresh() back to a room the wipe just un-cleared.
+      localStorage.removeItem(USDA_REVIEW_KEY);
+      if (scope === "all") localStorage.removeItem(LESSONS_READ_KEY);
+      setActiveQuest(null);
+      setChecks([]);
+      setReviewPending(false);
+      setUsdaView({ before_usda: "", after_usda: "" });
+      setAssistResult(null);
+      setLessonOpen(false);
+      setActiveTab("map");
+      // refresh() is the one path that reloads state, quests, and recipes
+      // together and opens the next room, which is what a boot would do.
+      await refresh(true);
+      setRevision((value) => value + 1);
+      setToast({
+        kind: "success",
+        title: scope === "all" ? "CRAWL RESET" : "CITY DEMOLISHED",
+        message: scope === "all"
+          ? "SYSTEM: Save wiped and the skyline with it. Floor 00 is taping again."
+          : "SYSTEM: Every published layer is gone. Your record stands — rerun any episode to rebuild its block.",
+      });
+    } catch (error) {
+      setToast({
+        kind: "error",
+        title: "RESET REFUSED",
+        message: error instanceof Error ? error.message : "The System kept the tapes.",
+      });
+    } finally {
+      setResetting(false);
+    }
+  };
+
   const buyUpgrade = async (id: string) => {
     try {
       const next = await api<PlayerState>(`/shop/${id}`, { method: "POST" });
@@ -1350,7 +1412,31 @@ export default function App() {
                 <button disabled={owned || state.opinion_points < item.cost} onClick={() => buyUpgrade(id)}>{owned ? "INSTALLED" : state.opinion_points < item.cost ? `NEED ${item.cost - state.opinion_points} MORE OP` : item.repeatable ? <><CircleDollarSign size={15} /> {item.cost} OP · RESTOCK</> : <><CircleDollarSign size={15} /> {item.cost} OP</>}</button>
               </article>;
             })}</div>
-          </div>)}<small className="fine-print">*Saferoom status void during syntax errors and certification deadlines.</small>
+          </div>)}
+          <div className="shop-section danger-zone">
+            <div className="shop-heading">CONDEMNED // NO REFUNDS, NO UNDO</div>
+            <div className="shop-grid">
+              {RESET_OPTIONS.map((option) => {
+                const armed = pendingReset === option.scope;
+                return <article className={armed ? "arming" : ""} key={option.scope}>
+                  <div className="shop-number">{option.scope === "city" ? "01" : "02"}</div>
+                  {option.scope === "city" ? <Building2 size={34} /> : <Skull size={34} />}
+                  <h3>{option.title}</h3>
+                  <p>{armed ? option.confirm : option.blurb}</p>
+                  {armed
+                    ? <div className="confirm-actions">
+                      <button className="yes" disabled={resetting} onClick={() => runReset(option.scope)}>
+                        {resetting ? <RefreshCw className="spin" size={15} /> : <Trash2 size={15} />} {option.action}
+                      </button>
+                      <button className="no" onClick={() => setPendingReset(null)} aria-label="Keep everything"><X size={13} /></button>
+                    </div>
+                    // Nothing here is recoverable, so the first click only arms it.
+                    : <button disabled={resetting} onClick={() => setPendingReset(option.scope)}>{option.action}</button>}
+                </article>;
+              })}
+            </div>
+          </div>
+          <small className="fine-print">*Saferoom status void during syntax errors and certification deadlines.</small>
         </div>}
         <section className={`authoring-dock code-panel panel ${spotlight === "editor" ? "spotlight" : ""}`} ref={editorRef}>
           <div className="editor-toolbar">

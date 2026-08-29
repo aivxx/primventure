@@ -147,6 +147,17 @@ main { display:grid; grid-template-columns: 250px minmax(420px, 1fr) 450px; gap:
 .skill-gem { width:45px;height:45px;display:grid;place-items:center;background:#242027;border:1px solid #49414f;transform:rotate(45deg);margin:4px 0 22px 5px;color:#746c78}.skill-gem svg{transform:rotate(-45deg)}.unlocked .skill-gem{color:var(--yellow);border-color:var(--yellow);box-shadow:0 0 25px rgba(159,84,255,.35)}
 .skill-node small{color:var(--purple);font-size:7px;letter-spacing:1px}.skill-node h3{font:800 17px "Barlow Condensed";margin:3px 0}.skill-node p{font-size:8px;line-height:1.5;color:#817a86}.skill-node footer{position:absolute;bottom:12px;color:var(--yellow);font-size:7px;font-weight:700}
 .shop-grid article { min-height:230px;padding:20px;background:#19171c;border:1px solid #39343d;position:relative}.shop-grid article.owned{border-color:#2f865d}.shop-number{position:absolute;right:12px;top:8px;font:800 31px "Barlow Condensed";color:#2e2a32}.shop-grid svg{color:var(--yellow)}.shop-grid h3{font:800 20px "Barlow Condensed";margin:14px 0 5px}.shop-grid p{font-size:8px;line-height:1.6;color:#8e8792;min-height:48px}.shop-grid button{border:0;background:var(--yellow);color:#111;padding:9px 12px;font-size:9px;font-weight:700;display:flex;gap:5px;align-items:center;cursor:pointer}.shop-grid button:disabled{background:#302c33;color:#716b76;cursor:not-allowed}.fine-print{display:block;padding:10px 25px;color:#5d5761;font-size:7px}
+.danger-zone .shop-heading{color:var(--red)}
+.danger-zone article{border-color:#5c2630;background:linear-gradient(150deg,#2a161b,#19171c 62%)}
+.danger-zone article.arming{border-color:var(--red);box-shadow:0 0 22px rgba(226,62,80,.24)}
+.danger-zone svg{color:var(--red)}
+.danger-zone .shop-number{color:#43242b}
+.danger-zone>.shop-grid>article>button{background:transparent;border:1px solid var(--red);color:var(--red)}
+.danger-zone>.shop-grid>article>button:hover:not(:disabled){background:var(--red);color:#150e10}
+.danger-zone .confirm-actions .yes{border-color:var(--red);background:var(--red);color:#150e10;padding:8px 11px;font-size:8px;gap:5px}
+.danger-zone .confirm-actions .yes:hover:not(:disabled){background:#f2566a}
+.danger-zone .confirm-actions .yes:disabled{opacity:.55;cursor:not-allowed}
+.danger-zone .confirm-actions .no{padding:8px}
 
 .editor-rail { background:#121015; border:1px solid #38323d; min-height:0; }
 .challenge-card { flex:none; max-height:44%; overflow:auto; padding:20px; background:linear-gradient(135deg,#302037,#18151c 70%); border-bottom:1px solid #4a3e4e; position:relative}

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import re
 import shutil
-from typing import Any
+from typing import Any, Literal
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -13,6 +13,12 @@ from .runner import QuestRunner
 from .scene import world_scene
 from .store import ROOT, WORLD_DIR, QuestStore, SaveStore, newest_world_mtime, quest_view
 
+
+# A city with nothing published yet. Every cleared room sublayers itself in.
+EMPTY_CITY = (
+    '#usda 1.0\n(\n    documentation = "Primventure\'s persistent city. '
+    'Successful quest layers are added here."\n)\n'
+)
 
 UPGRADES: dict[str, dict[str, Any]] = {
     "hint_refill": {
@@ -250,14 +256,19 @@ def choose_specialization(specialization: str) -> dict[str, Any]:
 
 
 @app.post("/api/reset")
-def reset_progress() -> dict[str, Any]:
+def reset_progress(scope: Literal["city", "all"] = "all") -> dict[str, Any]:
+    """Tear the city down, and on the wider scope the crawler's record with it.
+
+    Demolishing the city without clearing the save leaves the rooms cleared but
+    unpublished, which is the state a player wants when they would rather rebuild
+    the skyline from reruns than start the crawl over.
+    """
     shutil.rmtree(WORLD_DIR / "workstreams", ignore_errors=True)
     shutil.rmtree(WORLD_DIR / ".preview", ignore_errors=True)
-    (WORLD_DIR / "root.usda").write_text(
-        '#usda 1.0\n(\n    documentation = "Primventure\\\'s persistent city. '
-        'Successful quest layers are added here."\n)\n'
-    )
-    return saves.reset().model_dump()
+    (WORLD_DIR / "root.usda").write_text(EMPTY_CITY)
+    if scope == "all":
+        saves.reset()
+    return get_state()
 
 
 @app.get("/api/world/tree")

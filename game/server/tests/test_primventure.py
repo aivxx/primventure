@@ -295,6 +295,77 @@ def test_run_returns_the_same_state_shape_as_the_state_endpoint(tmp_path: Path, 
     assert set(run["state"]) == set(baseline)
 
 
+def _reset_client(tmp_path: Path, monkeypatch):
+    """An API client whose city and save both live in the temp directory."""
+    from fastapi.testclient import TestClient
+
+    from primventure import api as api_module
+
+    world = tmp_path / "world"
+    (world / "workstreams" / "f0_first_prim").mkdir(parents=True)
+    (world / ".preview").mkdir()
+    (world / "workstreams" / "f0_first_prim" / "submission.usd").write_text(
+        '#usda 1.0\n\ndef Xform "City"\n{\n}\n'
+    )
+    (world / "root.usda").write_text(
+        "#usda 1.0\n(\n    subLayers = [\n"
+        "        @workstreams/f0_first_prim/submission.usd@\n    ]\n)\n"
+    )
+    monkeypatch.setattr(api_module, "WORLD_DIR", world)
+    monkeypatch.setattr(api_module, "saves", SaveStore(tmp_path / "save.json"))
+    api_module.saves.save(PlayerState(xp=570, level=6, completed_quests=["f0_first_prim"]))
+    return TestClient(api_module.app), world
+
+
+def test_city_reset_clears_the_skyline_but_keeps_the_record(tmp_path: Path, monkeypatch) -> None:
+    client, world = _reset_client(tmp_path, monkeypatch)
+
+    state = client.post("/api/reset", params={"scope": "city"}).json()
+
+    assert not (world / "workstreams").exists()
+    assert not (world / ".preview").exists()
+    assert "subLayers" not in (world / "root.usda").read_text()
+    # The rooms stay cleared, so every episode is still there to rerun.
+    assert state["completed_quests"] == ["f0_first_prim"]
+    assert (state["xp"], state["level"]) == (570, 6)
+
+
+def test_full_reset_takes_the_save_down_with_the_city(tmp_path: Path, monkeypatch) -> None:
+    client, world = _reset_client(tmp_path, monkeypatch)
+
+    state = client.post("/api/reset", params={"scope": "all"}).json()
+
+    assert not (world / "workstreams").exists()
+    assert "subLayers" not in (world / "root.usda").read_text()
+    assert state["completed_quests"] == []
+    assert (state["xp"], state["level"]) == (0, 1)
+
+
+def test_reset_answers_in_the_same_shape_as_the_state_endpoint(tmp_path: Path, monkeypatch) -> None:
+    """The UI swaps the response straight into player state, so it must match."""
+    client, _ = _reset_client(tmp_path, monkeypatch)
+
+    baseline = client.get("/api/state").json()
+
+    for scope in ("city", "all"):
+        assert set(client.post("/api/reset", params={"scope": scope}).json()) == set(baseline)
+
+
+def test_reset_defaults_to_wiping_everything(tmp_path: Path, monkeypatch) -> None:
+    """The bare endpoint predates the scope, and callers still expect a full wipe."""
+    client, _ = _reset_client(tmp_path, monkeypatch)
+
+    assert client.post("/api/reset").json()["completed_quests"] == []
+
+
+def test_reset_rejects_a_scope_it_does_not_know(tmp_path: Path, monkeypatch) -> None:
+    client, world = _reset_client(tmp_path, monkeypatch)
+
+    assert client.post("/api/reset", params={"scope": "districts"}).status_code == 422
+    # A refused scope must not have demolished anything on its way out.
+    assert (world / "workstreams").exists()
+
+
 def test_every_validated_room_states_what_the_terminal_checks() -> None:
     quests = QuestStore().all()
     for quest in quests:

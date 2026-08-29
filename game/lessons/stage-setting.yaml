@@ -31,32 +31,60 @@ lessons:
           An untyped prim is a building with no purpose and no permits. The city has forty. They
           are why the fourth floor is in litigation.
         body: |
-          DefinePrim creates a typeless prim by default, which is an empty container. Supplying a
-          type name tells consumers what kind of data lives there and which schema attributes
-          apply.
+          Alongside its path, a prim can carry a type name: a single label such as Xform, Sphere,
+          or Mesh that declares what kind of object the container holds. The type is optional. A
+          prim without one is still a perfectly valid prim, but it is an unlabelled box, and
+          nothing reading the scene can assume anything about what is inside it.
 
-          Xform defines a transform. Scope is a simple container that holds no transform data.
-          Cube, Sphere, and Mesh define geometry. The type appears in USDA as part of the prim
-          declaration: def Xform "City".
+          The label matters because each type name points at a schema, the rulebook saying which
+          properties that kind of prim is expected to carry. Xform means the prim holds a
+          transform, so it can be moved, rotated, and scaled. Scope is a plain grouping container
+          with no transform at all. Cube, Sphere, and Mesh mean the prim describes geometry, so a
+          renderer knows there is something to draw.
+
+          In a USDA file the type sits between the word def and the prim's name. Below is the
+          same address written both ways. You will author the typed one in this room, and the
+          next beat is the Python that writes it.
+        code: |
+          # Typed: anything reading this knows the prim holds a transform.
+          def Xform "City"
+          {
+          }
+
+          # Untyped: a valid container that promises nothing.
+          def "City"
+          {
+          }
         points:
-          - "stage.DefinePrim(path, type) is the generic authoring call and works for any type."
-          - "Schema classes such as UsdGeom.Xform.Define(stage, path) are the clearer, less brittle option when the type is known."
-          - A typeless prim is still a valid prim. It simply carries no schema contract.
+          - A type is a promise about what the prim contains, and that promise is what lets other tools read your scene correctly.
+          - An untyped prim is legal and sometimes deliberate, but nothing can infer a transform, geometry, or material from one.
+          - Xform is the right choice for a prim whose job is to position whatever gets nested beneath it.
       - kind: api
         heading: Working with prims in Python
         system: >-
           Five methods. I have seen contestants memorize longer coffee orders.
         body: |
-          Define prims with the generic stage API or a schema class, then inspect the composed
-          result through the returned Usd.Prim. An invalid prim evaluates as False, which makes
-          existence checks cheap before you author an override.
+          Scene description is authored in Python through pxr, OpenUSD's Python package. Work
+          begins from a stage, the object that holds the scene in memory and knows which layer it
+          will be written to.
+
+          The call that creates a prim is DefinePrim, a method on that stage. It takes the path
+          where the prim should live and, optionally, the type name from the previous beat. Pass
+          a path alone and you get the unlabelled container. Pass a type as the second argument
+          and you get the typed one. Every typed schema also offers its own constructor, such as
+          UsdGeom.Xform.Define, which reaches the same result without spelling the type as a
+          string.
+
+          Both forms hand back a Usd.Prim you can then inspect. Authoring only changes memory, so
+          the layer still has to be saved before anything else can read it.
         code: |
           from pxr import Usd, UsdGeom
 
           stage = Usd.Stage.CreateNew("city.usda")
 
-          # Generic: define a prim at a path, optionally with a type.
-          city = stage.DefinePrim("/City", "Xform")
+          # Generic: a path, and optionally a type name.
+          plaza = stage.DefinePrim("/Plaza")            # untyped container
+          city = stage.DefinePrim("/City", "Xform")     # typed as Xform
 
           # Schema-specific: the same result with a typed interface.
           tower = UsdGeom.Xform.Define(stage, "/City/Tower")
@@ -67,6 +95,10 @@ lessons:
 
           if stage.GetPrimAtPath("/City").IsValid():
               stage.GetRootLayer().Save()
+        points:
+          - "stage.DefinePrim(path) creates an untyped prim, and a type name as the second argument creates a typed one."
+          - "Schema classes such as UsdGeom.Xform.Define(stage, path) are the clearer, less brittle option when the type is known."
+          - An invalid prim evaluates as False, which makes existence checks cheap before you author an override.
       - kind: pitfall
         heading: Where contestants lose the room
         system: >-
