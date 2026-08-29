@@ -18,11 +18,14 @@ TAUNTS = [
     "The System has inspected your opinions. Several have filed for witness protection.",
     "A bold layer. Incorrect, but bold. The crowd has been told this was intentional.",
     "Your authored intent and the composed result are no longer on speaking terms.",
+    "SYSTEM: Hydra did not crash. You did. There is a difference.",
+    "SYSTEM: Deleting the draft would have been faster. Also, a certification fail.",
 ]
 VICTORIES = [
     "VALIDATION GREEN. The Composition reluctantly returns one city block.",
     "Critical composition hit. Somewhere, a weaker opinion quietly expires.",
     "Room cleared. The System always believed in you, retroactively.",
+    "SYSTEM: Competent. Unsettling. Proceed.",
 ]
 
 
@@ -104,6 +107,21 @@ class QuestRunner:
             "from pathlib import Path\n"
             f"STAGE_PATH = {str(stage_path)!r}\n"
             "WORLD_ROOT = " + repr(str(WORLD_DIR)) + "\n"
+            "ASSET_LIBRARY = "
+            + repr(
+                str(
+                    ROOT
+                    / "docs"
+                    / "exercise_content"
+                    / "composition_arcs"
+                    / "lib"
+                    / "assets"
+                )
+            )
+            + "\n"
+            "EXCHANGE_OBJ = "
+            + repr(str(ROOT / "docs" / "exercise_content" / "data_exchange" / "shapes.obj"))
+            + "\n"
         )
         script_path.write_text(prelude + "\n" + code + "\n")
         env = {"PATH": os.environ.get("PATH", ""), "PYTHONIOENCODING": "utf-8"}
@@ -114,7 +132,7 @@ class QuestRunner:
                 env=env,
                 capture_output=True,
                 text=True,
-                timeout=8,
+                timeout=20,
             )
         except subprocess.TimeoutExpired:
             return stage_path, "", "Execution exceeded the eight-second arena limit."
@@ -219,12 +237,18 @@ class QuestRunner:
                 else prim.GetAttribute(data["attribute"]) if prim else None
             )
             value = attribute.Get(data["time"]) if attribute and "time" in data else attribute.Get() if attribute else None
-            if isinstance(value, tuple):
-                value = list(value)
-            passed = value == expected
+            value = QuestRunner._as_plain(value)
+            expected_plain = QuestRunner._as_plain(expected)
+            passed = value == expected_plain
         elif name == "metadata_equals":
             target = prim if prim else stage
-            passed = target.GetMetadata(data.get("metadata", data.get("key"))) == expected
+            value = target.GetMetadata(data.get("metadata", data.get("key"))) if target else None
+            field = data.get("field")
+            if field and isinstance(value, dict):
+                value = value.get(field)
+            passed = value == expected
+        elif name == "kind_equals":
+            passed = bool(prim and prim.IsValid() and Usd.ModelAPI(prim).GetKind() == expected)
         elif name == "has_reference":
             passed = bool(prim and prim.HasAuthoredReferences())
             if passed and data.get("asset"):
@@ -257,8 +281,10 @@ class QuestRunner:
                     or variant_set.GetVariantSelection() == data["selection"]
                 )
             )
+        elif name == "active":
+            passed = bool(prim and prim.IsValid() and prim.IsActive() == bool(expected if expected is not None else True))
         elif name == "instanceable":
-            passed = bool(prim and prim.IsInstanceable() == bool(expected if expected is not None else True))
+            passed = bool(prim and prim.IsValid() and prim.IsInstanceable() == bool(expected if expected is not None else True))
         elif name == "specifier_equals":
             specifiers = {
                 "def": Sdf.SpecifierDef,
@@ -283,7 +309,15 @@ class QuestRunner:
         elif name == "sublayer_order":
             actual = [Path(item).name for item in stage.GetRootLayer().subLayerPaths]
             wanted = [Path(item).name for item in data.get("layers", [])]
-            passed = actual[: len(wanted)] == wanted
+            passed = actual == wanted if data.get("exact") or wanted == [] else actual[: len(wanted)] == wanted
+        elif name == "layer_offset":
+            references = prim.GetMetadata("references") if prim else None
+            items = list(references.GetAppliedItems()) if references else []
+            offsets = [item.layerOffset.offset for item in items]
+            scales = [item.layerOffset.scale for item in items]
+            passed = bool(items) and (
+                data.get("offset") is None or data["offset"] in offsets
+            ) and (data.get("scale") is None or data["scale"] in scales)
         elif name == "attribute_source":
             attribute = stage.GetAttributeAtPath(path) if path else None
             stack = attribute.GetPropertyStack() if attribute else []
@@ -299,6 +333,25 @@ class QuestRunner:
             passed = bool(default and (not expected or default.GetPath().pathString == expected))
         elif name == "up_axis":
             passed = UsdGeom.GetStageUpAxis(stage) == expected
+        elif name == "meters_per_unit":
+            passed = UsdGeom.GetStageMetersPerUnit(stage) == float(expected)
+        elif name == "point_instancer":
+            instancer = UsdGeom.PointInstancer(prim) if prim else None
+            indices = instancer.GetProtoIndicesAttr().Get() if instancer else None
+            positions = instancer.GetPositionsAttr().Get() if instancer else None
+            targets = list(instancer.GetPrototypesRel().GetTargets()) if instancer else []
+            passed = bool(
+                instancer
+                and instancer.GetPrim().IsValid()
+                and indices
+                and positions
+                and len(indices) == len(positions)
+                and len(indices) >= int(data.get("min_instances", 1))
+                and (
+                    data.get("prototype_count") is None
+                    or len(targets) == int(data["prototype_count"])
+                )
+            )
         elif name == "start_time":
             passed = stage.GetStartTimeCode() == expected
         elif name == "end_time":
@@ -307,6 +360,19 @@ class QuestRunner:
             return False, f"Unknown validation rule {name!r}."
         detail = data.get("message") or f"{name}: expected {expected!r}"
         return passed, detail
+
+    @staticmethod
+    def _as_plain(value: Any) -> Any:
+        if value is None or isinstance(value, (str, bytes, bool, int, float)):
+            return value
+        if isinstance(value, dict):
+            return {key: QuestRunner._as_plain(item) for key, item in value.items()}
+        if hasattr(value, "__len__") and not isinstance(value, (str, bytes)):
+            try:
+                return [QuestRunner._as_plain(item) for item in list(value)]
+            except TypeError:
+                pass
+        return value
 
     def _publish(self, quest: Quest, artifact: Path) -> None:
         if quest.world_target and not quest.world_target.startswith("/"):

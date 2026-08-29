@@ -39,7 +39,9 @@ class QuestStore:
         self._quests = quests
 
     def all(self) -> list[Quest]:
-        return sorted(self._quests.values(), key=lambda q: (q.floor, q.neighborhood, q.id))
+        # Stable sort keeps each floor file's authored order, which is the
+        # prerequisite chain the dungeon map draws as a route.
+        return sorted(self._quests.values(), key=lambda q: q.floor)
 
     def get(self, quest_id: str) -> Quest:
         try:

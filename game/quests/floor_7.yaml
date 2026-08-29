@@ -1,90 +1,289 @@
 floor: 8
-floor_name: Instance Foundry
+floor_name: Instance Wilds
 quests:
   - id: f7_repeat_benches
     title: Cast the Repeat Benches
     floor: 8
-    floor_name: Instance Foundry
-    neighborhood: Prototype Row
+    floor_name: Instance Wilds
+    neighborhood: Scenegraph Thickets
     kind: room
     prerequisites: [f6_zoning_golem]
-    level_required: 14
-    exam_tasks: [author_references, enable_instancing]
-    stats: {craft: 4, insight: 4}
-    brief: "SYSTEM: The Foundry bills memory by the copy. Forge instances instead."
+    level_required: 15
+    exam_tasks: [author_scenegraph_instances, reuse_component]
+    stats: {craft: 4, insight: 3}
+    brief: "SYSTEM: The Wilds bill memory by the copy. Three benches, one prototype. Instanceable is not optional."
     starter: |
-      from pxr import Usd
-      stage = Usd.Stage.Open(STAGE_PATH)
+      from pathlib import Path
+      from pxr import Usd, UsdGeom
+
+      bench = (Path(WORLD_ROOT) / "assets" / "bench.usda").as_posix()
+      stage = Usd.Stage.CreateNew(STAGE_PATH)
+      UsdGeom.Xform.Define(stage, "/City/InstanceWilds")
       for name in ("BenchA", "BenchB", "BenchC"):
-          bench = stage.DefinePrim(f"/City/InstanceFoundry/{name}", "Xform")
-          # Reference assets/bench.usda and make each prim instanceable.
+          prim = UsdGeom.Xform.Define(stage, f"/City/InstanceWilds/{name}").GetPrim()
+          # TODO: Reference bench.usda and set instanceable True.
       stage.GetRootLayer().Save()
     language: python
     validator:
       assertions:
-        - has_reference: {path: /City/InstanceFoundry/BenchA, asset: assets/bench.usda}
-        - instanceable: {path: /City/InstanceFoundry/BenchA, value: true}
-        - instanceable: {path: /City/InstanceFoundry/BenchB, value: true}
-        - instanceable: {path: /City/InstanceFoundry/BenchC, value: true}
+        - has_reference: {path: /City/InstanceWilds/BenchA, asset: bench.usda}
+        - has_reference: {path: /City/InstanceWilds/BenchB, asset: bench.usda}
+        - has_reference: {path: /City/InstanceWilds/BenchC, asset: bench.usda}
+        - instanceable: {path: /City/InstanceWilds/BenchA, value: true}
+        - instanceable: {path: /City/InstanceWilds/BenchB, value: true}
+        - instanceable: {path: /City/InstanceWilds/BenchC, value: true}
     cookbook: docs/asset-modularity-instancing/authoring-scenegraph-instancing/exercise-authoring-scenegraph-instancing.md
-    xp: 390
+    xp: 220
     reward: Prototype Tongs
-    world_target: /City/InstanceFoundry
-    recipes: [Usd.References.AddReference, Usd.Prim.SetInstanceable]
+    world_target: /City/InstanceWilds
+    recipes: [Instancing, Instanceable]
 
   - id: f7_prototype_sentinel
     title: Pass the Prototype Sentinel
     floor: 8
-    floor_name: Instance Foundry
-    neighborhood: Sentinel Line
+    floor_name: Instance Wilds
+    neighborhood: Scenegraph Thickets
     kind: neighborhood_boss
     prerequisites: [f7_repeat_benches]
     level_required: 15
-    exam_tasks: [inspect_instances, preserve_shared_prototype]
-    stats: {insight: 5, resolve: 4}
-    brief: "SYSTEM: The Sentinel asks one question: which forms truly share?"
+    exam_tasks: [keep_instanceable, author_instance_local_metadata]
+    stats: {insight: 4, resolve: 3}
+    brief: "SYSTEM: The Sentinel asks which forms truly share. Keep BenchB instanceable. Name it in metadata, not by exploding the prototype."
     starter: |
-      from pxr import Usd
-      stage = Usd.Stage.Open(STAGE_PATH)
-      bench = stage.GetPrimAtPath("/City/InstanceFoundry/BenchB")
-      # Keep BenchB instanceable and set displayName to "Shared Foundry Bench".
+      from pathlib import Path
+      from pxr import Usd, UsdGeom
+
+      bench = (Path(WORLD_ROOT) / "assets" / "bench.usda").as_posix()
+      stage = Usd.Stage.CreateNew(STAGE_PATH)
+      prim = UsdGeom.Xform.Define(stage, "/City/InstanceWilds/BenchB").GetPrim()
+      prim.GetReferences().AddReference(bench)
+      prim.SetInstanceable(True)
+      # TODO: Set displayName to "Shared Foundry Bench" without clearing instanceable.
       stage.GetRootLayer().Save()
     language: python
     validator:
       assertions:
-        - instanceable: {path: /City/InstanceFoundry/BenchB, value: true}
-        - metadata_equals: {path: /City/InstanceFoundry/BenchB, key: displayName, value: "Shared Foundry Bench"}
+        - instanceable: {path: /City/InstanceWilds/BenchB, value: true}
+        - has_reference: {path: /City/InstanceWilds/BenchB, asset: bench.usda}
+        - metadata_equals: {path: /City/InstanceWilds/BenchB, key: displayName, value: "Shared Foundry Bench"}
     cookbook: docs/asset-modularity-instancing/authoring-scenegraph-instancing/scenegraph-instancing-intro.md
-    xp: 450
-    reward: Sentinel Memory Shard
-    world_target: /City/InstanceFoundry/BenchB
-    recipes: [Usd.Prim.IsInstance, Usd.Prim.GetPrototype, Usd.Prim.SetDisplayName]
+    xp: 260
+    reward: {opinion_points: 1, achievement: "New achievement! You named an instance without de-instancing it."}
+    world_target: /City/InstanceWilds/BenchB
+    recipes: [Opinions]
+    questions:
+      - prompt: What does SetInstanceable(True) create at runtime?
+        choices:
+          - An implicit prototype shared by matching instanceable prims
+          - A PointInstancer
+          - A flattened copy of every gprim
+        answer: 0
+        explanation: Scenegraph instancing shares an implicit prototype.
+
+  - id: f7_deinstance_sticker
+    title: Peel One Bench Off the Prototype
+    floor: 8
+    floor_name: Instance Wilds
+    neighborhood: Scenegraph Thickets
+    kind: room
+    prerequisites: [f7_prototype_sentinel]
+    level_required: 16
+    exam_tasks: [deinstance_selectively, preserve_other_instances]
+    stats: {craft: 3, insight: 4}
+    brief: "SYSTEM: One bench needs a unique sticker. Deinstance only that prim. The other two still share."
+    starter: |
+      from pathlib import Path
+      from pxr import Usd, UsdGeom
+
+      bench = (Path(WORLD_ROOT) / "assets" / "bench.usda").as_posix()
+      stage = Usd.Stage.CreateNew(STAGE_PATH)
+      for name in ("BenchA", "BenchB", "BenchC"):
+          prim = UsdGeom.Xform.Define(stage, f"/City/InstanceWilds/{name}").GetPrim()
+          prim.GetReferences().AddReference(bench)
+          prim.SetInstanceable(True)
+      # TODO: Set BenchC instanceable False and displayName "Unique Sticker Bench".
+      stage.GetRootLayer().Save()
+    language: python
+    validator:
+      assertions:
+        - instanceable: {path: /City/InstanceWilds/BenchA, value: true}
+        - instanceable: {path: /City/InstanceWilds/BenchB, value: true}
+        - instanceable: {path: /City/InstanceWilds/BenchC, value: false}
+        - metadata_equals: {path: /City/InstanceWilds/BenchC, key: displayName, value: "Unique Sticker Bench"}
+    cookbook: docs/asset-modularity-instancing/refining-scenegraph-instances/scenegraph-deinstance-refinement.md
+    xp: 240
+    reward: Sticker Permit
+    world_target: /City/InstanceWilds
+    recipes: [Instancing]
+
+  - id: f7_point_scatter
+    title: Scatter Cargo on the Point Grid
+    floor: 8
+    floor_name: Instance Wilds
+    neighborhood: Point Wastes
+    kind: room
+    prerequisites: [f7_deinstance_sticker]
+    level_required: 16
+    exam_tasks: [author_point_instancer, bind_prototypes]
+    stats: {craft: 5, insight: 4}
+    brief: "SYSTEM: Scenegraph instances are too chatty for a thousand crates. PointInstancer. Prototypes, indices, positions. No extras."
+    starter: |
+      from pathlib import Path
+      from pxr import Gf, Usd, UsdGeom
+
+      cargo = (Path(WORLD_ROOT) / "assets" / "cargo.usda").as_posix()
+      stage = Usd.Stage.CreateNew(STAGE_PATH)
+      scatter = UsdGeom.PointInstancer.Define(stage, "/World/Scatter")
+      proto = stage.DefinePrim("/World/Scatter/Prototypes/Crate", "Xform")
+      proto.GetReferences().AddReference(cargo)
+      # TODO: Set prototypes relationship to the crate prim.
+      # TODO: protoIndices [0, 0, 0, 0] and positions along X at 0, 2, 4, 6.
+      stage.GetRootLayer().Save()
+    language: python
+    validator:
+      assertions:
+        - point_instancer: {path: /World/Scatter, min_instances: 4, prototype_count: 1}
+        - has_reference: {path: /World/Scatter/Prototypes/Crate, asset: cargo.usda}
+    cookbook: docs/asset-modularity-instancing/authoring-point-instancing/exercise-authoring-point-instancing.md
+    xp: 280
+    reward: Scatter Ledger
+    world_target: /City/InstanceWilds/Warehouse
+    recipes: [Point Instancer]
+
+  - id: f7_point_wastes_boss
+    title: Mix Two Prototypes Without Copying
+    floor: 8
+    floor_name: Instance Wilds
+    neighborhood: Point Wastes
+    kind: neighborhood_boss
+    prerequisites: [f7_point_scatter]
+    level_required: 16
+    exam_tasks: [multi_prototype_instancer, author_proto_indices]
+    stats: {insight: 5, craft: 4}
+    brief: "SYSTEM: Crates and benches in one instancer. protoIndices choose. Copies are a moral failing."
+    starter: |
+      from pathlib import Path
+      from pxr import Gf, Usd, UsdGeom
+
+      cargo = (Path(WORLD_ROOT) / "assets" / "cargo.usda").as_posix()
+      bench = (Path(WORLD_ROOT) / "assets" / "bench.usda").as_posix()
+      stage = Usd.Stage.CreateNew(STAGE_PATH)
+      scatter = UsdGeom.PointInstancer.Define(stage, "/World/Scatter")
+      crate = stage.DefinePrim("/World/Scatter/Prototypes/Crate", "Xform")
+      crate.GetReferences().AddReference(cargo)
+      seat = stage.DefinePrim("/World/Scatter/Prototypes/Bench", "Xform")
+      seat.GetReferences().AddReference(bench)
+      # TODO: prototypes = [Crate, Bench], protoIndices = [0, 1, 0, 1], four X positions.
+      stage.GetRootLayer().Save()
+    language: python
+    validator:
+      assertions:
+        - point_instancer: {path: /World/Scatter, min_instances: 4, prototype_count: 2}
+        - has_reference: {path: /World/Scatter/Prototypes/Crate, asset: cargo.usda}
+        - has_reference: {path: /World/Scatter/Prototypes/Bench, asset: bench.usda}
+    cookbook: docs/asset-modularity-instancing/authoring-point-instancing/point-instancing-intro.md
+    xp: 320
+    reward: {opinion_points: 1, achievement: "New achievement! Two prototypes, zero duplicated warehouses."}
+    world_target: /City/InstanceWilds/Warehouse
+    recipes: [Point Instancer]
+    questions:
+      - prompt: How does point instancing differ from scenegraph instancing?
+        choices:
+          - Point instancers store per-instance arrays instead of prims per copy
+          - Point instancers cannot use references
+          - Scenegraph instancing forbids prototypes
+        answer: 0
+        explanation: Point instancing is array-based; scenegraph instancing uses instanceable prims.
+
+  - id: f7_warehouse_district
+    title: Recapture the Warehouse District
+    floor: 8
+    floor_name: Instance Wilds
+    neighborhood: Warehouse Recapture
+    kind: city_boss
+    prerequisites: [f7_point_wastes_boss]
+    level_required: 17
+    exam_tasks: [mix_scenegraph_and_point_instancing, compose_warehouse]
+    stats: {craft: 5, resolve: 4, lore: 3}
+    brief: "SYSTEM: City boss. Scenegraph instances for the office benches. Point instancer for the crate field. The warehouse pack can wait; these assets already work."
+    starter: |
+      from pathlib import Path
+      from pxr import Gf, Usd, UsdGeom
+
+      cargo = (Path(WORLD_ROOT) / "assets" / "cargo.usda").as_posix()
+      bench = (Path(WORLD_ROOT) / "assets" / "bench.usda").as_posix()
+      stage = Usd.Stage.CreateNew(STAGE_PATH)
+      UsdGeom.Xform.Define(stage, "/City/InstanceWilds/Warehouse")
+      # TODO: Instanceable benches at Office/BenchA and Office/BenchB referencing bench.usda.
+      # TODO: PointInstancer /City/InstanceWilds/Warehouse/CrateField with cargo prototype and 6 instances.
+      stage.GetRootLayer().Save()
+    language: python
+    validator:
+      assertions:
+        - instanceable: {path: /City/InstanceWilds/Warehouse/Office/BenchA, value: true}
+        - instanceable: {path: /City/InstanceWilds/Warehouse/Office/BenchB, value: true}
+        - has_reference: {path: /City/InstanceWilds/Warehouse/Office/BenchA, asset: bench.usda}
+        - point_instancer: {path: /City/InstanceWilds/Warehouse/CrateField, min_instances: 6, prototype_count: 1}
+    cookbook: docs/asset-modularity-instancing/asset-modularity/exercise-assets-overview.md
+    xp: 400
+    reward: {opinion_points: 2, achievement: "Warehouse recaptured. The crowd pretends they understood prototypes."}
+    world_target: /City/InstanceWilds/Warehouse
+    recipes: [Instancing, Assembly]
+    questions:
+      - prompt: When should you prefer a PointInstancer over scenegraph instances?
+        choices:
+          - Huge counts of similar copies with per-instance arrays
+          - Unique hero assets with deep overrides
+          - Always
+        answer: 0
+        explanation: Point instancers scale when copies share prototypes and vary by arrays.
 
   - id: f7_mirror_forge
     title: Break the Mirror Forge
     floor: 8
-    floor_name: Instance Foundry
+    floor_name: Instance Wilds
     neighborhood: Mirror Furnace
     kind: floor_boss
-    prerequisites: [f7_prototype_sentinel]
-    level_required: 16
-    exam_tasks: [nested_instancing, author_shared_assets]
-    stats: {craft: 5, resolve: 5}
-    brief: "SYSTEM: Mirrors inside mirrors flood the furnace. Nest the pattern deliberately."
+    prerequisites: [f7_warehouse_district]
+    level_required: 17
+    exam_tasks: [nested_instancing, instanceable_aggregate]
+    stats: {craft: 5, resolve: 5, insight: 3}
+    brief: "SYSTEM: A row of benches that is itself instanceable. Nest on purpose. Mirrors inside mirrors, but this time you hold the spec."
     starter: |
-      from pxr import Usd
-      stage = Usd.Stage.Open(STAGE_PATH)
-      row = stage.DefinePrim("/City/InstanceFoundry/BenchRow", "Xform")
-      row.GetReferences().AddReference("assets/bench_row.usda")
-      # Make BenchRow instanceable.
+      from pathlib import Path
+      from pxr import Usd, UsdGeom
+
+      row = (Path(WORLD_ROOT) / "assets" / "bench_row.usda").as_posix()
+      stage = Usd.Stage.CreateNew(STAGE_PATH)
+      prim = UsdGeom.Xform.Define(stage, "/City/InstanceWilds/BenchRow").GetPrim()
+      prim.GetReferences().AddReference(row)
+      # TODO: Make BenchRow instanceable.
       stage.GetRootLayer().Save()
     language: python
     validator:
       assertions:
-        - has_reference: {path: /City/InstanceFoundry/BenchRow, asset: assets/bench_row.usda}
-        - instanceable: {path: /City/InstanceFoundry/BenchRow, value: true}
+        - has_reference: {path: /City/InstanceWilds/BenchRow, asset: bench_row.usda}
+        - instanceable: {path: /City/InstanceWilds/BenchRow, value: true}
     cookbook: docs/asset-modularity-instancing/authoring-scenegraph-instancing/nested-instancing.md
-    xp: 540
-    reward: Mirror Forge Quencher
-    world_target: /City/InstanceFoundry/BenchRow
-    recipes: [Usd.References.AddReference, Usd.Prim.SetInstanceable]
+    xp: 460
+    reward:
+      opinion_points: 3
+      achievement: "Floor clear! Nested instancing survived the Mirror Forge."
+      inventory: {system_peeks: 1}
+    world_target: /City/InstanceWilds/BenchRow
+    recipes: [Instancing]
+    questions:
+      - prompt: What is nested instancing?
+        choices:
+          - Instanceable prims that themselves contain instanceable descendants or references
+          - Two PointInstancers in different files
+          - Flattening a prototype
+        answer: 0
+        explanation: Nested instancing stacks instanceable aggregates.
+      - prompt: Why can nested instancing explode memory if misused?
+        choices:
+          - Unique deinstances and nested prototypes multiply cost
+          - USD forbids more than one instance
+          - Payloads cannot nest
+        answer: 0
+        explanation: Deinstancing unique copies under nested prototypes defeats sharing.

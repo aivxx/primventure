@@ -8,15 +8,17 @@ quests:
     neighborhood: Intake Platform
     kind: room
     prerequisites: [f6_zoning_golem]
-    level_required: 16
+    level_required: 15
     exam_tasks: [normalize_import, author_provenance]
-    stats: {lore: 4, craft: 5}
-    brief: "SYSTEM: Foreign geometry arrived without papers. Record its provenance."
+    stats: {lore: 4, craft: 3}
+    brief: "SYSTEM: Foreign geometry arrived without papers. Stamp the crate OBJ before anyone claims it was native USDA."
     starter: |
       from pxr import Usd, UsdGeom
-      stage = Usd.Stage.Open(STAGE_PATH)
+
+      stage = Usd.Stage.CreateNew(STAGE_PATH)
       imported = UsdGeom.Xform.Define(stage, "/City/ExchangeTerminal/ImportedKiosk").GetPrim()
-      # Set customData sourceFormat="OBJ" and documentation="Normalized at intake."
+      # TODO: Set customData sourceFormat to "OBJ".
+      # TODO: Set documentation to "Normalized at intake."
       stage.GetRootLayer().Save()
     language: python
     validator:
@@ -24,26 +26,106 @@ quests:
         - metadata_equals: {path: /City/ExchangeTerminal/ImportedKiosk, key: customData, field: sourceFormat, value: OBJ}
         - metadata_equals: {path: /City/ExchangeTerminal/ImportedKiosk, key: documentation, value: "Normalized at intake."}
     cookbook: docs/data-exchange/data-exchange/what-is-data-exchange.md
-    xp: 450
+    xp: 180
     reward: Intake Customs Stamp
     world_target: /City/ExchangeTerminal/ImportedKiosk
-    recipes: [Usd.Prim.SetCustomDataByKey, Usd.Object.SetDocumentation]
+    recipes: [Metadata, Asset Info]
+
+  - id: f8_extract_mesh
+    title: Extract the Cube From Steerage
+    floor: 7
+    floor_name: Exchange Terminal
+    neighborhood: Intake Platform
+    kind: room
+    prerequisites: [f8_import_depot]
+    level_required: 15
+    exam_tasks: [extract_geometry, author_mesh]
+    stats: {craft: 5, insight: 3}
+    brief: "SYSTEM: Guild job. shapes.obj is sitting on the dock. Pull the Cube vertices into a Mesh. usd-core will not open OBJ for you. That is the lesson."
+    starter: |
+      from pxr import Gf, Usd, UsdGeom
+
+      stage = Usd.Stage.CreateNew(STAGE_PATH)
+      world = UsdGeom.Xform.Define(stage, "/World")
+      stage.SetDefaultPrim(world.GetPrim())
+      points = []
+      for line in Path(EXCHANGE_OBJ).read_text().splitlines():
+          if line.startswith("v "):
+              _, x, y, z = line.split()[:4]
+              points.append(Gf.Vec3f(float(x), float(y), float(z)))
+          if line.startswith("o ") and points:
+              break
+      cube_points = points[:8]
+      # TODO: Define Mesh /World/Cube and set its points to cube_points.
+      stage.GetRootLayer().Save()
+    language: python
+    validator:
+      assertions:
+        - prim_type: {path: /World/Cube, value: Mesh}
+        - default_prim: /World
+    cookbook: docs/data-exchange/data-extraction/exercise-extracting-geometry.md
+    xp: 240
+    reward: Vertex Tongs
+    world_target: /City/ExchangeTerminal/ExtractedCube
+    recipes: [Gprim, Mesh]
+
+  - id: f8_extract_overseer
+    title: Count What You Actually Extracted
+    floor: 7
+    floor_name: Exchange Terminal
+    neighborhood: Intake Platform
+    kind: neighborhood_boss
+    prerequisites: [f8_extract_mesh]
+    level_required: 15
+    exam_tasks: [inspect_extracted_geometry, author_extent]
+    stats: {insight: 4, craft: 3}
+    brief: "SYSTEM: A Mesh with no points is a rumor. Author eight points and an extent or the overseer files a discrepancy."
+    starter: |
+      from pxr import Gf, Usd, UsdGeom
+
+      stage = Usd.Stage.CreateNew(STAGE_PATH)
+      mesh = UsdGeom.Mesh.Define(stage, "/World/Cube")
+      # TODO: Set points to eight unit-cube corners and extent to ((-1,-1,-1), (1,1,1)).
+      stage.GetRootLayer().Save()
+    language: python
+    validator:
+      assertions:
+        - prim_type: {path: /World/Cube, value: Mesh}
+        - attribute_equals:
+            path: /World/Cube.points
+            value: [[1.0, 1.0, 1.0], [1.0, 1.0, -1.0], [1.0, -1.0, 1.0], [1.0, -1.0, -1.0], [-1.0, 1.0, 1.0], [-1.0, 1.0, -1.0], [-1.0, -1.0, 1.0], [-1.0, -1.0, -1.0]]
+    cookbook: docs/data-exchange/data-extraction/what-is-data-extraction.md
+    xp: 260
+    reward: {opinion_points: 1, achievement: "New achievement! You extracted geometry without pretending OBJ is USD."}
+    world_target: /City/ExchangeTerminal/ExtractedCube
+    recipes: [Attribute]
+    questions:
+      - prompt: Why doesn't usd-core open shapes.obj as a stage in this arena?
+        choices:
+          - The local usd-core build has no OBJ file-format plugin
+          - OBJ files are illegal in OpenUSD
+          - Default prims reject meshes
+        answer: 0
+        explanation: Data exchange often happens outside usd-core via explicit extract-and-author.
 
   - id: f8_axis_switchyard
     title: Align the Axis Switchyard
     floor: 7
     floor_name: Exchange Terminal
     neighborhood: Transform Junction
-    kind: neighborhood_boss
-    prerequisites: [f8_import_depot]
-    level_required: 17
-    exam_tasks: [normalize_coordinates, preserve_hierarchy]
-    stats: {insight: 5, craft: 5}
-    brief: "SYSTEM: A sideways shipment blocks every line. Normalize the stage convention."
+    kind: room
+    prerequisites: [f8_extract_overseer]
+    level_required: 16
+    exam_tasks: [normalize_up_axis, author_translate]
+    stats: {insight: 4, craft: 4}
+    brief: "SYSTEM: A Z-up shipment is blocking the Y-up line. Convert the convention, then park the kiosk."
     starter: |
-      from pxr import Usd, UsdGeom
-      stage = Usd.Stage.Open(STAGE_PATH)
-      # Set Y-up and translate ImportedKiosk to (10, 0, -4).
+      from pxr import Gf, Usd, UsdGeom
+
+      stage = Usd.Stage.CreateNew(STAGE_PATH)
+      UsdGeom.SetStageUpAxis(stage, UsdGeom.Tokens.z)
+      kiosk = UsdGeom.Xform.Define(stage, "/City/ExchangeTerminal/ImportedKiosk")
+      # TODO: Set the stage up axis to Y and translate the kiosk to (10, 0, -4).
       stage.GetRootLayer().Save()
     language: python
     validator:
@@ -51,10 +133,77 @@ quests:
         - up_axis: Y
         - attribute_equals: {path: "/City/ExchangeTerminal/ImportedKiosk.xformOp:translate", value: [10.0, 0.0, -4.0]}
     cookbook: docs/data-exchange/data-transformation/transformation-hierarchy.md
-    xp: 510
+    xp: 220
     reward: Coordinate Compass
     world_target: /City/ExchangeTerminal/ImportedKiosk
-    recipes: [UsdGeom.SetStageUpAxis, UsdGeom.Xformable.AddTranslateOp]
+    recipes: [Up Axis, Xform]
+
+  - id: f8_unit_gauge
+    title: Recalibrate the Meter Gauge
+    floor: 7
+    floor_name: Exchange Terminal
+    neighborhood: Transform Junction
+    kind: neighborhood_boss
+    prerequisites: [f8_axis_switchyard]
+    level_required: 16
+    exam_tasks: [set_meters_per_unit, preserve_axis]
+    stats: {lore: 4, insight: 3}
+    brief: "SYSTEM: The crate claims to be in inches. The city is centimeters. Write the contract or every lamp becomes a monument."
+    starter: |
+      from pxr import Usd, UsdGeom
+
+      stage = Usd.Stage.CreateNew(STAGE_PATH)
+      UsdGeom.SetStageUpAxis(stage, UsdGeom.Tokens.y)
+      # TODO: Set metersPerUnit to centimeters (0.01).
+      stage.GetRootLayer().Save()
+    language: python
+    validator:
+      assertions:
+        - up_axis: Y
+        - meters_per_unit: 0.01
+    cookbook: docs/data-exchange/data-transformation/what-is-data-transformation.md
+    xp: 240
+    reward: {opinion_points: 1, achievement: "New achievement! You admitted the scene was 1% of a meter."}
+    world_target: /City/ExchangeTerminal
+    recipes: [Stage]
+    questions:
+      - prompt: What does metersPerUnit 0.01 mean?
+        choices:
+          - One scene unit is one centimeter
+          - The stage is 1% complete
+          - Up axis is Y
+        answer: 0
+        explanation: metersPerUnit scales scene units into meters.
+
+  - id: f8_validate_warden
+    title: Satisfy the Validation Warden
+    floor: 7
+    floor_name: Exchange Terminal
+    neighborhood: Validation Concourse
+    kind: room
+    prerequisites: [f8_unit_gauge]
+    level_required: 16
+    exam_tasks: [validate_asset_contract, set_default_prim]
+    stats: {insight: 5, lore: 3}
+    brief: "SYSTEM: usdchecker-style rules, no C++ plugins. Default prim, Y-up, component kind. Fail any one and the crate stays on the dock."
+    starter: |
+      from pxr import Kind, Usd, UsdGeom
+
+      stage = Usd.Stage.CreateNew(STAGE_PATH)
+      world = UsdGeom.Xform.Define(stage, "/World").GetPrim()
+      # TODO: default prim /World, up axis Y, kind component.
+      stage.GetRootLayer().Save()
+    language: python
+    validator:
+      assertions:
+        - default_prim: /World
+        - up_axis: Y
+        - kind_equals: {path: /World, value: component}
+    cookbook: docs/data-exchange/asset-validation/what-is-asset-validation.md
+    xp: 230
+    reward: Warden Clipboard
+    world_target: /City/ExchangeTerminal
+    recipes: [Kind, Default Prim]
 
   - id: f8_customs_engine
     title: Audit the Customs Engine
@@ -62,26 +211,50 @@ quests:
     floor_name: Exchange Terminal
     neighborhood: Validation Concourse
     kind: city_boss
-    prerequisites: [f8_axis_switchyard]
-    level_required: 18
-    exam_tasks: [validate_asset, repair_stage_contract]
-    stats: {insight: 5, resolve: 5}
-    brief: "SYSTEM: The Engine detects every shortcut. Make the portfolio pass inspection."
+    prerequisites: [f8_validate_warden]
+    level_required: 16
+    exam_tasks: [obj_to_usd_pipeline, validate_stage_contract]
+    stats: {insight: 5, resolve: 5, craft: 4}
+    brief: "SYSTEM: City boss. Extract the OBJ cube, stamp provenance, pass the contract. The Engine does not care about your feelings."
     starter: |
-      from pxr import Usd, UsdGeom
-      stage = Usd.Stage.Open(STAGE_PATH)
-      city = stage.GetPrimAtPath("/City")
-      # Restore default prim /City, Y-up, and timeline 1-48.
+      from pxr import Gf, Kind, Sdf, Usd, UsdGeom
+
+      stage = Usd.Stage.CreateNew(STAGE_PATH)
+      world = UsdGeom.Xform.Define(stage, "/World").GetPrim()
+      points = []
+      for line in Path(EXCHANGE_OBJ).read_text().splitlines():
+          if line.startswith("v "):
+              _, x, y, z = line.split()[:4]
+              points.append(Gf.Vec3f(float(x), float(y), float(z)))
+          if len(points) >= 8:
+              break
+      # TODO: Set default prim, Y-up, centimeters, component kind.
+      # TODO: Define /World/Cube mesh points from the first eight OBJ vertices.
+      # TODO: Stamp customData sourceFormat="OBJ" on /World.
       stage.GetRootLayer().Save()
     language: python
     validator:
       assertions:
-        - default_prim: /City
+        - default_prim: /World
         - up_axis: Y
-        - start_time: 1
-        - end_time: 48
+        - meters_per_unit: 0.01
+        - kind_equals: {path: /World, value: component}
+        - prim_type: {path: /World/Cube, value: Mesh}
+        - metadata_equals: {path: /World, key: customData, field: sourceFormat, value: OBJ}
     cookbook: docs/data-exchange/asset-validation/exercise-asset-validation-testing.md
-    xp: 610
-    reward: Customs Engine Clearance
-    world_target: /
-    recipes: [Usd.Stage.SetDefaultPrim, UsdGeom.SetStageUpAxis, Usd.Stage.SetStartTimeCode, Usd.Stage.SetEndTimeCode]
+    xp: 420
+    reward: {opinion_points: 2, achievement: "Pipeline green. OBJ entered the Composition with papers."}
+    world_target: /City/ExchangeTerminal/CustomsCube
+    recipes: [Data Exchange]
+    questions:
+      - prompt: Which checks belong in a usdchecker-style intake test?
+        choices:
+          - Default prim, up axis, units, and required prims
+          - Only polygon count
+          - Only file size
+        answer: 0
+        explanation: Asset validation encodes pipeline contracts, not vibes.
+      - prompt: Where should source-format provenance live after an OBJ import?
+        choices: [customData on the asset interface, The filename only, A sidecar PDF]
+        answer: 0
+        explanation: Authored customData travels with the USD asset.

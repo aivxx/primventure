@@ -1,85 +1,446 @@
 floor: 5
-floor_name: Payload Docks
+floor_name: Arc Highlands
 quests:
-  - id: f5_sealed_crate
-    title: Manifest the Sealed Crate
+  - id: f5_sublayer_workstreams
+    title: Split the Skyscraper Workstreams
     floor: 5
-    floor_name: Payload Docks
-    neighborhood: Cargo Row
+    floor_name: Arc Highlands
+    neighborhood: Sublayer Yards
     kind: room
     prerequisites: [f4_hydra_of_choices]
     level_required: 10
-    exam_tasks: [author_payload, inspect_load_state]
-    stats: {craft: 3, insight: 3}
-    brief: "SYSTEM: Heavy cargo should travel asleep. Attach it as a payload."
+    exam_tasks: [author_sublayers, separate_workstreams]
+    stats: {craft: 3, lore: 3}
+    brief: "SYSTEM: Geometry and shading filed a joint complaint. Give each a weaker layer. Do not invent a third department."
     starter: |
-      from pxr import Usd
-      stage = Usd.Stage.Open(STAGE_PATH)
-      crate = stage.DefinePrim("/City/PayloadDocks/CargoCrate", "Xform")
-      # Add assets/cargo.usda as a payload.
+      from pathlib import Path
+      from pxr import Sdf, Usd, UsdGeom
+
+      stage = Usd.Stage.CreateNew(STAGE_PATH)
+      UsdGeom.SetStageUpAxis(stage, UsdGeom.Tokens.y)
+      folder = Path(STAGE_PATH).parent
+
+      geometry = Usd.Stage.CreateNew(str(folder / "geometry.usda"))
+      geometry.DefinePrim("/World", "Xform")
+      geometry.DefinePrim("/World/Hull", "Cube")
+      geometry.GetRootLayer().Save()
+
+      shading = Usd.Stage.CreateNew(str(folder / "shading.usda"))
+      shading.OverridePrim("/World/Hull").SetDisplayName("Shaded Hull")
+      shading.GetRootLayer().Save()
+
+      # TODO: Append shading.usda then geometry.usda to the root subLayerPaths.
       stage.GetRootLayer().Save()
     language: python
     validator:
       assertions:
-        - has_payload: {path: /City/PayloadDocks/CargoCrate, asset: assets/cargo.usda}
-    cookbook: docs/creating-composition-arcs/references-payloads/working-with-payloads.md
+        - prim_exists: /World/Hull
+        - sublayer_order: {layers: [shading.usda, geometry.usda]}
+        - specifier_equals: {path: /World/Hull, value: def}
+    cookbook: docs/creating-composition-arcs/sublayers/working-with-sublayers.md
+    xp: 200
+    reward: Workstream Wedge
+    world_target: /City/ArcHighlands/SkyscraperShell
+    recipes: [Sublayer, Layer Stack]
+
+  - id: f5_workstream_clerk
+    title: Reorder the Workstream Clerk
+    floor: 5
+    floor_name: Arc Highlands
+    neighborhood: Sublayer Yards
+    kind: neighborhood_boss
+    prerequisites: [f5_sublayer_workstreams]
+    level_required: 10
+    exam_tasks: [order_sublayers, inspect_strongest_opinion]
+    stats: {insight: 4, resolve: 3}
+    brief: "SYSTEM: Layout currently shouts over lighting. Invert the stack without rewriting either file. The Clerk is taking notes."
+    starter: |
+      from pathlib import Path
+      from pxr import Sdf, Usd
+
+      stage = Usd.Stage.Open(STAGE_PATH)
+      folder = Path(STAGE_PATH).parent
+      for name, label in [("layout.usda", "DRAFT"), ("lighting.usda", "FINAL")]:
+          layer = Usd.Stage.CreateNew(str(folder / name))
+          prim = layer.DefinePrim("/World/Marquee", "Xform")
+          prim.CreateAttribute("signOff", Sdf.ValueTypeNames.String).Set(label)
+          layer.GetRootLayer().Save()
+
+      stage.GetRootLayer().subLayerPaths = ["layout.usda", "lighting.usda"]
+      # TODO: Make lighting.usda strongest so signOff composes as FINAL.
+      stage.GetRootLayer().Save()
+    language: python
+    validator:
+      assertions:
+        - attribute_equals: {path: /World/Marquee.signOff, value: FINAL}
+        - attribute_source: {path: /World/Marquee.signOff, layer: lighting.usda}
+        - sublayer_order: {layers: [lighting.usda, layout.usda]}
+    cookbook: docs/creating-composition-arcs/sublayers/what-are-sublayers.md
+    xp: 260
+    reward: {opinion_points: 1, achievement: "New achievement! You promoted lighting without touching a vertex."}
+    world_target: /City/ArcHighlands/Marquee
+    recipes: [Opinions, Direct Opinion]
+    questions:
+      - prompt: In a root layer's subLayerPaths, which listed layer is strongest?
+        choices: [The first, The last, The largest file]
+        answer: 0
+        explanation: Sublayers are ordered strongest to weakest.
+
+  - id: f5_skyline_references
+    title: Raise Two Towers, One Asset
+    floor: 5
+    floor_name: Arc Highlands
+    neighborhood: Reference Docks
+    kind: room
+    prerequisites: [f5_workstream_clerk]
+    level_required: 11
+    exam_tasks: [author_external_references, reuse_city_assets]
+    stats: {craft: 4, lore: 2}
+    brief: "SYSTEM: Guild job. Port the skyline exercise: two copies of Skyscraper A, one of E. Geometry is already in the city pack. Do not photocopy it."
+    starter: |
+      from pathlib import Path
+      from pxr import Usd, UsdGeom
+
+      city = Path(ASSET_LIBRARY) / "envir" / "city"
+      a = (city / "skyscraperA" / "skyscraperA.usd").as_posix()
+      e = (city / "skyscraperE" / "skyscraperE.usd").as_posix()
+
+      stage = Usd.Stage.CreateNew(STAGE_PATH)
+      UsdGeom.SetStageUpAxis(stage, UsdGeom.Tokens.y)
+      UsdGeom.Xform.Define(stage, "/World")
+      # TODO: Define /World/skyscraperA_01 and /World/skyscraperA_02 referencing Skyscraper A.
+      # TODO: Define /World/skyscraperE_01 referencing Skyscraper E.
+      stage.GetRootLayer().Save()
+    language: python
+    validator:
+      assertions:
+        - has_reference: {path: /World/skyscraperA_01, asset: skyscraperA.usd}
+        - has_reference: {path: /World/skyscraperA_02, asset: skyscraperA.usd}
+        - has_reference: {path: /World/skyscraperE_01, asset: skyscraperE.usd}
+    cookbook: docs/creating-composition-arcs/references-payloads/working-with-references.md
+    xp: 240
+    reward: Skyline Work Order
+    world_target: /City/ArcHighlands/Skyline
+    recipes: [Reference, Asset]
+
+  - id: f5_encapsulation_raid
+    title: Seal the Unencapsulated Looks
+    floor: 5
+    floor_name: Arc Highlands
+    neighborhood: Reference Docks
+    kind: neighborhood_boss
+    prerequisites: [f5_skyline_references]
+    level_required: 11
+    exam_tasks: [encapsulate_default_prim, keep_bindings_inside]
+    stats: {insight: 4, resolve: 3}
+    brief: "SYSTEM: The material lives outside World. Referencing the asset will strand the binding. Move Looks under the default prim before the crowd notices."
+    starter: |
+      from pxr import Sdf, Usd, UsdGeom, UsdShade
+
+      stage = Usd.Stage.CreateNew(STAGE_PATH)
+      world = UsdGeom.Xform.Define(stage, "/World")
+      UsdGeom.Cube.Define(stage, "/World/Cube")
+      # Broken: Looks currently lives beside World. Encapsulate it instead.
+      # TODO: Set /World as default prim.
+      # TODO: Define /World/Looks as a Scope and /World/Looks/Red as a Material.
+      stage.GetRootLayer().Save()
+    language: python
+    validator:
+      assertions:
+        - default_prim: /World
+        - prim_exists: /World/Looks/Red
+        - prim_exists: /World/Cube
+        - traversal_contains: {paths: [/World/Looks/Red], excluded: [/Looks]}
+    cookbook: docs/creating-composition-arcs/encapsulation/what-is-encapsulation.md
     xp: 280
+    reward: {opinion_points: 1, achievement: "New achievement! You put Looks where a reference can actually find them."}
+    world_target: /City/ArcHighlands/EncapsulatedKiosk
+    recipes: [Default Prim, Encapsulation]
+    questions:
+      - prompt: Why does a material sibling of World fail when you reference World?
+        choices:
+          - Referencing World does not bring unencapsulated siblings
+          - Materials cannot be referenced
+          - Default prims ignore scopes
+        answer: 0
+        explanation: Only descendants of the referenced target are composed.
+
+  - id: f5_sealed_crate
+    title: Manifest the Payload Block
+    floor: 5
+    floor_name: Arc Highlands
+    neighborhood: Payload Berth
+    kind: room
+    prerequisites: [f5_encapsulation_raid]
+    level_required: 11
+    exam_tasks: [author_payload, defer_heavy_content]
+    stats: {craft: 3, insight: 3}
+    brief: "SYSTEM: Guild job. The small building pack is cargo, not scenery. Payload three copies. They should sleep until asked."
+    starter: |
+      from pathlib import Path
+      from pxr import Usd, UsdGeom
+
+      building = (Path(ASSET_LIBRARY) / "envir" / "city" / "sm_bldgF" / "sm_bldgF.usd").as_posix()
+      stage = Usd.Stage.CreateNew(STAGE_PATH)
+      UsdGeom.Xform.Define(stage, "/World")
+      # TODO: Payload sm_bldgF.usd onto /World/sm_bldgF_01, _02, and _03.
+      stage.GetRootLayer().Save()
+    language: python
+    validator:
+      assertions:
+        - has_payload: {path: /World/sm_bldgF_01, asset: sm_bldgF.usd}
+        - has_payload: {path: /World/sm_bldgF_02, asset: sm_bldgF.usd}
+        - has_payload: {path: /World/sm_bldgF_03, asset: sm_bldgF.usd}
+    cookbook: docs/creating-composition-arcs/references-payloads/working-with-payloads.md
+    xp: 250
     reward: Cargo Manifest
-    world_target: /City/PayloadDocks/CargoCrate
-    recipes: [Usd.Prim.GetPayloads, Usd.Payloads.AddPayload]
+    world_target: /City/ArcHighlands/PayloadBlock
+    recipes: [Payload, Load and Unload]
 
   - id: f5_harbor_master
     title: Outsmart the Harbor Master
     floor: 5
-    floor_name: Payload Docks
-    neighborhood: Load Control
-    kind: city_boss
+    floor_name: Arc Highlands
+    neighborhood: Payload Berth
+    kind: neighborhood_boss
     prerequisites: [f5_sealed_crate]
     level_required: 11
-    exam_tasks: [selective_loading, retain_payload_arc]
+    exam_tasks: [keep_payload_arc, document_deferred_load]
     stats: {insight: 4, resolve: 3}
-    brief: "SYSTEM: The Harbor Master loads everything at once. Prove restraint scales."
+    brief: "SYSTEM: The Harbor Master wants every crate unpacked. Keep the payload and stamp the crate as deferred cargo."
     starter: |
-      from pxr import Usd
-      stage = Usd.Stage.Open(STAGE_PATH, load=Usd.Stage.LoadNone)
-      crate = stage.GetPrimAtPath("/City/PayloadDocks/CargoCrate")
-      # Load only CargoCrate and mark it with documentation "Loaded on demand."
+      from pathlib import Path
+      from pxr import Usd, UsdGeom
+
+      building = (Path(ASSET_LIBRARY) / "envir" / "city" / "sm_bldgF" / "sm_bldgF.usd").as_posix()
+      stage = Usd.Stage.CreateNew(STAGE_PATH)
+      crate = UsdGeom.Xform.Define(stage, "/World/CargoCrate").GetPrim()
+      crate.GetPayloads().AddPayload(building)
+      # TODO: Set documentation metadata to "Loaded on demand."
       stage.GetRootLayer().Save()
     language: python
     validator:
       assertions:
-        - has_payload: {path: /City/PayloadDocks/CargoCrate, asset: assets/cargo.usda}
-        - metadata_equals: {path: /City/PayloadDocks/CargoCrate, key: documentation, value: "Loaded on demand."}
+        - has_payload: {path: /World/CargoCrate, asset: sm_bldgF.usd}
+        - metadata_equals: {path: /World/CargoCrate, key: documentation, value: "Loaded on demand."}
     cookbook: docs/creating-composition-arcs/references-payloads/what-are-payloads.md
-    xp: 340
-    reward: Selective Load License
-    world_target: /City/PayloadDocks/CargoCrate
-    recipes: [Usd.Stage.LoadNone, Usd.Stage.Load, Usd.Prim.SetMetadata]
+    xp: 300
+    reward: {opinion_points: 1, achievement: "New achievement! You declined to load the entire harbor at once."}
+    world_target: /City/ArcHighlands/CargoCrate
+    recipes: [Payload]
+    questions:
+      - prompt: What can a payload do that a reference cannot?
+        choices: [Deferred load and unload, Win over local opinions, Replace LIVRPS]
+        answer: 0
+        explanation: Payloads participate in composition but can be loaded and unloaded.
 
-  - id: f5_dockyard_leviathan
-    title: Unburden the Dockyard Leviathan
+  - id: f5_inherit_lamps
+    title: Inherit the Street-Lamp Class
     floor: 5
-    floor_name: Payload Docks
-    neighborhood: Deep Berth
-    kind: floor_boss
+    floor_name: Arc Highlands
+    neighborhood: Inherit Street
+    kind: room
     prerequisites: [f5_harbor_master]
     level_required: 12
-    exam_tasks: [reference_payload_pattern, set_default_prim]
-    stats: {craft: 4, resolve: 4}
-    brief: "SYSTEM: The Leviathan carries interface and bulk together. Split its burden."
+    exam_tasks: [author_class, add_inherit]
+    stats: {craft: 3, insight: 3}
+    brief: "SYSTEM: Every lamp wants its own override. Give them a class instead and inherit it. The electricians union is watching."
     starter: |
-      from pxr import Usd
-      stage = Usd.Stage.Open(STAGE_PATH)
-      leviathan = stage.DefinePrim("/City/PayloadDocks/Leviathan", "Xform")
-      # Reference sign.usda for interface and payload cargo.usda for bulk.
+      from pxr import Sdf, Usd
+
+      stage = Usd.Stage.CreateNew(STAGE_PATH)
+      lamp = stage.DefinePrim("/World/StreetLamp", "Xform")
+      lamp.CreateAttribute("fixture", Sdf.ValueTypeNames.String).Set("double")
+      # TODO: Create class prim /_street_lamp_dbl.
+      # TODO: Author class attribute temperature = 2700.
+      # TODO: Inherit the class onto StreetLamp.
       stage.GetRootLayer().Save()
     language: python
     validator:
       assertions:
-        - has_reference: {path: /City/PayloadDocks/Leviathan, asset: assets/sign.usda}
-        - has_payload: {path: /City/PayloadDocks/Leviathan, asset: assets/cargo.usda}
-    cookbook: docs/asset-structure/reference-payload-pattern/what-is-ref-payload-pattern.md
-    xp: 430
-    reward: Leviathan Loadstone
-    world_target: /City/PayloadDocks/Leviathan
-    recipes: [Usd.References.AddReference, Usd.Payloads.AddPayload]
+        - specifier_equals: {path: /_street_lamp_dbl, value: class}
+        - has_inherit: {path: /World/StreetLamp}
+        - attribute_equals: {path: /World/StreetLamp.temperature, value: 2700}
+        - traversal_contains: {paths: [/World/StreetLamp], excluded: [/_street_lamp_dbl]}
+    cookbook: docs/creating-composition-arcs/inherits-specializes/what-is-inherits.md
+    xp: 240
+    reward: Inheritance Permit
+    world_target: /City/ArcHighlands/StreetLamp
+    recipes: [Inherit, Class]
+
+  - id: f5_specializes_fallback
+    title: Specialize the Weakest Road
+    floor: 5
+    floor_name: Arc Highlands
+    neighborhood: Inherit Street
+    kind: neighborhood_boss
+    prerequisites: [f5_inherit_lamps]
+    level_required: 12
+    exam_tasks: [author_specializes, contrast_with_inherits]
+    stats: {insight: 4, resolve: 4}
+    brief: "SYSTEM: Specializes is a fallback, not a megaphone. Local maxspeed must still win. Prove it before the traffic cop composes a ticket."
+    starter: |
+      from pxr import Sdf, Usd
+
+      stage = Usd.Stage.CreateNew(STAGE_PATH)
+      fallback = stage.CreateClassPrim("/_osm_street_data")
+      fallback.CreateAttribute("osm:street:maxspeed", Sdf.ValueTypeNames.Int).Set(30)
+      road = stage.DefinePrim("/World/MainStreet", "Mesh")
+      # TODO: Specialize MainStreet from /_osm_street_data.
+      # TODO: Author a stronger local maxspeed of 20 on MainStreet.
+      stage.GetRootLayer().Save()
+    language: python
+    validator:
+      assertions:
+        - has_specializes: {path: /World/MainStreet}
+        - attribute_equals: {path: "/World/MainStreet.osm:street:maxspeed", value: 20}
+        - attribute_source: {path: "/World/MainStreet.osm:street:maxspeed", layer: submission.usd}
+    cookbook: docs/creating-composition-arcs/inherits-specializes/what-is-specializes.md
+    xp: 310
+    reward: {opinion_points: 1, achievement: "New achievement! You used the weakest arc on purpose."}
+    world_target: /City/ArcHighlands/MainStreet
+    recipes: [Specialize]
+    questions:
+      - prompt: Which is weaker, inherits or specializes?
+        choices: [Inherits, Specializes, They are equal]
+        answer: 1
+        explanation: Specializes is the weakest LIVRPS arc.
+
+  - id: f5_city_block
+    title: Recapture Highland Block
+    floor: 5
+    floor_name: Arc Highlands
+    neighborhood: Recaptured Skyline
+    kind: city_boss
+    prerequisites: [f5_specializes_fallback]
+    level_required: 12
+    exam_tasks: [compose_city_block, mix_references_and_payloads]
+    stats: {craft: 5, resolve: 4, lore: 2}
+    brief: "SYSTEM: Recapture a city block from the existing city pack. Two towers by reference, one warehouse by payload. Local stall IDs only."
+    starter: |
+      from pathlib import Path
+      from pxr import Usd, UsdGeom
+
+      city = Path(ASSET_LIBRARY) / "envir" / "city"
+      tower_a = (city / "skyscraperA" / "skyscraperA.usd").as_posix()
+      tower_e = (city / "skyscraperE" / "skyscraperE.usd").as_posix()
+      warehouse = (city / "sm_bldgF" / "sm_bldgF.usd").as_posix()
+
+      stage = Usd.Stage.CreateNew(STAGE_PATH)
+      UsdGeom.SetStageUpAxis(stage, UsdGeom.Tokens.y)
+      block = UsdGeom.Xform.Define(stage, "/City/ArcHighlands/HighlandBlock")
+      # TODO: Reference tower A at .../TowerA and tower E at .../TowerE.
+      # TODO: Payload the warehouse at .../Warehouse.
+      stage.GetRootLayer().Save()
+    language: python
+    validator:
+      assertions:
+        - has_reference: {path: /City/ArcHighlands/HighlandBlock/TowerA, asset: skyscraperA.usd}
+        - has_reference: {path: /City/ArcHighlands/HighlandBlock/TowerE, asset: skyscraperE.usd}
+        - has_payload: {path: /City/ArcHighlands/HighlandBlock/Warehouse, asset: sm_bldgF.usd}
+        - prim_exists: /City/ArcHighlands/HighlandBlock
+    cookbook: docs/creating-composition-arcs/prim-composition.md
+    xp: 400
+    reward: {opinion_points: 2, achievement: "District recaptured! The city pack has been deputized."}
+    world_target: /City/ArcHighlands/HighlandBlock
+    recipes: [Assembly, Composition]
+    questions:
+      - prompt: Why payload the warehouse but reference the towers in this fight?
+        choices:
+          - Heavy optional content can stay unloaded; interface assets stay composed
+          - Payloads always win LIVRPS
+          - References cannot target USD files
+        answer: 0
+        explanation: Payloads defer bulk while references keep the towers in the composed interface.
+
+  - id: f5_liverps_labyrinth
+    title: Trace the Highland Labyrinth
+    floor: 5
+    floor_name: Arc Highlands
+    neighborhood: LIVERPS Labyrinth
+    kind: floor_boss
+    prerequisites: [f5_city_block]
+    level_required: 12
+    exam_tasks: [trace_liverps, debug_composed_opinions]
+    stats: {insight: 5, resolve: 5, craft: 3}
+    brief: "SYSTEM: The block is composed. The sign is lying. A reference says 1, a variant says 2, a payload says 3. Author the local 4 and keep every weaker arc intact."
+    starter: |
+      from pathlib import Path
+      from pxr import Sdf, Usd
+
+      stage = Usd.Stage.CreateNew(STAGE_PATH)
+      folder = Path(STAGE_PATH).parent
+
+      referenced = Usd.Stage.CreateNew(str(folder / "ref_sign.usda"))
+      ref_root = referenced.DefinePrim("/Sign", "Xform")
+      ref_root.CreateAttribute("floorIndex", Sdf.ValueTypeNames.Int).Set(1)
+      referenced.SetDefaultPrim(ref_root)
+      referenced.GetRootLayer().Save()
+
+      payload = Usd.Stage.CreateNew(str(folder / "payload_sign.usda"))
+      payload_root = payload.DefinePrim("/Bulk", "Xform")
+      payload_root.CreateAttribute("floorIndex", Sdf.ValueTypeNames.Int).Set(3)
+      payload.SetDefaultPrim(payload_root)
+      payload.GetRootLayer().Save()
+
+      fallback = stage.CreateClassPrim("/_FallbackIndex")
+      fallback.CreateAttribute("floorIndex", Sdf.ValueTypeNames.Int).Set(0)
+      inherited = stage.CreateClassPrim("/_InheritedIndex")
+      inherited.CreateAttribute("floorIndex", Sdf.ValueTypeNames.Int).Set(5)
+
+      sign = stage.DefinePrim("/City/ArcHighlands/LabyrinthSign", "Xform")
+      sign.GetSpecializes().AddSpecialize(fallback.GetPath())
+      sign.GetPayloads().AddPayload("payload_sign.usda")
+      sign.GetReferences().AddReference("ref_sign.usda")
+      sign.GetInherits().AddInherit(inherited.GetPath())
+      modes = sign.GetVariantSets().AddVariantSet("edition")
+      for name, value in [("draft", 2), ("final", 2)]:
+          modes.AddVariant(name)
+          modes.SetVariantSelection(name)
+          with modes.GetVariantEditContext():
+              sign.CreateAttribute("floorIndex", Sdf.ValueTypeNames.Int).Set(value)
+      modes.SetVariantSelection("final")
+      # TODO: Author a local floorIndex of 4. Do not delete the weaker arcs.
+      stage.GetRootLayer().Save()
+    language: python
+    validator:
+      assertions:
+        - attribute_equals: {path: /City/ArcHighlands/LabyrinthSign.floorIndex, value: 4}
+        - attribute_source: {path: /City/ArcHighlands/LabyrinthSign.floorIndex, layer: submission.usd}
+        - has_inherit: {path: /City/ArcHighlands/LabyrinthSign}
+        - has_variant_set:
+            path: /City/ArcHighlands/LabyrinthSign
+            name: edition
+            variants: [draft, final]
+            selection: final
+        - has_reference: {path: /City/ArcHighlands/LabyrinthSign, asset: ref_sign.usda}
+        - has_payload: {path: /City/ArcHighlands/LabyrinthSign, asset: payload_sign.usda}
+        - has_specializes: {path: /City/ArcHighlands/LabyrinthSign}
+        - prim_stack: {path: /City/ArcHighlands/LabyrinthSign, min: 5}
+    cookbook: docs/creating-composition-arcs/strength-ordering/tracing-through-liverps.md
+    xp: 500
+    reward:
+      opinion_points: 3
+      achievement: "Floor clear! You traced LIVERPS on a live city sign. Weaker arcs request a mediator."
+      inventory: {system_peeks: 1}
+    world_target: /City/ArcHighlands/LabyrinthSign
+    recipes: [LIVERPS Strength Ordering, Composition]
+    questions:
+      - prompt: "From strongest to weakest, LIVRPS is:"
+        choices:
+          - Local, Inherits, Variant sets, References, Payloads, Specializes
+          - Local, References, Inherits, Variant sets, Payloads, Specializes
+          - Specializes, Payloads, References, Variant sets, Inherits, Local
+        answer: 0
+        explanation: LIVRPS is Local, Inherits, Variant sets, References, Payloads, Specializes.
+      - prompt: An inherit authors 5 and a local authors 4. Which composed value wins?
+        choices: ["5", "4", "Neither"]
+        answer: 1
+        explanation: Local opinions are stronger than inherits.
+      - prompt: Why keep the payload after authoring a local value?
+        choices:
+          - The payload still contributes other composition and can be inspected later
+          - Local opinions require payloads
+          - usdview cannot open stages without payloads
+        answer: 0
+        explanation: Weaker arcs remain part of the composed prim even when a stronger opinion wins.

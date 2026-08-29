@@ -30,6 +30,16 @@ quests:
     assert [quest.id for quest in quests] == ["orientation"]
 
 
+def test_catalog_order_is_a_playable_route() -> None:
+    quests = QuestStore().all()
+    assert [quest.floor for quest in quests] == sorted(quest.floor for quest in quests)
+    cleared: set[str] = set()
+    for quest in quests:
+        missing = [item for item in quest.prerequisites if item not in cleared]
+        assert not missing, f"{quest.id} is listed before {missing}"
+        cleared.add(quest.id)
+
+
 def test_orientation_awards_only_once(tmp_path: Path) -> None:
     saves = SaveStore(tmp_path / "save.json")
     runner = QuestRunner(saves)

@@ -29,8 +29,8 @@ binds to localhost and should not be exposed as a public service.
 ## The crawl
 
 - **Floors 0–9** cover orientation, stage authoring, schemas, composition,
-  advanced data modeling, composition arcs, asset structure, data exchange,
-  instancing, and certification recap.
+  beyond-basics (primvars, kinds, traversal, Hydra), composition arcs, asset
+  structure, data exchange, instancing, and certification recap.
 - **Rooms and bosses** use `pxr` assertions and original exam-task questions.
   The System takes XP for a missed boss answer; it never wipes a study run.
 - **Progression** persists in `game/save.json`: XP, crawler level, domain stats,

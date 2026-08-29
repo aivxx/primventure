@@ -1,87 +1,270 @@
 floor: 4
-floor_name: Variant Gardens
+floor_name: Beyond the Walls
 quests:
   - id: f4_season_gate
-    title: Turn the Season Gate
+    title: Paint the Season Into a Primvar
     floor: 4
-    floor_name: Variant Gardens
-    neighborhood: Season Walk
+    floor_name: Beyond the Walls
+    neighborhood: Primvar Hedge
     kind: room
     prerequisites: [f3_opinion_colossus]
     level_required: 8
-    exam_tasks: [create_variant_set, author_variants]
+    exam_tasks: [author_primvar, set_interpolation]
     stats: {craft: 3, lore: 2}
-    brief: "SYSTEM: The garden remembers many seasons. Give them named paths."
+    brief: "SYSTEM: Color is not a rumor. Author displayColor on the hedge. Constant interpolation. Spring is (0, 1, 0). The flowers have opinions."
     starter: |
-      from pxr import Usd, UsdGeom
-      stage = Usd.Stage.Open(STAGE_PATH)
-      garden = UsdGeom.Xform.Define(stage, "/City/VariantGardens/Garden").GetPrim()
-      # Create season variants "spring" and "winter"; select "spring".
+      from pxr import Gf, Sdf, Usd, UsdGeom
+
+      stage = Usd.Stage.CreateNew(STAGE_PATH)
+      hedge = UsdGeom.Mesh.Define(stage, "/City/BeyondTheWalls/Hedge")
+      # TODO: Create constant primvar displayColor = (0, 1, 0).
       stage.GetRootLayer().Save()
     language: python
     validator:
       assertions:
-        - has_variant_set: {path: /City/VariantGardens/Garden, name: season, variants: [spring, winter], selection: spring}
-    cookbook: docs/creating-composition-arcs/variant-sets/working-with-variant-sets.md
-    xp: 230
+        - prim_type: {path: /City/BeyondTheWalls/Hedge, value: Mesh}
+        - attribute_equals: {path: /City/BeyondTheWalls/Hedge.primvars:displayColor, value: [[0.0, 1.0, 0.0]]}
+    cookbook: docs/beyond-basics/primvars.md
+    xp: 180
     reward: Perennial Token
-    world_target: /City/VariantGardens/Garden
-    recipes: [Usd.Prim.GetVariantSets, Usd.VariantSet.AddVariant, Usd.VariantSet.SetVariantSelection]
+    world_target: /City/BeyondTheWalls/Hedge
+    recipes: [Primvar, Interpolation]
+
+  - id: f4_custom_tag
+    title: Invent a Custom Property Without a Schema
+    floor: 4
+    floor_name: Beyond the Walls
+    neighborhood: Primvar Hedge
+    kind: room
+    prerequisites: [f4_season_gate]
+    level_required: 8
+    exam_tasks: [author_custom_attribute, namespace_property]
+    stats: {craft: 3, insight: 2}
+    brief: "SYSTEM: No schema covers municipal gossip. Create custom string primvars:notes:warden = 'watch the north gate'. Custom is allowed. Chaos is not."
+    starter: |
+      from pxr import Sdf, Usd, UsdGeom
+
+      stage = Usd.Stage.CreateNew(STAGE_PATH)
+      gate = UsdGeom.Xform.Define(stage, "/City/BeyondTheWalls/NorthGate").GetPrim()
+      # TODO: Create string attribute primvars:notes:warden set to "watch the north gate".
+      stage.GetRootLayer().Save()
+    language: python
+    validator:
+      assertions:
+        - attribute_equals: {path: "/City/BeyondTheWalls/NorthGate.primvars:notes:warden", value: "watch the north gate"}
+    cookbook: docs/beyond-basics/custom-properties.md
+    xp: 170
+    reward: Custom Docket
+    world_target: /City/BeyondTheWalls/NorthGate
+    recipes: [Property, Attribute]
 
   - id: f4_two_faced_topiary
-    title: Prune the Two-Faced Topiary
+    title: Deactivate the Wrong Face
     floor: 4
-    floor_name: Variant Gardens
-    neighborhood: Topiary Maze
+    floor_name: Beyond the Walls
+    neighborhood: Quiet Garden
     kind: neighborhood_boss
-    prerequisites: [f4_season_gate]
+    prerequisites: [f4_custom_tag]
     level_required: 9
-    exam_tasks: [author_variant_contents, switch_variants]
-    stats: {craft: 3, resolve: 3}
-    brief: "SYSTEM: One root, two silhouettes. Contain each shape in its proper variant."
+    exam_tasks: [deactivate_prim, keep_sibling_active]
+    stats: {insight: 3, resolve: 3}
+    brief: "SYSTEM: Two faces. One is a draft. Deactivate Draft, leave Hero. Deletion is vandalism. Inactive is manners."
     starter: |
       from pxr import Usd, UsdGeom
-      stage = Usd.Stage.Open(STAGE_PATH)
-      topiary = UsdGeom.Xform.Define(stage, "/City/VariantGardens/Topiary").GetPrim()
-      shapes = topiary.GetVariantSets().AddVariantSet("shape")
-      # Add "cube" and "sphere" variants, author the matching child in each, select "sphere".
+
+      stage = Usd.Stage.CreateNew(STAGE_PATH)
+      UsdGeom.Sphere.Define(stage, "/City/BeyondTheWalls/Topiary/Hero")
+      UsdGeom.Cube.Define(stage, "/City/BeyondTheWalls/Topiary/Draft")
+      # TODO: Set Draft inactive. Leave Hero active.
       stage.GetRootLayer().Save()
     language: python
     validator:
       assertions:
-        - has_variant_set: {path: /City/VariantGardens/Topiary, name: shape, variants: [cube, sphere], selection: sphere}
-        - prim_type: {path: /City/VariantGardens/Topiary/Sculpture, value: Sphere}
-    cookbook: docs/creating-composition-arcs/variant-sets/what-are-variant-sets.md
-    xp: 290
-    reward: Gardener's Variant Shears
-    world_target: /City/VariantGardens/Topiary
-    recipes: [Usd.VariantSet.GetVariantEditContext, UsdGeom.Cube.Define, UsdGeom.Sphere.Define]
+        - active: {path: /City/BeyondTheWalls/Topiary/Hero, value: true}
+        - active: {path: /City/BeyondTheWalls/Topiary/Draft, value: false}
+        - traversal_contains:
+            paths: [/City/BeyondTheWalls/Topiary/Hero]
+            excluded: [/City/BeyondTheWalls/Topiary/Draft]
+    cookbook: docs/beyond-basics/active-inactive-prims.md
+    xp: 240
+    reward: {opinion_points: 1, achievement: "New achievement! You deactivated a draft instead of deleting the evidence."}
+    world_target: /City/BeyondTheWalls/Topiary
+    recipes: [Active and Inactive]
+    questions:
+      - prompt: What does deactivating a prim do to default stage traversal?
+        choices:
+          - Inactive prims and their descendants are skipped
+          - The prim is deleted from the layer
+          - Hydra crashes
+        answer: 0
+        explanation: Default Traverse() skips inactive prims.
+
+  - id: f4_traversal_census
+    title: Census Only the Concrete
+    floor: 4
+    floor_name: Beyond the Walls
+    neighborhood: Quiet Garden
+    kind: room
+    prerequisites: [f4_two_faced_topiary]
+    level_required: 9
+    exam_tasks: [traverse_stage, count_gprims]
+    stats: {insight: 4, craft: 2}
+    brief: "SYSTEM: Count Mesh prims on a default traversal. Classes do not vote. Write the tally on /World.census as an int."
+    starter: |
+      from pxr import Sdf, Usd, UsdGeom
+
+      stage = Usd.Stage.CreateNew(STAGE_PATH)
+      UsdGeom.Xform.Define(stage, "/World")
+      UsdGeom.Mesh.Define(stage, "/World/A")
+      UsdGeom.Mesh.Define(stage, "/World/B")
+      stage.CreateClassPrim("/World/_Blueprint")
+      # TODO: Traverse, count Mesh prims, store that count on /World.census.
+      stage.GetRootLayer().Save()
+    language: python
+    validator:
+      assertions:
+        - attribute_equals: {path: /World.census, value: 2}
+        - traversal_contains: {paths: [/World/A, /World/B], excluded: [/World/_Blueprint]}
+    cookbook: docs/beyond-basics/stage-traversal.md
+    xp: 200
+    reward: Census Stylus
+    world_target: /City/BeyondTheWalls
+    recipes: [Stage Traversal]
+
+  - id: f4_unit_contract
+    title: Sign the Units Contract
+    floor: 4
+    floor_name: Beyond the Walls
+    neighborhood: Measure Yard
+    kind: room
+    prerequisites: [f4_traversal_census]
+    level_required: 9
+    exam_tasks: [set_meters_per_unit, set_up_axis]
+    stats: {lore: 3, craft: 3}
+    brief: "SYSTEM: The wall was modeled in centimeters. Write metersPerUnit 0.01 and Y-up or the next floor's lamps become cathedral spires."
+    starter: |
+      from pxr import Usd, UsdGeom
+
+      stage = Usd.Stage.CreateNew(STAGE_PATH)
+      UsdGeom.Xform.Define(stage, "/World")
+      # TODO: Y-up and centimeters.
+      stage.GetRootLayer().Save()
+    language: python
+    validator:
+      assertions:
+        - up_axis: Y
+        - meters_per_unit: 0.01
+    cookbook: docs/beyond-basics/units.md
+    xp: 180
+    reward: Survey Chain
+    world_target: /City/BeyondTheWalls
+    recipes: [Stage]
+
+  - id: f4_kind_post
+    title: Post a Component Kind
+    floor: 4
+    floor_name: Beyond the Walls
+    neighborhood: Measure Yard
+    kind: neighborhood_boss
+    prerequisites: [f4_unit_contract]
+    level_required: 9
+    exam_tasks: [set_model_kind, distinguish_component]
+    stats: {lore: 4, craft: 3}
+    brief: "SYSTEM: A lamp post is a component, not an assembly of regrets. Kind it. The Golem on Floor 6 is already taking notes."
+    starter: |
+      from pxr import Kind, Usd, UsdGeom
+
+      stage = Usd.Stage.CreateNew(STAGE_PATH)
+      lamp = UsdGeom.Xform.Define(stage, "/City/BeyondTheWalls/LampPost").GetPrim()
+      # TODO: Set kind to component.
+      stage.GetRootLayer().Save()
+    language: python
+    validator:
+      assertions:
+        - kind_equals: {path: /City/BeyondTheWalls/LampPost, value: component}
+    cookbook: docs/beyond-basics/model-kinds.md
+    xp: 220
+    reward: {opinion_points: 1, achievement: "New achievement! You used a model kind before the Foundry made it fashionable."}
+    world_target: /City/BeyondTheWalls/LampPost
+    recipes: [Kind, Component]
+    questions:
+      - prompt: Which kind is a leaf asset meant to be referenced, not an aggregator?
+        choices: [component, assembly, group]
+        answer: 0
+        explanation: Components are the reusable leaf models in the hierarchy.
+
+  - id: f4_hydra_lecture
+    title: Admit Hydra Is a Bridge
+    floor: 4
+    floor_name: Beyond the Walls
+    neighborhood: Hydra Overlook
+    kind: room
+    prerequisites: [f4_kind_post]
+    level_required: 10
+    exam_tasks: [explain_hydra]
+    stats: {lore: 4, insight: 3}
+    brief: "SYSTEM: Hydra is not usdview, not Storm, not your viewport plugin. It is the bridge. This basement still will not draw a frame. Answer anyway."
+    starter: ""
+    language: none
+    validator:
+      assertions: []
+    cookbook: docs/beyond-basics/hydra.md
+    xp: 160
+    reward: Bridge Permit
+    world_target: /City/BeyondTheWalls
+    recipes: [Hydra]
+    questions:
+      - prompt: What does Hydra sit between?
+        choices:
+          - Scene description and a render delegate
+          - Sublayers and payloads
+          - Kind and assetInfo
+        answer: 0
+        explanation: Hydra is the rendering architecture between USD scene data and backends.
 
   - id: f4_hydra_of_choices
     title: Bind the Hydra of Choices
     floor: 4
-    floor_name: Variant Gardens
-    neighborhood: Choice Conservatory
+    floor_name: Beyond the Walls
+    neighborhood: Hydra Overlook
     kind: floor_boss
-    prerequisites: [f4_two_faced_topiary]
+    prerequisites: [f4_hydra_lecture]
     level_required: 10
-    exam_tasks: [combine_reference_variants, preserve_interface]
-    stats: {insight: 4, resolve: 3}
-    brief: "SYSTEM: Every head demands a duplicate. Refuse. Parameterize one asset."
+    exam_tasks: [combine_primvar_activation_units, recap_beyond_basics]
+    stats: {insight: 4, resolve: 4, craft: 3}
+    brief: "SYSTEM: Floor boss. Author a visible mesh, hide a draft, stamp units, paint a primvar. Hydra still will not render here. Competence will."
     starter: |
-      from pxr import Usd
-      stage = Usd.Stage.Open(STAGE_PATH)
-      hydra = stage.DefinePrim("/City/VariantGardens/HydraStatue", "Xform")
-      hydra.GetReferences().AddReference("assets/sign.usda")
-      # Add a finish variant set with "bronze" and "marble"; select "bronze".
+      from pxr import Gf, Kind, Sdf, Usd, UsdGeom
+
+      stage = Usd.Stage.CreateNew(STAGE_PATH)
+      world = UsdGeom.Xform.Define(stage, "/World").GetPrim()
+      hero = UsdGeom.Mesh.Define(stage, "/World/Hero")
+      draft = UsdGeom.Mesh.Define(stage, "/World/Draft")
+      # TODO: Y-up, centimeters, /World default prim and component kind.
+      # TODO: Deactivate Draft. Constant displayColor (1, 0.75, 0.25) on Hero.
       stage.GetRootLayer().Save()
     language: python
     validator:
       assertions:
-        - has_reference: {path: /City/VariantGardens/HydraStatue, asset: assets/sign.usda}
-        - has_variant_set: {path: /City/VariantGardens/HydraStatue, name: finish, variants: [bronze, marble], selection: bronze}
-    cookbook: docs/asset-structure/asset-parameterization/what-is-asset-parameterization.md
-    xp: 360
-    reward: Hydra Parameter Crown
-    world_target: /City/VariantGardens/HydraStatue
-    recipes: [Usd.References.AddReference, Usd.VariantSets.AddVariantSet]
+        - default_prim: /World
+        - up_axis: Y
+        - meters_per_unit: 0.01
+        - kind_equals: {path: /World, value: component}
+        - active: {path: /World/Hero, value: true}
+        - active: {path: /World/Draft, value: false}
+        - attribute_equals: {path: /World/Hero.primvars:displayColor, value: [[1.0, 0.75, 0.25]]}
+    cookbook: docs/beyond-basics/value-resolution.md
+    xp: 380
+    reward:
+      opinion_points: 2
+      achievement: "Floor clear! Beyond the Walls recaptured. Hydra sends its regards from another process."
+    world_target: /City/BeyondTheWalls
+    recipes: [Primvar, Active and Inactive, Value Resolution]
+    questions:
+      - prompt: Why might Get() return a composed value that no single layer fully contains?
+        choices:
+          - Value resolution walks strength order across arcs
+          - USD randomly picks a layer
+          - Hydra overwrites attributes
+        answer: 0
+        explanation: Composed values are resolved, not copied from one file.

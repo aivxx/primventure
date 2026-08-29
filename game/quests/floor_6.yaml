@@ -1,87 +1,403 @@
 floor: 6
-floor_name: Model Heights
+floor_name: Asset Foundry
 quests:
-  - id: f6_component_house
-    title: Zone the Component House
+  - id: f6_entry_point
+    title: Cut the Asset Front Door
     floor: 6
-    floor_name: Model Heights
-    neighborhood: Component Terrace
+    floor_name: Asset Foundry
+    neighborhood: Principles Ward
     kind: room
-    prerequisites: [f5_dockyard_leviathan]
+    prerequisites: [f5_liverps_labyrinth]
     level_required: 12
-    exam_tasks: [author_model_kind, create_component]
-    stats: {lore: 3, craft: 4}
-    brief: "SYSTEM: The Heights enforce hierarchy. Register this house as a component."
+    exam_tasks: [set_default_prim, encapsulate_entry]
+    stats: {lore: 3, craft: 3}
+    brief: "SYSTEM: Guild job one. An export dumped geometry at the layer root. Give it a /World door or every reference will wander the parking lot."
     starter: |
-      from pxr import Kind, Usd, UsdGeom
-      stage = Usd.Stage.Open(STAGE_PATH)
-      house = UsdGeom.Xform.Define(stage, "/City/ModelHeights/House").GetPrim()
-      # Set House kind to component and give it assetName metadata "Townhouse".
+      from pxr import Usd, UsdGeom
+
+      stage = Usd.Stage.CreateNew(STAGE_PATH)
+      UsdGeom.Cube.Define(stage, "/Hull")
+      # TODO: Define /World as an Xform, set it as the default prim,
+      # and reparent /Hull under /World with Usd.NamespaceEditor.
       stage.GetRootLayer().Save()
     language: python
     validator:
       assertions:
-        - metadata_equals: {path: /City/ModelHeights/House, key: kind, value: component}
-        - metadata_equals: {path: /City/ModelHeights/House, key: assetInfo, field: name, value: Townhouse}
+        - default_prim: /World
+        - prim_exists: /World/Hull
+        - traversal_contains: {paths: [/World/Hull], excluded: [/Hull]}
+    cookbook: docs/asset-structure/asset-structure-principles/your-first-asset.md
+    xp: 200
+    reward: Entry Chisel
+    world_target: /City/AssetFoundry/Townhouse
+    recipes: [Default Prim, Asset]
+
+  - id: f6_hierarchy_sort
+    title: File Looks With the Building
+    floor: 6
+    floor_name: Asset Foundry
+    neighborhood: Principles Ward
+    kind: neighborhood_boss
+    prerequisites: [f6_entry_point]
+    level_required: 12
+    exam_tasks: [organize_prim_hierarchy, encapsulate_materials]
+    stats: {insight: 3, lore: 3}
+    brief: "SYSTEM: Geometry lives under World. Materials filed a separate ZIP. Encapsulate Looks or the next reference will arrive nude."
+    starter: |
+      from pxr import Usd, UsdGeom, UsdShade
+
+      stage = Usd.Stage.CreateNew(STAGE_PATH)
+      world = UsdGeom.Xform.Define(stage, "/World")
+      stage.SetDefaultPrim(world.GetPrim())
+      UsdGeom.Cube.Define(stage, "/World/Hull")
+      # TODO: Define /World/Looks as a Scope and /World/Looks/Paint as a Material.
+      stage.GetRootLayer().Save()
+    language: python
+    validator:
+      assertions:
+        - default_prim: /World
+        - prim_type: {path: /World/Looks, value: Scope}
+        - prim_exists: /World/Looks/Paint
+        - traversal_contains: {paths: [/World/Looks/Paint], excluded: [/Looks]}
+    cookbook: docs/asset-structure/asset-structure-principles/organizing-prim-hierarchy.md
+    xp: 240
+    reward: {opinion_points: 1, achievement: "New achievement! You put the paint inside the building. Interior designers wept."}
+    world_target: /City/AssetFoundry/Townhouse
+    recipes: [Namespace, Encapsulation]
+    questions:
+      - prompt: Why should Looks live under the default prim?
+        choices:
+          - So references and payloads bring materials with the asset
+          - So usdview hides geometry
+          - So kind metadata becomes optional
+        answer: 0
+        explanation: Encapsulation keeps bindings inside the referenced target.
+
+  - id: f6_workstream_split
+    title: Split Geometry From Shading
+    floor: 6
+    floor_name: Asset Foundry
+    neighborhood: Workstream Forges
+    kind: room
+    prerequisites: [f6_hierarchy_sort]
+    level_required: 13
+    exam_tasks: [author_workstream_sublayers, keep_interface_thin]
+    stats: {craft: 4, lore: 3}
+    brief: "SYSTEM: Modelers and lookdev cannot share a file without a restraining order. Give each a sublayer."
+    starter: |
+      from pathlib import Path
+      from pxr import Sdf, Usd, UsdGeom
+
+      stage = Usd.Stage.CreateNew(STAGE_PATH)
+      folder = Path(STAGE_PATH).parent
+      geometry = Usd.Stage.CreateNew(str(folder / "geometry.usda"))
+      geometry.DefinePrim("/World", "Xform")
+      geometry.DefinePrim("/World/Hull", "Cube")
+      geometry.GetRootLayer().Save()
+      shading = Usd.Stage.CreateNew(str(folder / "shading.usda"))
+      shading.OverridePrim("/World/Hull").SetDisplayName("Shaded Hull")
+      shading.GetRootLayer().Save()
+      # TODO: Append shading.usda then geometry.usda as sublayers.
+      stage.GetRootLayer().Save()
+    language: python
+    validator:
+      assertions:
+        - prim_exists: /World/Hull
+        - sublayer_order: {layers: [shading.usda, geometry.usda]}
+    cookbook: docs/asset-structure/workstreams/modeling-workstreams.md
+    xp: 220
+    reward: Workstream Wedge
+    world_target: /City/AssetFoundry/Townhouse
+    recipes: [Sublayer, Layer Stack]
+
+  - id: f6_asset_interface
+    title: Forge the Thin Asset Shell
+    floor: 6
+    floor_name: Asset Foundry
+    neighborhood: Workstream Forges
+    kind: city_boss
+    prerequisites: [f6_workstream_split]
+    level_required: 13
+    exam_tasks: [reference_payload_pattern, set_default_prim, split_workstreams]
+    stats: {craft: 4, resolve: 4, lore: 3}
+    brief: "SYSTEM: City boss. Contents are bulk. The asset file is a door. Payload the workstreams. Do not weld the foundry to the catalog card."
+    starter: |
+      from pathlib import Path
+      from pxr import Sdf, Usd, UsdGeom
+
+      folder = Path(STAGE_PATH).parent
+      contents = Usd.Stage.CreateNew(str(folder / "contents.usda"))
+      UsdGeom.Xform.Define(contents, "/World")
+      contents.DefinePrim("/World/Hull", "Cube")
+      contents.SetDefaultPrim(contents.GetPrimAtPath("/World"))
+      contents.GetRootLayer().Save()
+
+      stage = Usd.Stage.CreateNew(STAGE_PATH)
+      world = UsdGeom.Xform.Define(stage, "/World")
+      UsdGeom.SetStageUpAxis(stage, UsdGeom.Tokens.y)
+      # TODO: Set /World as default prim.
+      # TODO: Payload contents.usda onto /World.
+      stage.GetRootLayer().Save()
+    language: python
+    validator:
+      assertions:
+        - default_prim: /World
+        - has_payload: {path: /World, asset: contents.usda}
+        - prim_exists: /World/Hull
+        - up_axis: Y
+    cookbook: docs/asset-structure/reference-payload-pattern/what-is-ref-payload-pattern.md
+    xp: 360
+    reward: {opinion_points: 2, achievement: "Shell forged. The contents layer now travels asleep."}
+    world_target: /City/AssetFoundry/Townhouse
+    recipes: [Payload, Asset]
+    questions:
+      - prompt: Why payload contents instead of referencing them from the asset interface?
+        choices:
+          - Payloads keep heavy contents unloadable while preserving the asset door
+          - References cannot target USDA
+          - Payloads always beat local opinions
+        answer: 0
+        explanation: The reference/payload pattern keeps a thin interface over deferred contents.
+
+  - id: f6_accent_parameter
+    title: Loft the Accent Color
+    floor: 6
+    floor_name: Asset Foundry
+    neighborhood: Parameter Loft
+    kind: room
+    prerequisites: [f6_asset_interface]
+    level_required: 13
+    exam_tasks: [author_interface_primvar, parameterize_asset]
+    stats: {craft: 3, lore: 3}
+    brief: "SYSTEM: The client will change the awning color 400 times. Put accentColor on the default prim, not buried in a shader."
+    starter: |
+      from pxr import Sdf, Usd, UsdGeom
+
+      stage = Usd.Stage.CreateNew(STAGE_PATH)
+      world = UsdGeom.Xform.Define(stage, "/World")
+      stage.SetDefaultPrim(world.GetPrim())
+      # TODO: Create constant primvar accentColor = (1, 0, 0) on /World.
+      stage.GetRootLayer().Save()
+    language: python
+    validator:
+      assertions:
+        - default_prim: /World
+        - attribute_equals: {path: /World.primvars:accentColor, value: [1.0, 0.0, 0.0]}
+    cookbook: docs/asset-structure/asset-parameterization/what-is-asset-parameterization.md
+    xp: 230
+    reward: Accent Swatch
+    world_target: /City/AssetFoundry/Townhouse
+    recipes: [Primvar, Asset]
+
+  - id: f6_loft_variant
+    title: Hoist the Shade Variant
+    floor: 6
+    floor_name: Asset Foundry
+    neighborhood: Parameter Loft
+    kind: neighborhood_boss
+    prerequisites: [f6_accent_parameter]
+    level_required: 13
+    exam_tasks: [loft_variant_set, keep_internal_selection]
+    stats: {insight: 4, craft: 3}
+    brief: "SYSTEM: Shade lives on Looks. Consumers cannot see Looks. Loft the variant set to the default prim or the art director will enter the payload."
+    starter: |
+      from pxr import Sdf, Usd, UsdGeom, UsdShade
+
+      stage = Usd.Stage.CreateNew(STAGE_PATH)
+      world = UsdGeom.Xform.Define(stage, "/World").GetPrim()
+      stage.SetDefaultPrim(world)
+      looks = stage.DefinePrim("/World/Looks", "Scope")
+      shades = looks.GetVariantSets().AddVariantSet("paint")
+      for name in ("brick", "stucco"):
+          shades.AddVariant(name)
+          shades.SetVariantSelection(name)
+          with shades.GetVariantEditContext():
+              looks.CreateAttribute("finishName", Sdf.ValueTypeNames.String).Set(name)
+      shades.SetVariantSelection("brick")
+      # TODO: Add the same paint variant set on /World and select brick.
+      stage.GetRootLayer().Save()
+    language: python
+    validator:
+      assertions:
+        - has_variant_set:
+            path: /World
+            name: paint
+            variants: [brick, stucco]
+            selection: brick
+        - has_variant_set:
+            path: /World/Looks
+            name: paint
+            variants: [brick, stucco]
+    cookbook: docs/asset-structure/reference-payload-pattern/lofting-variant-sets.md
+    xp: 280
+    reward: {opinion_points: 1, achievement: "New achievement! You lofted a variant without inviting the client into Looks."}
+    world_target: /City/AssetFoundry/Townhouse
+    recipes: [Variant Set]
+    questions:
+      - prompt: Why loft a variant set from Looks to the default prim?
+        choices:
+          - Downstream shots can select variants without opening internal scopes
+          - Variant sets only work on default prims
+          - Lofting deletes the original set
+        answer: 0
+        explanation: The asset interface is the supported place to parameterize an asset.
+
+  - id: f6_component_house
+    title: Zone the Component House
+    floor: 6
+    floor_name: Asset Foundry
+    neighborhood: Model Heights
+    kind: room
+    prerequisites: [f6_loft_variant]
+    level_required: 14
+    exam_tasks: [author_model_kind, set_asset_name]
+    stats: {lore: 3, craft: 4}
+    brief: "SYSTEM: The Heights enforce hierarchy. Register this house as a component named Townhouse."
+    starter: |
+      from pxr import Kind, Usd, UsdGeom
+
+      stage = Usd.Stage.CreateNew(STAGE_PATH)
+      house = UsdGeom.Xform.Define(stage, "/City/AssetFoundry/House").GetPrim()
+      stage.SetDefaultPrim(house)
+      # TODO: Set kind to component and asset name to Townhouse.
+      stage.GetRootLayer().Save()
+    language: python
+    validator:
+      assertions:
+        - kind_equals: {path: /City/AssetFoundry/House, value: component}
+        - metadata_equals: {path: /City/AssetFoundry/House, key: assetInfo, field: name, value: Townhouse}
     cookbook: docs/asset-structure/model-hierarchy/exercise-components.md
-    xp: 330
+    xp: 250
     reward: Component Deed
-    world_target: /City/ModelHeights/House
-    recipes: [Usd.ModelAPI.SetKind, Usd.ModelAPI.SetAssetName]
+    world_target: /City/AssetFoundry/House
+    recipes: [Kind, Component, Asset Info]
 
   - id: f6_assembly_block
     title: Assemble the Skyline Block
     floor: 6
-    floor_name: Model Heights
-    neighborhood: Assembly Rise
+    floor_name: Asset Foundry
+    neighborhood: Model Heights
     kind: neighborhood_boss
     prerequisites: [f6_component_house]
-    level_required: 13
-    exam_tasks: [author_assembly, organize_models]
+    level_required: 14
+    exam_tasks: [author_assembly, aggregate_components]
     stats: {craft: 4, insight: 4}
-    brief: "SYSTEM: Loose components clog the skyline. Gather them under an assembly."
+    brief: "SYSTEM: Loose components clog the skyline. An assembly references components. It does not become one."
     starter: |
+      from pathlib import Path
       from pxr import Kind, Usd, UsdGeom
-      stage = Usd.Stage.Open(STAGE_PATH)
-      block = UsdGeom.Xform.Define(stage, "/City/ModelHeights/SkylineBlock").GetPrim()
-      # Mark SkylineBlock as assembly and reference sign.usda beneath it as SignA.
+
+      sign = (Path(WORLD_ROOT) / "assets" / "sign.usda").as_posix()
+      stage = Usd.Stage.CreateNew(STAGE_PATH)
+      block = UsdGeom.Xform.Define(stage, "/City/AssetFoundry/SkylineBlock").GetPrim()
+      stage.SetDefaultPrim(block)
+      # TODO: Mark SkylineBlock as assembly.
+      # TODO: Define SignA beneath it and reference the civic sign asset.
       stage.GetRootLayer().Save()
     language: python
     validator:
       assertions:
-        - metadata_equals: {path: /City/ModelHeights/SkylineBlock, key: kind, value: assembly}
-        - has_reference: {path: /City/ModelHeights/SkylineBlock/SignA, asset: assets/sign.usda}
+        - kind_equals: {path: /City/AssetFoundry/SkylineBlock, value: assembly}
+        - has_reference: {path: /City/AssetFoundry/SkylineBlock/SignA, asset: sign.usda}
     cookbook: docs/asset-structure/model-hierarchy/exercise-assemblies.md
-    xp: 390
-    reward: Skyline Surveyor Badge
-    world_target: /City/ModelHeights/SkylineBlock
-    recipes: [Usd.ModelAPI.SetKind, Usd.References.AddReference]
+    xp: 300
+    reward: {opinion_points: 1, achievement: "New achievement! You aggregated a component without stuffing its guts into the block."}
+    world_target: /City/AssetFoundry/SkylineBlock
+    recipes: [Assembly, Model Hierarchy]
+    questions:
+      - prompt: What should an assembly typically contain?
+        choices:
+          - References or payloads to other models
+          - Flattened gprims copied from every component
+          - Only class prims
+        answer: 0
+        explanation: Assemblies aggregate models rather than duplicating their geometry.
+
+  - id: f6_street_groups
+    title: Group the North and South Lots
+    floor: 6
+    floor_name: Asset Foundry
+    neighborhood: Model Heights
+    kind: room
+    prerequisites: [f6_assembly_block]
+    level_required: 14
+    exam_tasks: [author_group_kind, nest_model_hierarchy]
+    stats: {lore: 4, craft: 3}
+    brief: "SYSTEM: Guild job eleven. An assembly with six naked children is a spreadsheet. Group the lots."
+    starter: |
+      from pxr import Kind, Usd, UsdGeom
+
+      stage = Usd.Stage.CreateNew(STAGE_PATH)
+      world = UsdGeom.Xform.Define(stage, "/World").GetPrim()
+      stage.SetDefaultPrim(world)
+      Usd.ModelAPI(world).SetKind(Kind.Tokens.assembly)
+      # TODO: Define /World/North and /World/South as group Xforms.
+      stage.GetRootLayer().Save()
+    language: python
+    validator:
+      assertions:
+        - kind_equals: {path: /World, value: assembly}
+        - kind_equals: {path: /World/North, value: group}
+        - kind_equals: {path: /World/South, value: group}
+    cookbook: docs/asset-structure/model-hierarchy/exercise-groups.md
+    xp: 240
+    reward: Lot Survey
+    world_target: /City/AssetFoundry/SkylineBlock
+    recipes: [Group, Model Hierarchy]
 
   - id: f6_zoning_golem
     title: Reorder the Zoning Golem
     floor: 6
-    floor_name: Model Heights
+    floor_name: Asset Foundry
     neighborhood: Hierarchy Hall
     kind: floor_boss
-    prerequisites: [f6_assembly_block]
+    prerequisites: [f6_street_groups]
     level_required: 14
-    exam_tasks: [enforce_model_hierarchy, author_group_kind]
-    stats: {lore: 4, resolve: 4}
-    brief: "SYSTEM: The Golem mistakes clutter for structure. Build a valid model hierarchy."
+    exam_tasks: [enforce_model_hierarchy, inspect_kinds]
+    stats: {lore: 5, resolve: 5, insight: 3}
+    brief: "SYSTEM: The Golem stacked a component on an assembly and called it urban planning. Restore group over assembly over component before the inspector arrives."
     starter: |
       from pxr import Kind, Usd, UsdGeom
-      stage = Usd.Stage.Open(STAGE_PATH)
-      district = stage.GetPrimAtPath("/City/ModelHeights")
-      # Set district kind=group; ensure SkylineBlock remains an assembly below it.
+
+      stage = Usd.Stage.CreateNew(STAGE_PATH)
+      district = UsdGeom.Xform.Define(stage, "/City/AssetFoundry").GetPrim()
+      block = UsdGeom.Xform.Define(stage, "/City/AssetFoundry/SkylineBlock").GetPrim()
+      house = UsdGeom.Xform.Define(stage, "/City/AssetFoundry/House").GetPrim()
+      # Currently inverted on purpose. Fix the kinds.
+      Usd.ModelAPI(district).SetKind(Kind.Tokens.component)
+      Usd.ModelAPI(block).SetKind(Kind.Tokens.group)
+      Usd.ModelAPI(house).SetKind(Kind.Tokens.assembly)
+      # TODO: district=group, SkylineBlock=assembly, House=component.
       stage.GetRootLayer().Save()
     language: python
     validator:
       assertions:
-        - metadata_equals: {path: /City/ModelHeights, key: kind, value: group}
-        - metadata_equals: {path: /City/ModelHeights/SkylineBlock, key: kind, value: assembly}
-        - metadata_equals: {path: /City/ModelHeights/House, key: kind, value: component}
+        - kind_equals: {path: /City/AssetFoundry, value: group}
+        - kind_equals: {path: /City/AssetFoundry/SkylineBlock, value: assembly}
+        - kind_equals: {path: /City/AssetFoundry/House, value: component}
+        - prim_exists: /City/AssetFoundry/SkylineBlock
+        - prim_exists: /City/AssetFoundry/House
     cookbook: docs/asset-structure/model-hierarchy/model-hierarchy-considerations.md
-    xp: 470
-    reward: Golem's Zoning Core
-    world_target: /City/ModelHeights
-    recipes: [Usd.ModelAPI, Kind.Tokens.group, Kind.Tokens.assembly]
+    xp: 480
+    reward:
+      opinion_points: 3
+      achievement: "Floor clear! The Zoning Golem now recites group, assembly, component in the approved order."
+      inventory: {system_peeks: 1}
+    world_target: /City/AssetFoundry
+    recipes: [Model Hierarchy, Kind]
+    questions:
+      - prompt: Which kind should organize sibling assemblies in a district?
+        choices: [group, component, gprim]
+        answer: 0
+        explanation: Groups organize models without being leaf components.
+      - prompt: Why keep component geometry out of the assembly layer?
+        choices:
+          - Assemblies aggregate reusable models; copying gprims breaks reuse
+          - Components cannot be referenced
+          - Kind metadata forbids payloads
+        answer: 0
+        explanation: Model hierarchy exists so assemblies instance and reference components.
+      - prompt: Which API sets a prim's model kind?
+        choices: [Usd.ModelAPI.SetKind, UsdGeom.Tokens.kind, Sdf.Layer.SetKind]
+        answer: 0
+        explanation: Usd.ModelAPI is the supported authoring API for kind.

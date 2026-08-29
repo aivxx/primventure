@@ -1,48 +1,330 @@
 floor: 9
-floor_name: Crown District
+floor_name: Recap Colosseum
 quests:
   - id: f9_portfolio_gate
     title: Open the Portfolio Gate
     floor: 9
-    floor_name: Crown District
+    floor_name: Recap Colosseum
     neighborhood: Portfolio Promenade
     kind: room
     prerequisites: [f7_mirror_forge, f8_customs_engine]
     level_required: 18
-    exam_tasks: [compose_portfolio, preserve_contracts]
+    exam_tasks: ["7.2", compose_portfolio, preserve_contracts]
     stats: {craft: 5, lore: 5}
-    brief: "SYSTEM: The Crown admits builders, not tourists. Present a composed city."
+    brief: "SYSTEM: Both branches are clear. Present a payload of cargo and a pipeline note. Tourists will be refunded in sarcasm."
     starter: |
-      from pxr import Usd
-      stage = Usd.Stage.Open(STAGE_PATH)
-      crown = stage.DefinePrim("/City/CrownDistrict", "Xform")
-      # Add a payload to cargo.usda and documentation "Portfolio capstone district."
+      from pathlib import Path
+      from pxr import Usd, UsdGeom
+
+      cargo = (Path(WORLD_ROOT) / "assets" / "cargo.usda").as_posix()
+      stage = Usd.Stage.CreateNew(STAGE_PATH)
+      crown = UsdGeom.Xform.Define(stage, "/City/CrownDistrict").GetPrim()
+      # TODO: Payload cargo.usda and set documentation to "Portfolio capstone district."
       stage.GetRootLayer().Save()
     language: python
     validator:
       assertions:
-        - has_payload: {path: /City/CrownDistrict, asset: assets/cargo.usda}
+        - has_payload: {path: /City/CrownDistrict, asset: cargo.usda}
         - metadata_equals: {path: /City/CrownDistrict, key: documentation, value: "Portfolio capstone district."}
     cookbook: docs/asset-structure/asset-structure-principles/your-first-asset.md
-    xp: 550
+    xp: 280
     reward: Portfolio Gate Writ
     world_target: /City/CrownDistrict
-    recipes: [Usd.Payloads.AddPayload, Usd.Object.SetDocumentation]
+    recipes: [Payload, Asset]
+
+  - id: f9_edit_target_duel
+    title: Duel on the Weaker Edit Target
+    floor: 9
+    floor_name: Recap Colosseum
+    neighborhood: Debug Gauntlet
+    kind: room
+    prerequisites: [f9_portfolio_gate]
+    level_required: 18
+    exam_tasks: ["8.1", set_edit_target, inspect_property_stack]
+    stats: {insight: 5, craft: 3}
+    brief: "SYSTEM: Root is strongest. The notes layer is weaker. Set the edit target before you author or you will vandalize the wrong file. This is debugging, not interior design."
+    starter: |
+      from pathlib import Path
+      from pxr import Sdf, Usd
+
+      stage = Usd.Stage.CreateNew(STAGE_PATH)
+      world = stage.DefinePrim("/World", "Xform")
+      notes = Sdf.Layer.CreateNew(str(Path(STAGE_PATH).parent / "notes.usda"))
+      stage.GetRootLayer().subLayerPaths.append("notes.usda")
+      stage.SetEditTarget(notes)
+      # TODO: Author displayName "Authored on notes" on /World while notes is the edit target.
+      stage.GetRootLayer().Save()
+      notes.Save()
+    language: python
+    validator:
+      assertions:
+        - metadata_equals: {path: /World, key: displayName, value: "Authored on notes"}
+        - sublayer_order: {layers: [notes.usda]}
+    cookbook: docs/creating-composition-arcs/prim-composition.md
+    xp: 260
+    reward: Edit Target Glove
+    world_target: /City/CrownDistrict
+    recipes: [Layer Stack, Opinions]
+
+  - id: f9_stack_inspector
+    title: Read the Property Stack Aloud
+    floor: 9
+    floor_name: Recap Colosseum
+    neighborhood: Debug Gauntlet
+    kind: neighborhood_boss
+    prerequisites: [f9_edit_target_duel]
+    level_required: 18
+    exam_tasks: ["8.2", debug_value_resolution, inspect_prim_stack]
+    stats: {insight: 6, resolve: 4}
+    brief: "SYSTEM: A reference says 1. You will say 4. GetPropertyStack is a flashlight, not a weapon. Leave the weaker arc alive."
+    starter: |
+      from pathlib import Path
+      from pxr import Sdf, Usd
+
+      stage = Usd.Stage.CreateNew(STAGE_PATH)
+      source = Usd.Stage.CreateNew(str(Path(STAGE_PATH).parent / "weaker.usda"))
+      root = source.DefinePrim("/Probe", "Xform")
+      root.CreateAttribute("signal", Sdf.ValueTypeNames.Int).Set(1)
+      source.SetDefaultPrim(root)
+      source.GetRootLayer().Save()
+      probe = stage.DefinePrim("/World/Probe", "Xform")
+      probe.GetReferences().AddReference("weaker.usda")
+      # TODO: Author local signal = 4 on /World/Probe.
+      stage.GetRootLayer().Save()
+    language: python
+    validator:
+      assertions:
+        - attribute_equals: {path: /World/Probe.signal, value: 4}
+        - attribute_source: {path: /World/Probe.signal, layer: submission.usd}
+        - has_reference: {path: /World/Probe, asset: weaker.usda}
+        - prim_stack: {path: /World/Probe, min: 2}
+    cookbook: docs/beyond-basics/value-resolution.md
+    xp: 300
+    reward: {opinion_points: 1, achievement: "New achievement! You inspected the stack and still wrote the stronger opinion yourself."}
+    world_target: /City/CrownDistrict
+    recipes: [Value Resolution, LIVERPS Strength Ordering]
+    questions:
+      - prompt: Why inspect GetPropertyStack instead of guessing?
+        choices:
+          - It lists the authored sources in strength order for that property
+          - It flattens the stage
+          - It compiles a plugin
+        answer: 0
+        explanation: The property stack is a debug view of competing opinions.
+
+  - id: f9_layer_offset_raid
+    title: Shift Time Without Rewriting Samples
+    floor: 9
+    floor_name: Recap Colosseum
+    neighborhood: Debug Gauntlet
+    kind: room
+    prerequisites: [f9_stack_inspector]
+    level_required: 18
+    exam_tasks: ["8.3", author_layer_offset]
+    stats: {insight: 5, craft: 4}
+    brief: "SYSTEM: The clip starts at frame 0. The shot wants it at 10. LayerOffset. Do not bake new samples unless you enjoy unpaid overtime."
+    starter: |
+      from pathlib import Path
+      from pxr import Sdf, Usd
+
+      folder = Path(STAGE_PATH).parent
+      clip = Usd.Stage.CreateNew(str(folder / "clip.usda"))
+      prim = clip.DefinePrim("/Clip", "Xform")
+      attr = prim.CreateAttribute("amp", Sdf.ValueTypeNames.Int)
+      attr.Set(1, 0)
+      attr.Set(2, 5)
+      clip.SetDefaultPrim(prim)
+      clip.GetRootLayer().Save()
+
+      stage = Usd.Stage.CreateNew(STAGE_PATH)
+      dest = stage.DefinePrim("/World/Clip", "Xform")
+      # TODO: Add a reference to clip.usda with Sdf.LayerOffset(offset=10).
+      stage.GetRootLayer().Save()
+    language: python
+    validator:
+      assertions:
+        - has_reference: {path: /World/Clip, asset: clip.usda}
+        - layer_offset: {path: /World/Clip, offset: 10}
+    cookbook: docs/beyond-basics/value-resolution.md
+    xp: 280
+    reward: Offset Wrench
+    world_target: /City/CrownDistrict
+    recipes: [Layer Offset, Animated Value]
+
+  - id: f9_flatten_delivery
+    title: Flatten for Delivery, Keep the Receipt
+    floor: 9
+    floor_name: Recap Colosseum
+    neighborhood: Debug Gauntlet
+    kind: room
+    prerequisites: [f9_layer_offset_raid]
+    level_required: 18
+    exam_tasks: ["7.2", flatten_stage, deliver_package]
+    stats: {lore: 5, craft: 4}
+    brief: "SYSTEM: Delivery wants one file. Flatten the composed cube. This is a package, not a workstream. Do not confuse the two."
+    starter: |
+      from pathlib import Path
+      from pxr import Sdf, Usd
+
+      folder = Path(STAGE_PATH).parent
+      part = Usd.Stage.CreateNew(str(folder / "part.usda"))
+      part.DefinePrim("/World", "Xform")
+      part.DefinePrim("/World/Cube", "Cube")
+      part.GetRootLayer().Save()
+
+      composed = Usd.Stage.CreateInMemory()
+      composed.GetRootLayer().subLayerPaths.append(str(folder / "part.usda"))
+      # TODO: Flatten composed (returns an Sdf.Layer) and Export it to STAGE_PATH.
+    language: python
+    validator:
+      assertions:
+        - prim_type: {path: /World/Cube, value: Cube}
+        - sublayer_order: {layers: []}
+    cookbook: docs/beyond-basics/value-resolution.md
+    xp: 260
+    reward: Delivery Flatten
+    world_target: /City/CrownDistrict
+    recipes: [Flatten, Layer]
+
+  - id: f9_changeblock_sprint
+    title: Batch the Edits, Don't Spam Notices
+    floor: 9
+    floor_name: Recap Colosseum
+    neighborhood: Debug Gauntlet
+    kind: neighborhood_boss
+    prerequisites: [f9_flatten_delivery]
+    level_required: 19
+    exam_tasks: ["8.4", use_sdf_changeblock]
+    stats: {craft: 4, insight: 4}
+    brief: "SYSTEM: Three attributes, one Sdf.ChangeBlock. Notices are not a personality. Batch them. usd-core can do this much without a full build."
+    starter: |
+      from pxr import Sdf, Usd
+
+      stage = Usd.Stage.CreateNew(STAGE_PATH)
+      prim = stage.DefinePrim("/World/Batch", "Xform")
+      # TODO: Inside Sdf.ChangeBlock(), create integer attributes a, b, and c set to 1, 2, 3.
+      stage.GetRootLayer().Save()
+    language: python
+    validator:
+      assertions:
+        - attribute_equals: {path: /World/Batch.a, value: 1}
+        - attribute_equals: {path: /World/Batch.b, value: 2}
+        - attribute_equals: {path: /World/Batch.c, value: 3}
+    cookbook: docs/beyond-basics/custom-properties.md
+    xp: 240
+    reward: {opinion_points: 1, achievement: "New achievement! You used a ChangeBlock. The notice queue sends flowers."}
+    world_target: /City/CrownDistrict
+    recipes: [Change Processing]
+    questions:
+      - prompt: What is Sdf.ChangeBlock for?
+        choices:
+          - Batching scene edits to reduce redundant change processing
+          - Compiling C++ plugins
+          - Deleting layer offsets
+        answer: 0
+        explanation: ChangeBlock coalesces notices while many specs are authored.
+
+  - id: f9_customizing_raid
+    title: The Plugin That Wasn't Here
+    floor: 9
+    floor_name: Recap Colosseum
+    neighborhood: Customizing Colosseum
+    kind: room
+    prerequisites: [f9_changeblock_sprint]
+    level_required: 19
+    exam_tasks: ["6.1", "6.2", "6.3", customizing_usd_concepts]
+    stats: {lore: 6, insight: 5}
+    brief: "SYSTEM: Concept raid. This arena is usd-core. It will not compile your plugin, generate a schema, or host an AssetResolver. Answer honestly. Pretending otherwise is how careers become LinkedIn myths."
+    starter: ""
+    language: none
+    validator:
+      assertions: []
+    cookbook: docs/beyond-basics/hydra.md
+    xp: 320
+    reward: Honest Plugin Disclaimer
+    world_target: /City/CrownDistrict
+    recipes: [Hydra, Plugin]
+    questions:
+      - prompt: What does usdGenSchema require that this local usd-core crawl cannot provide?
+        choices:
+          - A full OpenUSD build with codegen, typically including C++
+          - Only a USDA file and usdview
+          - A PointInstancer
+        answer: 0
+        explanation: Schema generation is a full-install workflow, not a usd-core notebook trick.
+      - prompt: What is an Asset Resolver responsible for?
+        choices:
+          - Mapping asset identifiers to locatable resources
+          - Winning LIVRPS over local opinions
+          - Replacing Hydra
+        answer: 0
+        explanation: Resolvers plug into Ar to locate assets from URIs or custom schemes.
+      - prompt: Where do Scene Indexes primarily live?
+        choices:
+          - Hydra 2.0 scene processing, not the usd-core composition engine in this arena
+          - Inside every Sdf.LayerOffset
+          - In Kind.Tokens
+        answer: 0
+        explanation: Scene Indexes filter Hydra scene data; they are not a substitute for LIVRPS.
+      - prompt: "Value clips are best described as:"
+        choices:
+          - Time-sampled layer sequences composed onto a prim, often for animation caches
+          - A synonym for variant sets
+          - A render delegate
+        answer: 0
+        explanation: Value clips stream time samples from clip layers rather than baking them all locally.
+
+  - id: f9_hydra_brief
+    title: Name the Three Heads of Hydra
+    floor: 9
+    floor_name: Recap Colosseum
+    neighborhood: Customizing Colosseum
+    kind: neighborhood_boss
+    prerequisites: [f9_customizing_raid]
+    level_required: 19
+    exam_tasks: ["6.4", hydra_architecture]
+    stats: {lore: 6, insight: 4}
+    brief: "SYSTEM: Hydra is not usdview. It is the bridge. Name the parts. HdStorm ships. Your custom delegate does not, not in this basement."
+    starter: ""
+    language: none
+    validator:
+      assertions: []
+    cookbook: docs/beyond-basics/hydra.md
+    xp: 280
+    reward: {opinion_points: 1, achievement: "New achievement! You described Hydra without claiming to have written HdStorm."}
+    world_target: /City/CrownDistrict
+    recipes: [Hydra, Rendering]
+    questions:
+      - prompt: Which three parts make up Hydra's core loop?
+        choices:
+          - Scene delegate, render index, render delegate
+          - Sublayer, reference, payload
+          - Kind, assetInfo, metersPerUnit
+        answer: 0
+        explanation: Hydra pulls scene data through a delegate, indexes it, and renders via a delegate plugin.
+      - prompt: What is HdStorm in a standard OpenUSD distribution?
+        choices:
+          - The included real-time render delegate used by usdview
+          - A required Asset Resolver
+          - A Kind token
+        answer: 0
+        explanation: HdStorm is the shipped GL/Metal/Vulkan delegate.
 
   - id: f9_archivist_prime
     title: Answer Archivist Prime
     floor: 9
-    floor_name: Crown District
+    floor_name: Recap Colosseum
     neighborhood: Certification Archive
     kind: city_boss
-    prerequisites: [f9_portfolio_gate]
+    prerequisites: [f9_hydra_brief]
     level_required: 19
-    exam_tasks: [explain_composition, verify_authored_state]
-    stats: {lore: 6, insight: 5}
-    brief: "SYSTEM: Archivist Prime permits no memorized incantations. Explain what the stage resolves."
+    exam_tasks: ["2.1", "3.1", "8.x", recap_mcq]
+    stats: {lore: 6, insight: 6}
+    brief: "SYSTEM: Archivist Prime permits no memorized incantations. Original questions. If you copy a dump, the crowd will know."
     starter: |
       from pxr import Usd
-      stage = Usd.Stage.Open(STAGE_PATH)
+
+      stage = Usd.Stage.CreateNew(STAGE_PATH)
       archive = stage.DefinePrim("/City/CrownDistrict/CertificationArchive", "Scope")
       archive.SetDocumentation("Composition knowledge verified.")
       stage.GetRootLayer().Save()
@@ -51,47 +333,88 @@ quests:
       assertions:
         - prim_type: {path: /City/CrownDistrict/CertificationArchive, value: Scope}
         - metadata_equals: {path: /City/CrownDistrict/CertificationArchive, key: documentation, value: "Composition knowledge verified."}
-    cookbook: docs/creating-composition-arcs/prim-composition.md
-    xp: 650
-    reward: Archivist's Gold Index
+    cookbook: docs/creating-composition-arcs/strength-ordering/what-is-liverps.md
+    xp: 400
+    reward: {opinion_points: 2, achievement: "Archive sealed. Your opinions have been indexed against the study guide, not a braindump."}
     world_target: /City/CrownDistrict/CertificationArchive
-    recipes: [Usd.Prim.GetPrimStack, Usd.Prim.GetMetadata]
+    recipes: [Composition, LIVERPS Strength Ordering]
     questions:
-      - prompt: Which local opinion wins over a referenced opinion, and why?
-        answer_key: A local opinion wins because local opinions are stronger than references in LIVRPS.
-      - prompt: Why use a payload for heavy optional content?
-        answer_key: Payloads permit deferred and selective loading while preserving composition.
+      - prompt: In LIVRPS, which pair is ordered strongest then weaker?
+        choices:
+          - Local opinions, then inherits
+          - Specializes, then local
+          - Payloads, then variant sets
+        answer: 0
+        explanation: Local is strongest; inherits are next.
+      - prompt: A referenced asset has no default prim and you omit primPath. What happens?
+        choices:
+          - The reference cannot target a prim automatically
+          - USD invents /World
+          - The strongest sublayer is referenced
+        answer: 0
+        explanation: External references without a prim path require a default prim.
+      - prompt: Why is TfDebug a poor substitute for GetPropertyStack while studying composition?
+        choices:
+          - TfDebug traces runtime diagnostics; it does not list authored opinion strength
+          - TfDebug deletes weaker layers
+          - TfDebug is the same API
+        answer: 0
+        explanation: Debug symbols and composition inspection solve different problems.
+      - prompt: "Custom Kind tokens in production usually require:"
+        choices:
+          - Kind plugin configuration in a full USD install, not just SetKind on a random string
+          - Only a displayName
+          - Flattening
+        answer: 0
+        explanation: Extending Kind is a customization workflow beyond usd-core defaults.
 
   - id: f9_null_monarch
     title: Reauthor the Null Monarch
     floor: 9
-    floor_name: Crown District
+    floor_name: Recap Colosseum
     neighborhood: Root Throne
     kind: floor_boss
     prerequisites: [f9_archivist_prime]
     level_required: 20
-    exam_tasks: [capstone_stage_authoring, combine_composition_patterns]
+    exam_tasks: ["1.1", "2.x", "7.2", capstone_stage_authoring]
     stats: {craft: 6, insight: 6, resolve: 6}
-    brief: "SYSTEM: The Null Monarch deletes meaning, not matter. Reassert every city contract."
+    brief: "SYSTEM: The Null Monarch deletes meaning, not matter. Reassert the city contract, instance a sign, and keep Y-up. Last fight. No C++. No mercy for missing default prims."
     starter: |
-      from pxr import Usd, UsdGeom
-      stage = Usd.Stage.Open(STAGE_PATH)
-      city = stage.GetPrimAtPath("/City")
-      throne = stage.DefinePrim("/City/CrownDistrict/RootThrone", "Xform")
-      # Make the throne an instanceable reference to sign.usda; restore City defaults.
+      from pathlib import Path
+      from pxr import Kind, Usd, UsdGeom
+
+      sign = (Path(WORLD_ROOT) / "assets" / "sign.usda").as_posix()
+      stage = Usd.Stage.CreateNew(STAGE_PATH)
+      city = UsdGeom.Xform.Define(stage, "/City").GetPrim()
+      throne = UsdGeom.Xform.Define(stage, "/City/CrownDistrict/RootThrone").GetPrim()
+      # TODO: default prim /City, Y-up, start 1, end 48.
+      # TODO: Reference the civic sign on the throne and set instanceable True.
+      # TODO: Mark /City kind group.
       stage.GetRootLayer().Save()
     language: python
     validator:
       assertions:
         - prim_exists: /City/CrownDistrict/RootThrone
-        - has_reference: {path: /City/CrownDistrict/RootThrone, asset: assets/sign.usda}
+        - has_reference: {path: /City/CrownDistrict/RootThrone, asset: sign.usda}
         - instanceable: {path: /City/CrownDistrict/RootThrone, value: true}
         - default_prim: /City
         - up_axis: Y
         - start_time: 1
         - end_time: 48
+        - kind_equals: {path: /City, value: group}
     cookbook: docs/asset-structure/asset-structure-principles/index.md
-    xp: 1000
-    reward: Crown of Persistent Composition
+    xp: 800
+    reward:
+      opinion_points: 5
+      achievement: "Colosseum clear. Contestant USD-01 remains underqualified and employed."
+      inventory: {system_peeks: 2}
     world_target: /City
-    recipes: [Usd.References.AddReference, Usd.Prim.SetInstanceable, Usd.Stage.SetDefaultPrim, UsdGeom.SetStageUpAxis]
+    recipes: [Default Prim, Instancing, Kind]
+    questions:
+      - prompt: Which of these is out of scope for a usd-core certification crawl?
+        choices:
+          - Compiling a custom C++ file-format plugin in this process
+          - Authoring a default prim
+          - Inspecting a prim stack
+        answer: 0
+        explanation: Plugin compilation needs a full USD build environment.
