@@ -107,6 +107,16 @@ def get_quest(quest_id: str) -> dict[str, Any]:
     return quest_view(quest, saves.load(), quests.lesson_for(quest))
 
 
+@app.get("/api/quests/{quest_id}/usda")
+def get_quest_usda(quest_id: str) -> dict[str, str]:
+    quests.refresh()
+    try:
+        quest = quests.get(quest_id)
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    return runner.usda_view(quest)
+
+
 @app.get("/api/recipes")
 def get_recipes() -> list[dict[str, Any]]:
     graph = ROOT / "docs" / "_static" / "data" / "glossary-graph-structure.js"

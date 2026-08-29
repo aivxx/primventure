@@ -342,10 +342,13 @@ def test_nameplate_room_is_solvable_from_what_the_ui_states(
     quest = next(item for item in QuestStore().all() if item.id == "f0_nameplate")
     saves = SaveStore(tmp_path / "save.json")
     saves.save(PlayerState(completed_quests=["f0_first_prim"]))
+    runner = QuestRunner(saves)
 
-    unchanged = QuestRunner(saves).run(quest, RunRequest(code=quest.starter))
+    unchanged = runner.run(quest, RunRequest(code=quest.starter))
     assert not unchanged.success
     assert [check.passed for check in unchanged.results] == [False, False]
+    assert 'def Xform "City"' in unchanged.before_usda
+    assert "cityName" not in unchanged.after_usda
 
     solution = quest.starter.replace(
         "stage.GetRootLayer().Save()",
@@ -354,8 +357,13 @@ def test_nameplate_room_is_solvable_from_what_the_ui_states(
         'city.SetMetadata("documentation", "The persistent city portfolio.")\n'
         "stage.GetRootLayer().Save()",
     )
-    solved = QuestRunner(saves).run(quest, RunRequest(code=solution))
+    solved = runner.run(quest, RunRequest(code=solution))
     assert solved.success, [check.message for check in solved.results if not check.passed]
+    assert 'custom string cityName = "Primventure"' in solved.after_usda
+    assert 'doc = "The persistent city portfolio."' in solved.after_usda
+    review = runner.usda_view(quest)
+    assert review["before_usda"] == solved.before_usda
+    assert review["after_usda"] == solved.after_usda
 
 
 def test_publish_preserves_supporting_layers(

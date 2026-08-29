@@ -41,7 +41,9 @@ type Recipe = { id: string; label: string; category: string; unlocked: boolean }
 type RunResult = {
   success: boolean; output: string; system_message: string;
   results: Array<{ rule: string; passed: boolean; message: string }>; state: PlayerState;
+  before_usda: string; after_usda: string;
 };
+type USDAView = { before_usda: string; after_usda: string };
 type Toast = { kind: "success" | "error" | "info"; title: string; message: string };
 type AssistResult = { kind: "hint" | "peek"; title: string; message: string };
 type HintResponse = { hint: string; state: PlayerState };
@@ -71,8 +73,22 @@ const CLASS_PATHS = [
 const ONBOARDED_KEY = "primventure.onboarded.v2";
 const GUIDED_KEY = "primventure.guided";
 const LESSONS_READ_KEY = "primventure.lessons-read.v1";
+const USDA_REVIEW_KEY = "primventure.usda-review";
 
-type GuideTarget = "lesson" | "editor" | "run" | "map" | "payout" | "consumables";
+type GuideTarget = "lesson" | "editor" | "run" | "usda" | "map" | "payout" | "consumables" | "feed";
+// Panels on the left edge have no room for an arrow beside them, and the
+// tutorial card owns the bottom left, so those targets get pointed at from the
+// right instead of being covered by their own callout.
+const POINTER_SIDE: Record<GuideTarget, "left" | "right"> = {
+  lesson: "right",
+  editor: "right",
+  run: "left",
+  usda: "right",
+  map: "right",
+  payout: "left",
+  consumables: "left",
+  feed: "left",
+};
 const GUIDE_STEPS: Array<{ target: GuideTarget; title: string; body: string }> = [
   {
     target: "lesson",
@@ -82,12 +98,17 @@ const GUIDE_STEPS: Array<{ target: GuideTarget; title: string; body: string }> =
   {
     target: "editor",
     title: "Write the code",
-    body: "The terminal holds real Python. A comment marks the line you need to write. STAGE_PATH is already defined for you.",
+    body: "This is the terminal. It holds real Python, with a blank line under each instruction to write on. STAGE_PATH and the closing Save() are already supplied.",
   },
   {
     target: "run",
     title: "Run the room",
-    body: "usd-core opens your stage and checks it. If something is missing, the System tells you which check failed. Nothing is lost when you miss.",
+    body: "usd-core opens your stage and checks it against the list in the room card. Nothing is lost when a check fails, so run as often as you need to.",
+  },
+  {
+    target: "usda",
+    title: "Read the USDA you authored",
+    body: "This panel holds the layer itself. BEFORE is the stage the room handed you, AFTER is what your code wrote, and the first changed line is highlighted.",
   },
   {
     target: "map",
@@ -103,6 +124,11 @@ const GUIDE_STEPS: Array<{ target: GuideTarget; title: string; body: string }> =
     target: "consumables",
     title: "Spend it on consumables",
     body: "Hint Tokens buy you a clue for the room you are stuck on. Opinion X-Rays show the composed layer stack after you clear a room. Click one here to use it, and hit SAFEROOM to buy more once a boss has paid you.",
+  },
+  {
+    target: "feed",
+    title: "Watch the city compose",
+    body: "City Feed renders world/root.usda, the stage every cleared room publishes into. It redraws after each win, so the skyline is the running total of everything you have authored.",
   },
 ];
 
@@ -129,6 +155,16 @@ function questStatus(quest: Quest): "locked" | "available" | "complete" | "boss"
   if (quest.completed) return "complete";
   if (!quest.unlocked) return "locked";
   return quest.kind.endsWith("boss") ? "boss" : "available";
+}
+
+function firstChangedLine(before: string, after: string): number {
+  const original = before.split("\n");
+  const modified = after.split("\n");
+  const length = Math.max(original.length, modified.length);
+  for (let index = 0; index < length; index += 1) {
+    if (original[index] !== modified[index]) return index + 1;
+  }
+  return 1;
 }
 
 function cookbookUrl(path: string) {
@@ -375,7 +411,11 @@ function GuideDock({ step, onBack, onNext, onClose }: {
   </div>;
 }
 
-function ScenePreview({ revision }: { revision: number }) {
+function ScenePreview({ revision, panelRef, spotlit }: {
+  revision: number;
+  panelRef?: React.Ref<HTMLElement>;
+  spotlit?: boolean;
+}) {
   const host = useRef<HTMLDivElement>(null);
   const [status, setStatus] = useState("SCANNING STAGE...");
 
@@ -441,7 +481,7 @@ function ScenePreview({ revision }: { revision: number }) {
     };
   }, [revision]);
 
-  return <section className="preview-card panel">
+  return <section className={`preview-card panel ${spotlit ? "spotlight" : ""}`} ref={panelRef}>
     <div className="panel-heading"><span><Boxes size={15} /> CITY FEED</span><em>{status}</em></div>
     <div className="preview-viewport" ref={host}><div className="view-corners" /><span className="axis">Y ↑<br />X ↗</span></div>
     <div className="preview-meta"><span>STAGE: world/root.usda</span><span>UP: Y</span><span>24 FPS</span></div>
@@ -461,12 +501,15 @@ export default function App() {
   const [assistResult, setAssistResult] = useState<AssistResult | null>(null);
   const [pendingSpend, setPendingSpend] = useState<"hint_tokens" | "system_peeks" | null>(null);
   const [checks, setChecks] = useState<boolean[]>([]);
+  const [usdaView, setUsdaView] = useState<USDAView>({ before_usda: "", after_usda: "" });
+  const [usdaMode, setUsdaMode] = useState<"before" | "after">("before");
+  const [reviewPending, setReviewPending] = useState(false);
   const [revision, setRevision] = useState(0);
   const [toast, setToast] = useState<Toast | null>(null);
   const [showLanding, setShowLanding] = useState(() => localStorage.getItem(ONBOARDED_KEY) !== "1");
   const [guideStep, setGuideStep] = useState<number | null>(null);
   const [mapScope, setMapScope] = useState<"floor" | "all">("floor");
-  const [pointer, setPointer] = useState<{ x: number; y: number } | null>(null);
+  const [pointer, setPointer] = useState<{ x: number; y: number; side: "left" | "right" } | null>(null);
   const [lessonOpen, setLessonOpen] = useState(false);
   const [, setLessonRevision] = useState(0);
   const booted = useRef(false);
@@ -474,9 +517,11 @@ export default function App() {
   const editorRef = useRef<HTMLElement>(null);
   const focusEditor = useRef<(() => void) | null>(null);
   const runRef = useRef<HTMLButtonElement>(null);
-  const mapRef = useRef<HTMLElement>(null);
+  const mapRef = useRef<HTMLDivElement>(null);
+  const usdaRef = useRef<HTMLElement>(null);
   const payoutRef = useRef<HTMLElement>(null);
   const consumablesRef = useRef<HTMLElement>(null);
+  const feedRef = useRef<HTMLElement>(null);
 
   const refresh = async (advance = false) => {
     const [nextState, nextQuests, nextRecipes] = await Promise.all([
@@ -487,6 +532,9 @@ export default function App() {
     setRecipes(nextRecipes);
     setActiveQuest((current) => {
       const nextOpen = nextQuests.find((quest) => quest.unlocked && !quest.completed);
+      const reviewId = localStorage.getItem(USDA_REVIEW_KEY);
+      const reviewQuest = reviewId ? nextQuests.find((quest) => quest.id === reviewId) : null;
+      if (!advance && reviewQuest) return reviewQuest;
       if (advance && nextOpen) return nextOpen;
       if (current) return nextQuests.find((quest) => quest.id === current.id) || current;
       return nextOpen || nextQuests[0] || null;
@@ -501,6 +549,27 @@ export default function App() {
         setShowLanding(false);
       }
     }
+  };
+
+  const chooseQuest = (quest: Quest) => {
+    if (reviewPending && quest.id !== activeQuest?.id) {
+      setUsdaMode("after");
+      setToast({
+        kind: "info",
+        title: "REVIEW THE OPINION",
+        message: "The room is clear. Inspect the updated USDA on the right, then continue.",
+      });
+      usdaRef.current?.scrollIntoView({ block: "center", behavior: "smooth" });
+      return;
+    }
+    setActiveQuest(quest);
+  };
+
+  const continueAfterReview = async () => {
+    localStorage.removeItem(USDA_REVIEW_KEY);
+    setReviewPending(false);
+    setUsdaMode("before");
+    await refresh(true);
   };
 
   const enterArena = () => {
@@ -525,10 +594,33 @@ export default function App() {
     setAssistResult(null);
     setPendingSpend(null);
     setChecks([]);
+    const owesReview = localStorage.getItem(USDA_REVIEW_KEY) === activeQuest.id;
+    setReviewPending(owesReview);
+    setUsdaMode(activeQuest.completed || owesReview ? "after" : "before");
+  }, [activeQuest?.id]);
+  useEffect(() => {
+    if (!activeQuest) return;
     if (!showLanding && activeQuest.lesson && !activeQuest.completed && !lessonsRead().has(activeQuest.id)) {
       setLessonOpen(true);
     }
   }, [activeQuest?.id, showLanding]);
+  useEffect(() => {
+    if (!activeQuest) return;
+    let cancelled = false;
+    setUsdaView({ before_usda: "", after_usda: "" });
+    api<USDAView>(`/quests/${activeQuest.id}/usda`)
+      .then((view) => {
+        if (!cancelled) setUsdaView(view);
+      })
+      .catch((error) => {
+        if (!cancelled) {
+          setToast({ kind: "error", title: "USDA OFFLINE", message: error.message });
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [activeQuest?.id]);
   useEffect(() => {
     if (!toast) return;
     const timeout = window.setTimeout(() => setToast(null), 6000);
@@ -567,8 +659,10 @@ export default function App() {
       editor: editorRef.current,
       run: runRef.current,
       map: mapRef.current,
+      usda: usdaRef.current,
       payout: payoutRef.current,
       consumables: consumablesRef.current,
+      feed: feedRef.current,
     } as Record<GuideTarget, HTMLElement | null>)[target];
     const measure = () => {
       const rect = node()?.getBoundingClientRect();
@@ -576,11 +670,20 @@ export default function App() {
         setPointer(null);
         return;
       }
+      const side = POINTER_SIDE[target];
       const centered = rect.top + Math.min(rect.height / 2, 150);
-      setPointer({
-        x: Math.max(108, rect.left - 10),
-        y: Math.min(Math.max(centered, 96), window.innerHeight - 44),
-      });
+      const x = side === "left"
+        ? Math.min(rect.right + 22, window.innerWidth - 104)
+        : Math.max(108, rect.left - 10);
+      let y = Math.min(Math.max(centered, 96), window.innerHeight - 44);
+      // The tutorial card is fixed to the bottom left. Anything the arrow would
+      // share that space with gets pointed at from higher up the target instead.
+      const dock = document.querySelector(".guide-dock")?.getBoundingClientRect();
+      const spansDock = dock && x - 96 < dock.right && x + 96 > dock.left;
+      if (dock && spansDock && y + 20 > dock.top - 12) {
+        y = Math.max(96, Math.min(y, dock.top - 44));
+      }
+      setPointer({ x, y, side });
     };
     // Narrow windows move the editor rail below the columns, so the run button
     // can start off-screen and take the fixed-position arrow with it.
@@ -637,13 +740,33 @@ export default function App() {
       const stageChecks = result.results.filter((item) => !item.rule.startsWith("question_"));
       setChecks(stageChecks.length === activeQuest.expects.length ? stageChecks.map((item) => item.passed) : []);
       const payout = result.state.opinion_points - state.opinion_points;
-      setToast({
-        kind: result.success ? "success" : "error",
-        title: result.success ? "ROOM CLEARED" : "VALIDATION FAILED",
-        message: `${!result.success && !lessonRead ? "SYSTEM: You skipped the briefing. The lesson remains available. " : ""}${result.system_message} ${result.results.filter((item) => !item.passed).map((item) => item.message).join(" ")}${payout > 0 ? ` Payout: +${payout} Opinion Points, spendable on consumables in the Saferoom.` : ""}`,
+      setUsdaView({
+        before_usda: result.before_usda || usdaView.before_usda,
+        after_usda: result.after_usda,
       });
-      await refresh(result.success);
-      if (result.success) setRevision((value) => value + 1);
+      setUsdaMode(result.after_usda ? "after" : "before");
+      const needsUsdaReview = result.success && activeQuest.language !== "none" && Boolean(result.after_usda);
+      if (needsUsdaReview) {
+        setToast(null);
+        localStorage.setItem(USDA_REVIEW_KEY, activeQuest.id);
+        setReviewPending(true);
+        setRevision((value) => value + 1);
+        window.setTimeout(() => usdaRef.current?.scrollIntoView({ block: "center", behavior: "smooth" }), 80);
+      } else if (!result.success) {
+        setToast({
+          kind: "error",
+          title: "VALIDATION FAILED",
+          message: `${!lessonRead ? "SYSTEM: You skipped the briefing. The lesson remains available. " : ""}${result.system_message} ${result.results.filter((item) => !item.passed).map((item) => item.message).join(" ")}`,
+        });
+      }
+      await refresh(result.success && !needsUsdaReview);
+      if (needsUsdaReview && payout > 0) {
+        setToast({
+          kind: "info",
+          title: `+${payout} OPINION POINT${payout === 1 ? "" : "S"}`,
+          message: "Payout banked. Review the updated USDA before continuing.",
+        });
+      }
     } catch (error) {
       setToast({ kind: "error", title: "SIGNAL LOST", message: error instanceof Error ? error.message : "The API did not answer." });
     } finally {
@@ -747,6 +870,7 @@ export default function App() {
     { id: "upgrade" as const, heading: "UPGRADES // PERMANENT AND COSMETIC", items: Object.entries(state.shop || {}).filter(([, item]) => item.kind !== "consumable") },
   ];
   const status = activeQuest ? questStatus(activeQuest) : "locked";
+  const visibleUsda = usdaMode === "before" ? usdaView.before_usda : usdaView.after_usda;
 
   if (showLanding) {
     return <div className="app-shell">
@@ -843,15 +967,15 @@ export default function App() {
             <b>× {quantity}</b>
           </div>)}
         </section>}
-        <ScenePreview revision={revision} />
+        <ScenePreview revision={revision} panelRef={feedRef} spotlit={spotlight === "feed"} />
       </aside>
-      <section className={`command-center ${spotlight === "map" ? "spotlight" : ""}`} ref={mapRef}>
+      <section className="command-center">
         <nav className="mode-tabs">
           <button className={activeTab === "map" ? "active" : ""} onClick={() => setActiveTab("map")}><Skull size={16} /> DUNGEON MAP</button>
           <button className={activeTab === "skills" ? "active" : ""} onClick={() => setActiveTab("skills")}><Sparkles size={16} /> RECIPE TREE</button>
           <button className={activeTab === "kiosk" ? "active" : ""} onClick={() => setActiveTab("kiosk")}><ShoppingCart size={16} /> SAFEROOM</button>
         </nav>
-        {activeTab === "map" && <div className="map panel">
+        {activeTab === "map" && <div className={`map panel ${spotlight === "map" ? "spotlight" : ""}`} ref={mapRef}>
           <div className="map-title">
             <div>
               <span>{mapScope === "floor" ? `FLOOR ${String(focusFloor).padStart(2, "0")} · ${focusCleared}/${focusRooms.length} CLEARED` : "CONTESTANT PATH // FLOORS 00–09"}</span>
@@ -870,7 +994,7 @@ export default function App() {
               const roomStatus = questStatus(quest);
               return <div className="room-wrap" key={quest.id}>
                 {index > 0 && <span className={`connector ${roomStatus === "locked" ? "locked" : ""}`} />}
-                <button className={`room ${roomStatus} ${activeQuest?.id === quest.id ? "selected" : ""}`} disabled={roomStatus === "locked"} onClick={() => setActiveQuest(quest)}>
+                <button className={`room ${roomStatus} ${activeQuest?.id === quest.id ? "selected" : ""}`} disabled={roomStatus === "locked"} onClick={() => chooseQuest(quest)}>
                   {roomStatus === "locked" ? <LockKeyhole /> : roomStatus === "boss" ? <Skull /> : roomStatus === "complete" ? <Trophy /> : <Code2 />}
                   <span>{quest.kind.endsWith("boss") ? "BOSS" : `0${index + 1}`}</span>
                 </button><small>{quest.title}</small>
@@ -912,6 +1036,24 @@ export default function App() {
             })}</div>
           </div>)}<small className="fine-print">*Saferoom status void during syntax errors and certification deadlines.</small>
         </div>}
+        <section className={`authoring-dock code-panel panel ${spotlight === "editor" ? "spotlight" : ""}`} ref={editorRef}>
+          <div className="editor-toolbar">
+            <span><TerminalSquare size={15} /> ROOM TERMINAL</span>
+            <div><button className="active">{activeQuest?.language.toUpperCase() || "—"}</button></div>
+          </div>
+          <Editor
+            height="100%"
+            language={activeQuest?.language === "python" ? "python" : "plaintext"}
+            theme="vs-dark"
+            value={code}
+            onChange={(value) => setCode(value || "")}
+            onMount={(editor) => { focusEditor.current = () => editor.focus(); }}
+            options={{ readOnly: activeQuest?.language === "none" || reviewPending, minimap: { enabled: false }, fontSize: 13, lineHeight: 21, padding: { top: 16 }, scrollBeyondLastLine: false, tabSize: 4 }}
+          />
+          <button className={`run-button ${spotlight === "run" ? "spotlight" : ""}`} onClick={runQuest} disabled={running || !activeQuest || status === "locked" || reviewPending} ref={runRef}>
+            {running ? <RefreshCw className="spin" /> : reviewPending ? <CheckCircle2 /> : <Play fill="currentColor" />} {running ? "JUDGES ARE THINKING..." : reviewPending ? "ROOM CLEARED — REVIEW USDA →" : activeQuest?.language === "none" ? "ACKNOWLEDGE BRIEF" : "RUN THE ROOM"}
+          </button>
+        </section>
       </section>
       <aside className="editor-rail">
         <section className="challenge-card">
@@ -919,7 +1061,10 @@ export default function App() {
           <h2>{activeQuest?.title || "Waiting for the System"}</h2><p>{activeQuest?.brief}</p>
           <div className="objective"><ChevronRight size={16} /><span><small>NEIGHBORHOOD</small>{activeQuest?.neighborhood}</span></div>
           {activeQuest && <div className="learning-route">
-            <span className={lessonRead ? "done" : "current"}><b>1</b> LEARN</span><i /><span className={lessonRead ? "current" : ""}><b>2</b> AUTHOR</span><i /><span><b>3</b> VALIDATE</span>
+            <span className={lessonRead ? "done" : "current"}><b>1</b> LEARN</span><i />
+            <span className={reviewPending ? "done" : lessonRead ? "current" : ""}><b>2</b> AUTHOR</span><i />
+            <span className={reviewPending ? "done" : checks.length ? "current" : ""}><b>3</b> VALIDATE</span><i />
+            <span className={reviewPending ? "current" : ""}><b>4</b> REVIEW</span>
           </div>}
           {activeQuest && <button className="cookbook-link" onClick={() => setLessonOpen(true)}><BookOpen size={15} /> {lessonRead ? "REVIEW LESSON" : "LEARN THIS ROOM"}</button>}
           {activeQuest && activeQuest.expects.length > 0 && <div className="expectations">
@@ -938,16 +1083,48 @@ export default function App() {
             </select> : <input value={String(answers[index] ?? "")} onChange={(event) => setAnswers((current) => current.map((answer, i) => i === index ? event.target.value : answer))} placeholder="Explain your reasoning…" />}
           </label>)}
         </section>
-        <section className={`code-panel panel ${spotlight === "editor" ? "spotlight" : ""}`} ref={editorRef}>
-          <div className="editor-toolbar"><span><TerminalSquare size={15} /> ROOM TERMINAL</span><div><button className="active">{activeQuest?.language.toUpperCase() || "—"}</button></div></div>
-          <Editor height="100%" language={activeQuest?.language === "python" ? "python" : "plaintext"} theme="vs-dark" value={code} onChange={(value) => setCode(value || "")} onMount={(editor) => { focusEditor.current = () => editor.focus(); }} options={{ readOnly: activeQuest?.language === "none", minimap: { enabled: false }, fontSize: 13, lineHeight: 21, padding: { top: 16 }, scrollBeyondLastLine: false, tabSize: 4 }} />
+        <section className={`usda-panel panel ${reviewPending ? "review-required" : ""} ${spotlight === "usda" ? "spotlight" : ""}`} ref={usdaRef}>
+          <div className="usda-heading">
+            <span><Code2 size={15} /> AUTHORED USDA</span>
+            <div className="usda-tabs">
+              <button className={usdaMode === "before" ? "active" : ""} onClick={() => setUsdaMode("before")}>BEFORE</button>
+              <button className={usdaMode === "after" ? "active" : ""} onClick={() => setUsdaMode("after")} disabled={!usdaView.after_usda}>AFTER</button>
+            </div>
+          </div>
+          {reviewPending && <div className="review-callout">
+            <ArrowRight size={18} />
+            <div><strong>ROOM CLEARED // REVIEW THE UPDATE</strong><small>The green USDA is the layer your Python authored.</small></div>
+          </div>}
+          <div className={`usda-editor ${usdaMode}`}>
+            {visibleUsda ? <Editor
+              key={`${activeQuest?.id}-${usdaMode}-${reviewPending ? "review" : "idle"}`}
+              height="100%"
+              language="plaintext"
+              theme="vs-dark"
+              value={visibleUsda}
+              onMount={(editor) => {
+                if (usdaMode !== "after" || !usdaView.before_usda) return;
+                const line = firstChangedLine(usdaView.before_usda, usdaView.after_usda);
+                editor.revealLineInCenter(line);
+                editor.deltaDecorations([], [{
+                  range: { startLineNumber: line, startColumn: 1, endLineNumber: line, endColumn: 1 },
+                  options: { isWholeLine: true, className: "usda-changed-line", glyphMarginClassName: "usda-changed-glyph" },
+                }]);
+              }}
+              options={{ readOnly: true, minimap: { enabled: false }, fontSize: 11, lineHeight: 18, wordWrap: "on", scrollBeyondLastLine: false, padding: { top: 12 } }}
+            /> : <div className="usda-empty">
+              <Code2 size={24} />
+              <strong>{activeQuest?.language === "none" ? "NO LAYER FOR THIS BRIEFING" : "RUN THE ROOM TO AUTHOR USDA"}</strong>
+              <p>{activeQuest?.language === "none" ? "This room checks an answer, not a stage." : "The BEFORE tab shows the incoming layer. Your authored result appears here after a run."}</p>
+            </div>}
+          </div>
+          {reviewPending && <button className="continue-button" onClick={continueAfterReview}>
+            I SEE THE NEW OPINIONS — CONTINUE <ArrowRight size={15} />
+          </button>}
         </section>
-        <button className={`run-button ${spotlight === "run" ? "spotlight" : ""}`} onClick={runQuest} disabled={running || !activeQuest || status === "locked"} ref={runRef}>
-          {running ? <RefreshCw className="spin" /> : <Play fill="currentColor" />} {running ? "JUDGES ARE THINKING..." : activeQuest?.language === "none" ? "ACKNOWLEDGE BRIEF" : "RUN THE ROOM"}
-        </button>
       </aside>
     </main>
-    {guideStep !== null && pointer && <div className="guide-pointer" style={{ left: pointer.x, top: pointer.y }} aria-hidden="true">
+    {guideStep !== null && pointer && <div className={`guide-pointer ${pointer.side}`} style={{ left: pointer.x, top: pointer.y }} aria-hidden="true">
       <span className="pointer-step">{guideStep + 1}</span>
       <ChevronRight /><ChevronRight />
     </div>}

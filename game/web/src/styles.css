@@ -53,7 +53,7 @@ button:focus-visible { outline: 2px solid var(--cream); outline-offset: 3px; }
 .player-strip strong { font-size:11px; }
 .level { margin-left:8px; font-size:9px; color:var(--yellow); border:1px solid #62501d; padding:5px 7px; }
 
-main { display:grid; grid-template-columns: 250px minmax(420px, 1fr) 450px; gap:12px; padding:12px; min-height:calc(100vh - 74px); }
+main { display:grid; grid-template-columns: 250px minmax(420px, 1fr) 450px; gap:12px; padding:12px; height:calc(100vh - 74px); min-height:720px; }
 .left-rail, .editor-rail { display:flex; flex-direction:column; gap:12px; min-width:0; }
 .panel { background:linear-gradient(145deg, rgba(29,26,33,.96), rgba(17,16,20,.98)); border:1px solid #37313c; position:relative; }
 .panel::after { content:""; position:absolute; inset:5px; border:1px solid rgba(255,255,255,.025); pointer-events:none; }
@@ -93,11 +93,11 @@ main { display:grid; grid-template-columns: 250px minmax(420px, 1fr) 450px; gap:
 .axis { position:absolute; bottom:12px; left:12px; z-index:2; color:#8b8390; font-size:7px; line-height:1.7; }
 .preview-meta { padding:7px 9px; display:flex; justify-content:space-between; color:#6e6872; font-size:6px; }
 
-.command-center { display:flex; flex-direction:column; min-width:0; }
+.command-center { display:flex; flex-direction:column; min-width:0; min-height:0; }
 .mode-tabs { display:flex; height:41px; border-bottom:1px solid #3a343e; margin-bottom:12px; }
 .mode-tabs button { border:0; border-right:1px solid #332f37; background:#131116; color:#756f7a; padding:0 18px; font-size:9px; font-weight:700; letter-spacing:1px; display:flex; align-items:center; gap:7px; cursor:pointer; }
 .mode-tabs button.active { background:var(--cream); color:var(--ink); }
-.map,.skill-tree,.kiosk { flex:1; overflow:auto; max-height:calc(100vh - 139px); }
+.map,.skill-tree,.kiosk { flex:1 1 42%; min-height:245px; overflow:auto; }
 .map-title,.section-hero { padding:28px 30px 24px; display:flex; justify-content:space-between; align-items:flex-end; border-bottom:1px solid #39333e; background:linear-gradient(110deg,rgba(159,84,255,.14),transparent 55%); }
 .map-title span,.section-hero>span { color:var(--yellow); font-size:8px; font-weight:700; letter-spacing:2px; }
 .map-title h1,.section-hero h1 { margin:3px 0 1px; font:900 italic clamp(28px,3vw,45px)/.9 "Barlow Condensed"; letter-spacing:.5px; }
@@ -148,15 +148,17 @@ main { display:grid; grid-template-columns: 250px minmax(420px, 1fr) 450px; gap:
 .skill-node small{color:var(--purple);font-size:7px;letter-spacing:1px}.skill-node h3{font:800 17px "Barlow Condensed";margin:3px 0}.skill-node p{font-size:8px;line-height:1.5;color:#817a86}.skill-node footer{position:absolute;bottom:12px;color:var(--yellow);font-size:7px;font-weight:700}
 .shop-grid article { min-height:230px;padding:20px;background:#19171c;border:1px solid #39343d;position:relative}.shop-grid article.owned{border-color:#2f865d}.shop-number{position:absolute;right:12px;top:8px;font:800 31px "Barlow Condensed";color:#2e2a32}.shop-grid svg{color:var(--yellow)}.shop-grid h3{font:800 20px "Barlow Condensed";margin:14px 0 5px}.shop-grid p{font-size:8px;line-height:1.6;color:#8e8792;min-height:48px}.shop-grid button{border:0;background:var(--yellow);color:#111;padding:9px 12px;font-size:9px;font-weight:700;display:flex;gap:5px;align-items:center;cursor:pointer}.shop-grid button:disabled{background:#302c33;color:#716b76;cursor:not-allowed}.fine-print{display:block;padding:10px 25px;color:#5d5761;font-size:7px}
 
-.editor-rail { background:#121015; border:1px solid #38323d; }
-.challenge-card { padding:20px; background:linear-gradient(135deg,#302037,#18151c 70%); border-bottom:1px solid #4a3e4e; position:relative;overflow:hidden}
+.editor-rail { background:#121015; border:1px solid #38323d; min-height:0; }
+.challenge-card { flex:none; max-height:44%; overflow:auto; padding:20px; background:linear-gradient(135deg,#302037,#18151c 70%); border-bottom:1px solid #4a3e4e; position:relative}
 .challenge-card::before{content:"02";position:absolute;right:-4px;bottom:-30px;font:900 120px "Barlow Condensed";color:rgba(255,255,255,.025)}
 .eyebrow{display:flex;justify-content:space-between;align-items:center}.eyebrow span{font-size:7px;background:var(--red);padding:4px 7px;font-weight:700;letter-spacing:1px}.eyebrow b{font-size:8px;color:var(--yellow)}
 .challenge-card h2{font:900 italic 29px/.95 "Barlow Condensed";margin:13px 0 8px}.challenge-card>p{font-size:9px;line-height:1.6;color:#aca4b0}
 .objective{display:flex;gap:7px;align-items:center;border-left:2px solid var(--yellow);background:#28221a;padding:9px;color:var(--yellow)}.objective span{font-size:8px;color:#d7cdaa}.objective small{display:block;color:var(--yellow);font-size:6px;letter-spacing:1.2px;margin-bottom:3px}
-.learning-route{display:flex;align-items:center;gap:6px;margin-top:12px;color:#8e8792;font-size:7px;font-weight:700;letter-spacing:1px}.learning-route span{display:flex;align-items:center;gap:4px;white-space:nowrap}.learning-route b{display:grid;place-items:center;width:15px;height:15px;background:#3c3050;color:var(--cream);font-size:7px}.learning-route i{width:12px;border-top:1px dotted #665772}
+.learning-route{display:flex;align-items:center;gap:5px;margin-top:12px;color:#8e8792;font-size:6.5px;font-weight:700;letter-spacing:.7px}.learning-route span{display:flex;align-items:center;gap:4px;white-space:nowrap}.learning-route b{display:grid;place-items:center;width:15px;height:15px;background:#3c3050;color:var(--cream);font-size:7px}.learning-route i{flex:1;min-width:5px;border-top:1px dotted #665772}
 .learning-route span.current{color:var(--yellow)}.learning-route span.current b{background:var(--yellow);color:var(--ink)}.learning-route span.done{color:var(--green)}.learning-route span.done b{background:var(--green);color:var(--ink)}
-.cookbook-link{display:inline-flex;align-items:center;gap:7px;margin-top:10px;padding:10px 12px;border:1px solid #7a6320;background:#2b2413;color:var(--yellow);font-size:9px;font-weight:700;letter-spacing:.7px;cursor:pointer}.cookbook-link:hover{background:#3a3016;border-color:var(--yellow)}
+.cookbook-link{display:inline-flex;align-items:center;gap:7px;margin-top:10px;padding:10px 12px;border:1px solid #7a6320;background:#2b2413;color:var(--yellow);font-size:9px;font-weight:700;letter-spacing:.7px;cursor:pointer;animation:lesson-breathe 2.6s ease-in-out infinite}
+.cookbook-link:hover{background:#3a3016;border-color:var(--yellow);animation:none}
+@keyframes lesson-breathe{0%,100%{border-color:#7a6320;box-shadow:0 0 0 rgba(255,203,46,0)}50%{border-color:var(--yellow);box-shadow:0 0 13px rgba(255,203,46,.32)}}
 .assist-result{position:relative;margin:7px;padding:10px 28px 10px 11px;border:1px solid #634887;border-left:3px solid var(--purple);background:#1b1521}
 .assist-result.peek{border-color:#4b745f;border-left-color:var(--green);background:#142019}
 .assist-result>span{color:#c798ff;font-size:7px;font-weight:700;letter-spacing:1.5px}.assist-result.peek>span{color:var(--green)}
@@ -219,8 +221,23 @@ main { display:grid; grid-template-columns: 250px minmax(420px, 1fr) 450px; gap:
 .expectations li.failed{color:#ff8d9c}.expectations li.failed i{color:var(--red)}
 .boss-question{display:block;position:relative;margin-top:12px;color:#d7cdaa;font-size:8px;line-height:1.45}.boss-question input,.boss-question select{display:block;width:100%;margin-top:5px;padding:8px;background:#141217;border:1px solid #514758;color:var(--cream);font:8px "IBM Plex Mono"}
 .code-panel { flex:1; min-height:350px; display:flex;flex-direction:column;border-left:0;border-right:0; }
+.authoring-dock{flex:1 1 50%;min-height:330px;margin-top:12px;border:1px solid #37313c}
+.authoring-dock>.run-button{flex:none;width:calc(100% - 24px);margin:9px 12px 12px}
 .editor-toolbar{height:39px;flex:none;display:flex;align-items:center;justify-content:space-between;padding:0 10px;border-bottom:1px solid #38323c;font-size:8px;font-weight:700}.editor-toolbar>span{display:flex;gap:6px;align-items:center}.editor-toolbar button{background:transparent;color:#77717c;border:0;border-left:1px solid #39333d;padding:8px;cursor:pointer;font-size:8px}.editor-toolbar button.active{color:var(--yellow)}
 .run-button{margin:12px;border:0;background:var(--yellow);color:#12100a;min-height:49px;font-weight:800;font-size:11px;display:flex;justify-content:center;align-items:center;gap:9px;cursor:pointer;clip-path:polygon(2% 0,100% 0,98% 100%,0 100%);box-shadow:inset 0 -4px 0 rgba(0,0,0,.22)}.run-button:hover{background:#ffe069}.run-button:disabled{filter:grayscale(.7);cursor:wait}.run-button svg{width:17px}.run-button kbd{position:absolute;right:27px;font-size:8px;color:#75601c}.spin{animation:spin 1s linear infinite}
+.usda-panel{flex:1;min-height:0;display:flex;flex-direction:column;overflow:hidden}
+.usda-heading{height:42px;flex:none;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #38323c;padding-left:12px}
+.usda-heading>span{display:flex;align-items:center;gap:7px;font-size:8px;font-weight:700;letter-spacing:1.2px}
+.usda-tabs{align-self:stretch;display:flex}.usda-tabs button{border:0;border-left:1px solid #38323c;background:#131116;color:#77717c;padding:0 12px;font:700 7px "IBM Plex Mono";letter-spacing:1px;cursor:pointer}.usda-tabs button.active{background:#242027;color:var(--yellow)}.usda-tabs button:disabled{opacity:.35;cursor:not-allowed}
+.usda-editor{flex:1;min-height:180px;position:relative}.usda-editor.after{box-shadow:inset 3px 0 0 var(--green)}
+.usda-changed-line{background:rgba(77,204,145,.14);border-left:3px solid var(--green)}
+.usda-changed-glyph{background:var(--green)}
+.usda-empty{height:100%;display:grid;place-content:center;justify-items:center;text-align:center;padding:28px;color:#5f5964}.usda-empty strong{margin-top:10px;color:#8c8491;font:800 14px "Barlow Condensed";letter-spacing:1px}.usda-empty p{max-width:34ch;font-size:8px;line-height:1.6}
+.review-required{border-color:var(--green);box-shadow:0 0 0 2px rgba(77,204,145,.18),0 0 28px rgba(77,204,145,.12);animation:review-pulse 1.8s ease-in-out infinite}
+.review-callout{display:flex;align-items:center;gap:9px;flex:none;padding:9px 12px;background:#14241c;border-bottom:1px solid #2f865d;color:var(--green)}.review-callout>svg{animation:review-point 1s ease-in-out infinite}.review-callout strong,.review-callout small{display:block}.review-callout strong{font-size:8px;letter-spacing:1px}.review-callout small{margin-top:3px;color:#9ccbb5;font-size:7px}
+.continue-button{flex:none;margin:10px;border:0;background:var(--green);color:#0b1811;min-height:45px;display:flex;align-items:center;justify-content:center;gap:8px;font:800 9px "IBM Plex Mono";letter-spacing:.7px;cursor:pointer}.continue-button:hover{background:#74e0ac}
+@keyframes review-pulse{50%{box-shadow:0 0 0 3px rgba(77,204,145,.32),0 0 34px rgba(77,204,145,.22)}}
+@keyframes review-point{50%{transform:translateX(6px)}}
 
 .system-toast{position:fixed;z-index:50;right:24px;top:91px;width:min(380px,calc(100vw - 32px));padding:22px 22px 18px;background:#f3edda;color:#161318;border:2px solid #161318;box-shadow:7px 7px 0 var(--yellow);animation:toast-in .35s ease-out;overflow:hidden}.system-toast.error{box-shadow:7px 7px 0 var(--red)}.system-toast.success{box-shadow:7px 7px 0 var(--green)}.system-toast button{position:absolute;right:8px;top:8px;background:transparent;border:0;cursor:pointer}.system-toast button svg{width:17px}.toast-tag{font-size:7px;font-weight:700;letter-spacing:1.5px;color:#785c00;margin-bottom:7px}.system-toast strong{font:900 italic 24px "Barlow Condensed"}.system-toast p{font-size:9px;line-height:1.5;margin:5px 25px 0 0}.toast-scan{height:3px;background:var(--yellow);position:absolute;bottom:0;left:0;animation:scan 5.5s linear}.error .toast-scan{background:var(--red)}.success .toast-scan{background:var(--green)}
 
@@ -364,10 +381,17 @@ main { display:grid; grid-template-columns: 250px minmax(420px, 1fr) 450px; gap:
 .guide-actions .ghost:disabled { opacity:.4; cursor:not-allowed; }
 .guide-actions .solid { background:#161318; color:var(--cream); }
 
-.guide-pointer { position:fixed; z-index:91; transform:translate(-100%,-50%); display:flex; align-items:center; gap:2px; pointer-events:none; animation:point-nudge 1.15s ease-in-out infinite; }
+.guide-pointer { position:fixed; z-index:91; display:flex; align-items:center; gap:2px; pointer-events:none; }
+/* `.left` mirrors the whole callout so it can sit to the right of a panel and
+   point back at it; the step number is flipped again to stay readable. */
+.guide-pointer.right { transform:translate(-100%,-50%); animation:point-right 1.15s ease-in-out infinite; }
+.guide-pointer.left { transform:translate(0,-50%) scaleX(-1); animation:point-left 1.15s ease-in-out infinite; }
+.guide-pointer.left .pointer-step { transform:scaleX(-1); }
 .pointer-step { display:grid; place-items:center; width:38px; height:38px; margin-right:4px; background:var(--yellow); color:#12100a; font:900 24px "Barlow Condensed"; clip-path:polygon(14% 0,100% 0,86% 100%,0 100%); box-shadow:0 0 26px rgba(255,203,46,.55); }
 .guide-pointer svg { width:27px; height:27px; stroke-width:3; color:var(--yellow); filter:drop-shadow(0 0 10px rgba(255,203,46,.85)); }
 .guide-pointer svg:last-child { margin-left:-16px; opacity:.5; }
+.guide-pointer.left svg:last-child { opacity:1; }
+.guide-pointer.left svg:first-of-type { opacity:.5; }
 
 .spotlight { outline:3px solid var(--yellow); outline-offset:3px; animation:spotlight-pulse 1.9s ease-in-out infinite; }
 .run-button.spotlight { outline:0; filter:drop-shadow(0 0 10px rgba(255,203,46,.8)); animation:cta-pulse 1.5s ease-in-out infinite; }
@@ -380,7 +404,8 @@ main { display:grid; grid-template-columns: 250px minmax(420px, 1fr) 450px; gap:
 @keyframes roll{from{top:-90px}to{top:100vh}}
 @keyframes vu{0%,100%{height:22%}30%{height:100%}55%{height:48%}75%{height:86%}}
 @keyframes slide-in{from{opacity:0;transform:translateX(-26px)}to{opacity:1;transform:none}}
-@keyframes point-nudge{50%{transform:translate(calc(-100% + 14px),-50%)}}
+@keyframes point-right{50%{transform:translate(calc(-100% + 14px),-50%)}}
+@keyframes point-left{50%{transform:translate(-14px,-50%) scaleX(-1)}}
 @keyframes blink{50%{opacity:0}}
 @keyframes cta-glow{50%{box-shadow:inset 0 -4px 0 rgba(0,0,0,.22),0 0 26px rgba(255,203,46,.4)}}
 @keyframes glitch-a{0%,88%,100%{clip-path:inset(0 0 62% 0);transform:translate(-3px,-1px)}91%{clip-path:inset(12% 0 40% 0);transform:translate(-7px,1px)}95%{clip-path:inset(0 0 78% 0);transform:translate(4px,-2px)}}
@@ -388,15 +413,16 @@ main { display:grid; grid-template-columns: 250px minmax(420px, 1fr) 450px; gap:
 
 @media(prefers-reduced-motion:reduce){
   .landing::after,.ticker-track,.landing h1::before,.landing h1::after,.landing-cta,.caret,.spotlight,
-  .run-button.spotlight,.chrome-roll,.bottom-meter i,.rec-dot,.lower-third,.guide-pointer,.lesson-drawer{animation:none}
+  .run-button.spotlight,.chrome-roll,.bottom-meter i,.rec-dot,.lower-third,.guide-pointer,.lesson-drawer,.cookbook-link,
+  .review-required,.review-callout>svg{animation:none}
   .landing h1::before,.landing h1::after,.chrome-roll{display:none}
 }
 
 @media(max-width:1180px){
-  main{grid-template-columns:210px 1fr}.editor-rail{grid-column:1/-1;display:grid;grid-template-columns:280px 1fr auto;min-height:390px}.code-panel{min-height:390px}.run-button{min-width:180px;align-self:stretch}.run-button kbd{display:none}.preview-card{min-height:230px}
+  main{grid-template-columns:210px 1fr;height:auto;min-height:calc(100vh - 74px)}.editor-rail{grid-column:1/-1;display:grid;grid-template-columns:300px 1fr;min-height:480px}.challenge-card{max-height:none;border-right:1px solid #4a3e4e}.usda-panel{min-height:480px}.run-button kbd{display:none}.preview-card{min-height:230px}
 }
 @media(max-width:800px){
-  .topbar{grid-template-columns:1fr auto;height:64px}.broadcast{display:none}.brand strong{font-size:20px}main{display:flex;flex-direction:column;padding:8px}.left-rail{display:grid;grid-template-columns:1fr 1fr}.preview-card{grid-column:1/-1;height:280px}.command-center{order:-1;min-height:600px}.editor-rail{display:flex;min-height:650px}.code-panel{height:420px;flex:none}.floor{grid-template-columns:1fr;gap:18px}.floor-label strong{max-width:none}.room-track{justify-content:space-around}.room-wrap{flex-basis:92px;width:92px}.connector{width:20px}.skill-node{transform:none}
+  .topbar{grid-template-columns:1fr auto;height:64px}.broadcast{display:none}.brand strong{font-size:20px}main{display:flex;flex-direction:column;padding:8px}.left-rail{display:grid;grid-template-columns:1fr 1fr}.preview-card{grid-column:1/-1;height:280px}.command-center{order:-1;min-height:900px}.authoring-dock{height:430px;flex:none}.editor-rail{display:flex;min-height:760px}.challenge-card{max-height:none}.usda-panel{min-height:460px}.floor{grid-template-columns:1fr;gap:18px}.floor-label strong{max-width:none}.room-track{justify-content:space-around}.room-wrap{flex-basis:92px;width:92px}.connector{width:20px}.skill-node{transform:none}
   .lesson-drawer{width:100vw}
 }
 @media(max-width:900px){

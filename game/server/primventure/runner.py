@@ -49,6 +49,8 @@ class QuestRunner:
             return self._response(quest, state, False, [], "", f"STAIRWELL LOCKED. {reason}")
 
         question_results = self._validate_questions(quest, request.answers)
+        before_usda = ""
+        after_usda = ""
         if quest.language == "none":
             results = question_results or [
                 ValidationResult(rule="orientation", passed=True, message="Brief acknowledged.")
@@ -56,7 +58,9 @@ class QuestRunner:
             output = ""
             artifact = None
         else:
-            artifact, output, execution_error = self._execute(quest, request)
+            artifact, output, execution_error, before_usda, after_usda = self._execute_with_snapshots(
+                quest, request
+            )
             if execution_error:
                 results = question_results + [
                     ValidationResult(rule="execution", passed=False, message=execution_error)
@@ -69,7 +73,7 @@ class QuestRunner:
         success = bool(results) and all(result.passed for result in results)
         if success:
             if artifact is not None:
-                self._publish(quest, artifact)
+                self._publish(quest, artifact, before_usda, after_usda)
             state = self._award(quest, state)
             message = VICTORIES[sum(map(ord, quest.id)) % len(VICTORIES)]
         else:
@@ -79,29 +83,57 @@ class QuestRunner:
                 state.level = level_for_xp(state.xp)
                 self.saves.save(state)
                 message += " Boss fee: 25 XP."
-        return self._response(quest, state, success, results, output, message)
+        return self._response(
+            quest,
+            state,
+            success,
+            results,
+            output,
+            message,
+            before_usda,
+            after_usda,
+        )
 
-    def _execute(self, quest: Quest, request: RunRequest) -> tuple[Path | None, str, str | None]:
+    def _execute(
+        self, quest: Quest, request: RunRequest
+    ) -> tuple[Path | None, str, str | None]:
+        """Compatibility entry point for validators and lesson solution tests."""
+        artifact, output, error, _, _ = self._execute_with_snapshots(quest, request)
+        return artifact, output, error
+
+    def _execute_with_snapshots(
+        self, quest: Quest, request: RunRequest
+    ) -> tuple[Path | None, str, str | None, str, str]:
         temp_dir = Path(tempfile.mkdtemp(prefix="primventure-"))
         extension = ".usda" if (request.language or quest.language) == "usda" else ".usd"
         stage_path = temp_dir / f"submission{extension}"
         code = request.code
         if not code.strip():
             shutil.rmtree(temp_dir, ignore_errors=True)
-            return None, "", "No authored opinions detected. Submit code or USDA."
+            return (
+                None,
+                "",
+                "No authored opinions detected. Submit code or USDA.",
+                self.baseline_usda(quest),
+                "",
+            )
 
         if extension == ".usda":
+            before_usda = quest.starter
             stage_path.write_text(code)
             try:
                 layer = Sdf.Layer.FindOrOpen(str(stage_path))
                 if layer is None:
                     raise ValueError("USD could not open the submitted layer.")
             except Exception as exc:
-                return stage_path, "", f"USDA parse failed: {exc}"
-            return stage_path, "", None
+                return stage_path, "", f"USDA parse failed: {exc}", before_usda, code
+            return stage_path, "", None, before_usda, layer.ExportToString()
 
         if "CreateNew(STAGE_PATH)" not in code:
             self._seed_stage(stage_path)
+            before_usda = self._layer_to_usda(stage_path)
+        else:
+            before_usda = self._empty_usda()
         script_path = temp_dir / "submission.py"
         prelude = (
             "from pathlib import Path\n"
@@ -135,13 +167,70 @@ class QuestRunner:
                 timeout=20,
             )
         except subprocess.TimeoutExpired:
-            return stage_path, "", "Execution exceeded the eight-second arena limit."
+            return (
+                stage_path,
+                "",
+                "Execution exceeded the eight-second arena limit.",
+                before_usda,
+                self._layer_to_usda(stage_path),
+            )
         output = (completed.stdout + completed.stderr).strip()
+        after_usda = self._layer_to_usda(stage_path)
         if completed.returncode:
-            return stage_path, output, f"Python exited with status {completed.returncode}."
+            return (
+                stage_path,
+                output,
+                f"Python exited with status {completed.returncode}.",
+                before_usda,
+                after_usda,
+            )
         if not stage_path.exists():
-            return stage_path, output, "Code ran, but no stage was saved to STAGE_PATH."
-        return stage_path, output, None
+            return (
+                stage_path,
+                output,
+                "Code ran, but no stage was saved to STAGE_PATH.",
+                before_usda,
+                "",
+            )
+        return stage_path, output, None, before_usda, after_usda
+
+    def baseline_usda(self, quest: Quest) -> str:
+        """Return the authored layer a player starts from before running code."""
+        if quest.language == "none":
+            return ""
+        if quest.language == "usda":
+            return quest.starter
+        if "CreateNew(STAGE_PATH)" in quest.starter:
+            return self._empty_usda()
+        temp_dir = Path(tempfile.mkdtemp(prefix="primventure-baseline-"))
+        try:
+            path = temp_dir / "before.usd"
+            self._seed_stage(path)
+            return self._layer_to_usda(path)
+        finally:
+            shutil.rmtree(temp_dir, ignore_errors=True)
+
+    def usda_view(self, quest: Quest) -> dict[str, str]:
+        """Load stable review snapshots, or prepare the active room baseline."""
+        snapshots = WORLD_DIR / "workstreams" / quest.id / ".review"
+        before = snapshots / "before.usda"
+        after = snapshots / "after.usda"
+        return {
+            "before_usda": before.read_text() if before.exists() else self.baseline_usda(quest),
+            "after_usda": after.read_text() if after.exists() else "",
+        }
+
+    @staticmethod
+    def _empty_usda() -> str:
+        layer = Sdf.Layer.CreateAnonymous(".usda")
+        return layer.ExportToString()
+
+    @staticmethod
+    def _layer_to_usda(path: Path) -> str:
+        if not path.exists():
+            return ""
+        layer = Sdf.Layer.FindOrOpen(str(path))
+        return layer.ExportToString() if layer else ""
 
     @staticmethod
     def _seed_stage(stage_path: Path) -> None:
@@ -374,7 +463,13 @@ class QuestRunner:
                 pass
         return value
 
-    def _publish(self, quest: Quest, artifact: Path) -> None:
+    def _publish(
+        self, quest: Quest, artifact: Path, before_usda: str = "", after_usda: str = ""
+    ) -> None:
+        snapshots = (WORLD_DIR / "workstreams" / quest.id / ".review").resolve()
+        snapshots.mkdir(parents=True, exist_ok=True)
+        (snapshots / "before.usda").write_text(before_usda)
+        (snapshots / "after.usda").write_text(after_usda or self._layer_to_usda(artifact))
         if quest.world_target and not quest.world_target.startswith("/"):
             destination = (WORLD_DIR / quest.world_target).resolve()
             destination.parent.mkdir(parents=True, exist_ok=True)
@@ -443,6 +538,8 @@ class QuestRunner:
         results: list[ValidationResult],
         output: str,
         message: str,
+        before_usda: str = "",
+        after_usda: str = "",
     ) -> RunResponse:
         return RunResponse(
             success=success,
@@ -451,5 +548,7 @@ class QuestRunner:
             output=output,
             system_message=message,
             state=state.model_dump(),
+            before_usda=before_usda,
+            after_usda=after_usda,
         )
 

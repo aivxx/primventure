@@ -81,6 +81,8 @@ class RunResponse(BaseModel):
     output: str = ""
     system_message: str
     state: dict[str, Any]
+    before_usda: str = ""
+    after_usda: str = ""
 
 
 class PlayerState(BaseModel):
