@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import Editor from "@monaco-editor/react";
 import {
-  ArrowRight, Backpack, Boxes, BookOpen, CheckCircle2, ChevronRight, Circle,
-  CircleDollarSign, Code2, Eye, FlaskConical, Gem, HelpCircle, Lightbulb,
-  ListChecks, LockKeyhole, Play, RefreshCw, Shield, ShoppingCart, Skull,
-  Sparkles, Swords, TerminalSquare, Trophy, X, XCircle, Zap,
+  ArrowRight, Backpack, Boxes, BookOpen, CheckCircle2, ChevronLeft, ChevronRight,
+  Circle, CircleDollarSign, Clapperboard, Code2, Eye, FlaskConical, Gem, HelpCircle,
+  Lightbulb, ListChecks, LockKeyhole, Play, RefreshCw, Shield, ShoppingCart,
+  Skull, Sparkles, Swords, TerminalSquare, Trophy, Tv, X, XCircle, Zap,
 } from "lucide-react";
 import * as THREE from "three";
 
@@ -115,7 +115,7 @@ const GUIDE_STEPS: Array<{ target: GuideTarget; title: string; body: string }> =
   {
     target: "map",
     title: "Move through the floors",
-    body: "Clear the rooms to learn the floor. The boss is the exit exam, and your cleared work stacks up as a real USD city in world/. Rooms tagged +OP on the map pay Opinion Points the first time you clear them.",
+    body: "Clear the rooms to learn the floor. The boss is the exit exam, and your cleared work stacks up as a real USD city in world/. Cleared floors become playback episodes. The audience rewatches those reruns while you stay on the live broadcast.",
   },
   {
     target: "payout",
@@ -167,6 +167,22 @@ function questStatus(quest: Quest): "locked" | "available" | "complete" | "boss"
   if (quest.completed) return "complete";
   if (!quest.unlocked) return "locked";
   return quest.kind.endsWith("boss") ? "boss" : "available";
+}
+
+function floorStatus(rooms: Quest[]): "locked" | "live" | "cleared" {
+  if (rooms.some((quest) => quest.unlocked && !quest.completed)) return "live";
+  if (rooms.length > 0 && rooms.every((quest) => quest.completed)) return "cleared";
+  return "locked";
+}
+
+function episodeCode(floor: number) {
+  return `S01E${String(floor).padStart(2, "0")}`;
+}
+
+function episodeTag(kind: "locked" | "live" | "cleared") {
+  if (kind === "live") return "ON AIR";
+  if (kind === "cleared") return "RERUN";
+  return "UNAIRED";
 }
 
 function firstChangedLine(before: string, after: string): number {
@@ -424,11 +440,34 @@ function GuideDock({ step, onBack, onNext, onClose }: {
 }
 
 type ScenePrim = {
-  path: string; type: string; matrix: number[]; color: [number, number, number];
+  path: string; name: string; type: string; matrix: number[];
+  role: "geometry" | "light" | "pad";
+  color?: [number, number, number];
   size?: number; radius?: number; height?: number; axis?: string;
-  points?: number[][]; triangles?: number[];
+  points?: number[][]; triangles?: number[]; intensity?: number;
 };
 type WorldScene = { up_axis: string; meters_per_unit: number; prims: ScenePrim[] };
+
+/** The district a prim belongs to, so the plan view can give it a plot. */
+function districtOf(path: string) {
+  const parts = path.split("/").filter(Boolean);
+  return parts.length > 1 ? parts.slice(0, 2).join("/") : parts[0] || "City";
+}
+
+/** Plot centres on a square grid, ordered so the city grows outward evenly. */
+function planGrid(count: number, pitch: number) {
+  const columns = Math.max(1, Math.ceil(Math.sqrt(count)));
+  const rows = Math.ceil(count / columns);
+  return Array.from({ length: count }, (_, index) => {
+    const column = index % columns;
+    const row = Math.floor(index / columns);
+    return new THREE.Vector3(
+      (column - (columns - 1) / 2) * pitch,
+      0,
+      (row - (rows - 1) / 2) * pitch,
+    );
+  });
+}
 
 /** One gprim, as three.js geometry. Implicit shapes carry parameters, not points. */
 function primGeometry(prim: ScenePrim): THREE.BufferGeometry | null {
@@ -447,6 +486,41 @@ function primGeometry(prim: ScenePrim): THREE.BufferGeometry | null {
     if (prim.triangles?.length) geometry.setIndex(prim.triangles);
     geometry.computeVertexNormals();
     return geometry;
+  }
+  return null;
+}
+
+/** Lights and addressed-but-empty prims, drawn as landmarks rather than buildings. */
+function landmarkObject(prim: ScenePrim): THREE.Object3D | null {
+  if (prim.role === "light") {
+    const color = new THREE.Color().setRGB(...(prim.color ?? [1, 0.8, 0.18]));
+    const radius = Math.max(prim.radius ?? 0.5, 0.35);
+    const beacon = new THREE.Group();
+    beacon.add(new THREE.Mesh(
+      new THREE.SphereGeometry(radius, 18, 12),
+      new THREE.MeshStandardMaterial({ color, emissive: color, emissiveIntensity: 1.6 }),
+    ));
+    beacon.add(new THREE.Mesh(
+      new THREE.SphereGeometry(radius * 1.7, 14, 10),
+      new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.12 }),
+    ));
+    // A real light on the stage, so the feed is lit by what the player authored.
+    beacon.add(new THREE.PointLight(color, Math.min((prim.intensity ?? 1) / 250, 6), 0, 2));
+    return beacon;
+  }
+  if (prim.role === "pad") {
+    const color = new THREE.Color().setRGB(...(prim.color ?? [0.42, 0.36, 0.52]));
+    const plate = new THREE.Mesh(
+      new THREE.BoxGeometry(1.6, 0.08, 1.6),
+      new THREE.MeshStandardMaterial({ color, roughness: 0.85, transparent: true, opacity: 0.75 }),
+    );
+    const outline = new THREE.LineSegments(
+      new THREE.EdgesGeometry(new THREE.BoxGeometry(1.6, 0.08, 1.6)),
+      new THREE.LineBasicMaterial({ color: 0x9f54ff, transparent: true, opacity: 0.55 }),
+    );
+    const pad = new THREE.Group();
+    pad.add(plate, outline);
+    return pad;
   }
   return null;
 }
@@ -497,36 +571,129 @@ function ScenePreview({ revision, panelRef, spotlit }: {
       .then((response) => response.json() as Promise<WorldScene>)
       .then((world) => {
         if (disposed) return;
-        const city = new THREE.Group();
+        // Placement is never taught, so every district authors on the origin and
+        // would otherwise render as one interpenetrating pile. The feed is a
+        // planner's view: each district keeps its authored internal transforms
+        // but is handed its own plot.
+        const districts = new Map<string, ScenePrim[]>();
         for (const prim of world.prims) {
-          const geometry = primGeometry(prim);
-          if (!geometry) continue;
-          const color = new THREE.Color().setRGB(...prim.color);
-          const shape = new THREE.Mesh(geometry, new THREE.MeshStandardMaterial({
-            color, roughness: 0.42, metalness: 0.28, emissive: color, emissiveIntensity: 0.09,
-          }));
-          // USD hands back a row-major matrix for row-vector math, and fromArray
-          // reads column-major, so the load itself performs the transpose.
-          const placement = new THREE.Matrix4().fromArray(prim.matrix);
-          shape.applyMatrix4(placement);
-          const outline = new THREE.LineSegments(new THREE.EdgesGeometry(geometry), edgeMaterial);
-          outline.applyMatrix4(placement);
-          city.add(shape, outline);
+          const key = districtOf(prim.path);
+          districts.set(key, [...(districts.get(key) || []), prim]);
         }
-        if (!city.children.length) {
-          setStatus("NO GEOMETRY AUTHORED YET");
+        const blocks = new THREE.Group();
+        const built: THREE.Group[] = [];
+        for (const [, members] of districts) {
+          const block = new THREE.Group();
+          // Rooms that never author a transform all land on the same spot, so
+          // co-located neighbours get fanned apart. Anything the player did
+          // place keeps exactly the position it authored.
+          const spots = new Map<string, number>();
+          for (const prim of members) {
+            const geometry = prim.role === "geometry" ? primGeometry(prim) : null;
+            const object = geometry
+              ? new THREE.Mesh(geometry, new THREE.MeshStandardMaterial({
+                color: new THREE.Color().setRGB(...(prim.color ?? [0.58, 0.54, 0.66])),
+                roughness: 0.42,
+                metalness: 0.28,
+                emissive: new THREE.Color().setRGB(...(prim.color ?? [0.58, 0.54, 0.66])),
+                emissiveIntensity: 0.09,
+              }))
+              : landmarkObject(prim);
+            if (!object) continue;
+            // USD hands back a row-major matrix for row-vector math, and fromArray
+            // reads column-major, so the load itself performs the transpose.
+            const placement = new THREE.Matrix4().fromArray(prim.matrix);
+            object.applyMatrix4(placement);
+            const at = new THREE.Vector3().setFromMatrixPosition(placement);
+            const spot = `${at.x.toFixed(2)},${at.z.toFixed(2)}`;
+            const taken = spots.get(spot) ?? 0;
+            spots.set(spot, taken + 1);
+            if (taken) {
+              const ring = Math.ceil(taken / 8);
+              const step = (taken - 1) * (Math.PI / 4);
+              object.position.x += Math.cos(step) * 2.6 * ring;
+              object.position.z += Math.sin(step) * 2.6 * ring;
+            }
+            object.userData.role = prim.role;
+            block.add(object);
+            if (geometry) {
+              const outline = new THREE.LineSegments(new THREE.EdgesGeometry(geometry), edgeMaterial);
+              outline.applyMatrix4(placement);
+              outline.position.copy(object.position);
+              outline.userData.role = prim.role;
+              block.add(outline);
+            }
+          }
+          if (block.children.length) built.push(block);
+        }
+        if (!built.length) {
+          setStatus("NO OPINIONS PUBLISHED YET");
           return;
         }
+        // Size the plots from the largest district so nothing spills next door.
+        let pitch = 0;
+        const footprints = built.map((block) => {
+          block.updateMatrixWorld(true);
+          const box = new THREE.Box3().setFromObject(block);
+          const size = box.getSize(new THREE.Vector3());
+          pitch = Math.max(pitch, size.x, size.z);
+          // Buildings are what rests on the pavement. A beacon's glow reaches
+          // below its own centre, and letting that set the height would hoist
+          // the whole district off the ground.
+          const structural = new THREE.Box3();
+          for (const child of block.children) {
+            if (child.userData.role === "geometry") structural.expandByObject(child);
+          }
+          return { box, lift: structural.isEmpty() ? 0 : -structural.min.y };
+        });
+        pitch = (pitch || 2) * 1.55;
+        const centres = planGrid(built.length, pitch);
+        built.forEach((block, index) => {
+          const { box, lift } = footprints[index];
+          const centre = box.getCenter(new THREE.Vector3());
+          block.position.set(centres[index].x - centre.x, lift, centres[index].z - centre.z);
+          blocks.add(block);
+        });
+        const city = new THREE.Group();
+        city.add(blocks);
+        blocks.updateMatrixWorld(true);
+        const extent = new THREE.Box3().setFromObject(blocks);
+        const span = extent.getSize(new THREE.Vector3());
+        // Centre the districts over the origin so the ground can be laid under
+        // them. Only the footprint shifts; the skyline keeps standing on y=0.
+        const centre = extent.getCenter(new THREE.Vector3());
+        blocks.position.x -= centre.x;
+        blocks.position.z -= centre.z;
+        const ground = Math.max(span.x, span.z, pitch) * 1.3;
+        const plate = new THREE.Mesh(
+          new THREE.PlaneGeometry(ground, ground),
+          new THREE.MeshStandardMaterial({ color: 0x1b1424, roughness: 0.95, metalness: 0 }),
+        );
+        plate.rotation.x = -Math.PI / 2;
+        const lines = new THREE.GridHelper(ground, Math.max(4, built.length * 2), 0x6b4a9c, 0x33284a);
+        (lines.material as THREE.Material).transparent = true;
+        (lines.material as THREE.Material).opacity = 0.35;
+        city.add(plate, lines);
         if (world.up_axis === "Z") city.rotation.x = -Math.PI / 2;
+        // Frame on the ground plate, which always contains the districts, so a
+        // single tall tower cannot shrink the rest of the city out of view.
+        city.scale.multiplyScalar(4.3 / (Math.max(ground, span.y) * 1.42 || 1));
         city.updateMatrixWorld(true);
-        const extent = new THREE.Box3().setFromObject(city);
-        city.scale.multiplyScalar(2.4 / (extent.getSize(new THREE.Vector3()).length() || 1));
-        city.updateMatrixWorld(true);
-        city.position.sub(new THREE.Box3().setFromObject(city).getCenter(new THREE.Vector3()));
+        const settled = new THREE.Box3().setFromObject(city).getCenter(new THREE.Vector3());
+        city.position.set(-settled.x, -settled.y, -settled.z);
         scene.remove(fallback);
         model = city;
         scene.add(city);
-        setStatus(`LIVE STAGE · ${city.children.length / 2} PRIMS`);
+        const counts = world.prims.reduce(
+          (total, prim) => ({ ...total, [prim.role]: (total[prim.role] || 0) + 1 }),
+          {} as Record<string, number>,
+        );
+        const parts = [
+          counts.geometry ? `${counts.geometry} PRIM${counts.geometry === 1 ? "" : "S"}` : "",
+          counts.light ? `${counts.light} LIGHT${counts.light === 1 ? "" : "S"}` : "",
+          counts.pad ? `${counts.pad} LOT${counts.pad === 1 ? "" : "S"}` : "",
+        ].filter(Boolean);
+        setStatus(`${built.length} DISTRICT${built.length === 1 ? "" : "S"} · ${parts.join(" · ")}`);
       })
       .catch(() => setStatus("STAGE FEED OFFLINE"));
     const resize = () => {
@@ -555,7 +722,7 @@ function ScenePreview({ revision, panelRef, spotlit }: {
   return <section className={`preview-card panel ${spotlit ? "spotlight" : ""}`} ref={panelRef}>
     <div className="panel-heading"><span><Boxes size={15} /> CITY FEED</span><em>{status}</em></div>
     <div className="preview-viewport" ref={host}><div className="view-corners" /><span className="axis">Y ↑<br />X ↗</span></div>
-    <div className="preview-meta"><span>STAGE: world/root.usda</span><span>UP: Y</span><span>24 FPS</span></div>
+    <div className="preview-meta"><span>STAGE: world/root.usda</span><span>PLAN VIEW</span><span>UP: Y</span></div>
   </section>;
 }
 
@@ -580,6 +747,7 @@ export default function App() {
   const [showLanding, setShowLanding] = useState(() => localStorage.getItem(ONBOARDED_KEY) !== "1");
   const [guideStep, setGuideStep] = useState<number | null>(null);
   const [mapScope, setMapScope] = useState<"floor" | "all">("floor");
+  const [browseFloor, setBrowseFloor] = useState<number | null>(null);
   const [pointer, setPointer] = useState<{ x: number; y: number; side: "left" | "right" } | null>(null);
   const [lessonOpen, setLessonOpen] = useState(false);
   const [, setLessonRevision] = useState(0);
@@ -603,6 +771,7 @@ export default function App() {
     setState(nextState);
     setQuests(nextQuests);
     setRecipes(nextRecipes);
+    if (advance) setBrowseFloor(null);
     setActiveQuest((current) => {
       const nextOpen = nextQuests.find((quest) => quest.unlocked && !quest.completed);
       const reviewId = localStorage.getItem(USDA_REVIEW_KEY);
@@ -635,7 +804,18 @@ export default function App() {
       usdaRef.current?.scrollIntoView({ block: "center", behavior: "smooth" });
       return;
     }
+    setBrowseFloor(quest.floor);
+    setMapScope("floor");
     setActiveQuest(quest);
+  };
+
+  const openFloor = (floor: number | "all") => {
+    if (floor === "all") {
+      setMapScope("all");
+      return;
+    }
+    setMapScope("floor");
+    setBrowseFloor(floor);
   };
 
   const continueAfterReview = async () => {
@@ -796,10 +976,23 @@ export default function App() {
     () => quests.find((quest) => !quest.completed && quest.opinion_points > 0) || null,
     [quests],
   );
-  const focusFloor = activeQuest?.floor ?? nextQuest?.floor ?? 0;
+  const liveFloor = nextQuest?.floor ?? activeQuest?.floor ?? 0;
+  const focusFloor = browseFloor ?? activeQuest?.floor ?? liveFloor;
   const visibleFloors = mapScope === "all" ? floors : floors.filter(([floor]) => floor === focusFloor);
   const focusRooms = floors.find(([floor]) => floor === focusFloor)?.[1] || [];
   const focusCleared = focusRooms.filter((quest) => quest.completed).length;
+  const playbackEpisode = mapScope === "floor" && focusFloor !== liveFloor && focusCleared > 0;
+  const playbackScene = Boolean(activeQuest?.completed && activeQuest.floor !== liveFloor);
+  const reachableFloors = floors.filter(([, rooms]) => floorStatus(rooms) !== "locked");
+  const archiveIndex = reachableFloors.findIndex(([floor]) => floor === focusFloor);
+  const previousFloor = archiveIndex > 0 ? reachableFloors[archiveIndex - 1]?.[0] : undefined;
+  const nextArchiveFloor = archiveIndex >= 0 ? reachableFloors[archiveIndex + 1]?.[0] : undefined;
+  const resumeLiveBroadcast = () => {
+    const live = nextQuest || quests.find((quest) => quest.unlocked && !quest.completed) || activeQuest;
+    setBrowseFloor(null);
+    setMapScope("floor");
+    if (live && live.id !== activeQuest?.id && !reviewPending) setActiveQuest(live);
+  };
   const lessonRead = activeQuest ? lessonsRead().has(activeQuest.id) : false;
   const spotlight = guideStep === null ? null : GUIDE_STEPS[guideStep].target;
   const xpFloor = (state.level - 1) * 100;
@@ -969,9 +1162,13 @@ export default function App() {
     <header className="topbar">
       <button className="brand" onClick={() => setShowLanding(true)} title="Replay the intro">
         <div className="brand-mark"><span>P</span></div>
-        <div><strong>PRIMVENTURE</strong><small>THE COMPOSITION IS LIVE</small></div>
+        <div><strong>PRIMVENTURE</strong><small>{playbackEpisode || playbackScene ? "SYNDICATED RERUN" : "THE COMPOSITION IS LIVE"}</small></div>
       </button>
-      <div className="broadcast"><span className="live-dot" /> LOCAL ARENA <b>USD-CORE</b></div>
+      <div className={`broadcast ${playbackEpisode || playbackScene ? "rerun" : ""}`}>
+        {playbackEpisode || playbackScene
+          ? <><span className="live-dot rerun" /> PLAYBACK <b>{episodeCode(playbackScene ? activeQuest!.floor : focusFloor)}</b></>
+          : <><span className="live-dot" /> ON AIR <b>{episodeCode(liveFloor)}</b></>}
+      </div>
       <div className="player-strip">
         <button className="help-button" onClick={() => setGuideStep(0)}><HelpCircle size={14} /> HOW TO PLAY</button>
         <div className="avatar">{state.contestant.slice(-2)}</div><div><small>{state.title}</small><strong>{state.contestant}</strong></div><span className="level">LVL {state.level}</span>
@@ -1055,21 +1252,60 @@ export default function App() {
           <button className={activeTab === "skills" ? "active" : ""} onClick={() => setActiveTab("skills")}><Sparkles size={16} /> RECIPE TREE</button>
           <button className={activeTab === "kiosk" ? "active" : ""} onClick={() => setActiveTab("kiosk")}><ShoppingCart size={16} /> SAFEROOM</button>
         </nav>
-        {activeTab === "map" && <div className={`map panel ${spotlight === "map" ? "spotlight" : ""}`} ref={mapRef}>
+        {activeTab === "map" && <div className={`map panel ${playbackEpisode ? "playback" : ""} ${spotlight === "map" ? "spotlight" : ""}`} ref={mapRef}>
           <div className="map-title">
             <div>
-              <span>{mapScope === "floor" ? `FLOOR ${String(focusFloor).padStart(2, "0")} · ${focusCleared}/${focusRooms.length} CLEARED` : "CONTESTANT PATH // FLOORS 00–09"}</span>
-              <h1>{mapScope === "floor" ? focusRooms[0]?.floor_name || "RECAPTURE PROTOCOL" : "RECAPTURE PROTOCOL"}</h1>
-              <p>{nextQuest ? <>Clear the rooms to learn the floor. The boss is the exit exam, and it pays the Opinion Points you spend on consumables. Next: <b>{nextQuest.title}</b>.</> : "Every room on this route is cleared."}</p>
-              <div className="map-scope">
-                <button className={mapScope === "floor" ? "active" : ""} onClick={() => setMapScope("floor")}>THIS FLOOR</button>
-                <button className={mapScope === "all" ? "active" : ""} onClick={() => setMapScope("all")}>ALL FLOORS</button>
+              <span>{mapScope === "floor"
+                ? `${playbackEpisode ? "PLAYBACK EPISODE" : "LIVE BROADCAST"} · ${episodeCode(focusFloor)} · ${focusCleared}/${focusRooms.length} SCENES`
+                : "SEASON 01 · BOX SET"}</span>
+              <h1>{mapScope === "floor" ? focusRooms[0]?.floor_name || "RECAPTURE PROTOCOL" : "SEASON GUIDE"}</h1>
+              <p>{playbackEpisode
+                ? <>Previously on the Composition. The audience is rewatching this episode while the live crawl waits on floor {String(liveFloor).padStart(2, "0")}.{nextQuest ? <> Resume with <b>{nextQuest.title}</b>.</> : null}</>
+                : nextQuest
+                  ? <>This episode is still taping. Clear the rooms, face the boss, and the System files another syndication package. Next scene: <b>{nextQuest.title}</b>.</>
+                  : "Season finale locked. Every episode is in the can."}</p>
+              <div className="episode-guide" aria-label="Season 01 episode guide">
+                <button className="episode-step" disabled={previousFloor === undefined} onClick={() => previousFloor !== undefined && openFloor(previousFloor)} aria-label="Previous episode">
+                  <ChevronLeft size={14} />
+                </button>
+                {floors.map(([floor, rooms]) => {
+                  const kind = floorStatus(rooms);
+                  const selected = mapScope === "floor" && floor === focusFloor;
+                  return <button
+                    key={floor}
+                    className={`episode-chip ${kind} ${selected ? "active" : ""}`}
+                    disabled={kind === "locked"}
+                    onClick={() => openFloor(floor)}
+                    title={`${episodeTag(kind)} · ${episodeCode(floor)} · ${rooms[0]?.floor_name}`}
+                  >
+                    <em>EP</em>
+                    {String(floor).padStart(2, "0")}
+                    <small>{episodeTag(kind)}</small>
+                  </button>;
+                })}
+                <button className="episode-step" disabled={nextArchiveFloor === undefined} onClick={() => nextArchiveFloor !== undefined && openFloor(nextArchiveFloor)} aria-label="Next episode">
+                  <ChevronRight size={14} />
+                </button>
+                <button className={`episode-chip all ${mapScope === "all" ? "active" : ""}`} onClick={() => openFloor("all")}>BOX SET</button>
               </div>
             </div>
-            <div className="completion"><b>{state.completed_quests.length}/{quests.length}</b><small>ROOMS CLEARED</small></div>
+            <div className="completion"><b>{state.completed_quests.length}/{quests.length}</b><small>SCENES FILED</small></div>
           </div>
+          {playbackEpisode && <div className="playback-bumper">
+            <div className="bumper-bug"><i className="rec-dot" /> RERUN</div>
+            <Clapperboard size={22} />
+            <div>
+              <span>PREVIOUSLY ON THE COMPOSITION</span>
+              <strong>{episodeCode(focusFloor)} · {focusRooms[0]?.floor_name}</strong>
+              <p>
+                SYSTEM: This episode already aired. The crowd demanded a recap package, so here we are, watching you watch yourself.
+                Open a scene to reread the lesson and the USDA on file. Nothing here advances the live crawl.
+              </p>
+            </div>
+            <button className="resume-live" onClick={resumeLiveBroadcast}>RESUME LIVE BROADCAST</button>
+          </div>}
           <div className="floor-list">{visibleFloors.map(([floor, rooms]) => <div className="floor" key={floor}>
-            <div className="floor-label"><span>FLOOR {String(floor).padStart(2, "0")}</span><strong>{rooms[0]?.floor_name}</strong></div>
+            <div className="floor-label"><span>{episodeCode(floor)} · {floorStatus(rooms) === "cleared" ? "RERUN" : floorStatus(rooms) === "live" ? "ON AIR" : "UNAIRED"}</span><strong>{rooms[0]?.floor_name}</strong></div>
             <div className="room-track">{rooms.map((quest, index) => {
               const roomStatus = questStatus(quest);
               return <div className="room-wrap" key={quest.id}>
@@ -1082,7 +1318,7 @@ export default function App() {
               </div>;
             })}</div>
           </div>)}</div>
-          <div className="legend"><span><i className="complete" /> CLEARED</span><span><i className="available" /> OPEN</span><span><i className="boss" /> BOSS</span><span><i className="locked" /> LOCKED</span><span>+OP PAYS OPINION POINTS FOR THE SAFEROOM</span></div>
+          <div className="legend"><span><i className="complete" /> AIRED</span><span><i className="available" /> TAPING</span><span><i className="boss" /> FINALE</span><span><i className="locked" /> UNAIRED</span><span>RERUN PLAYS BACK A CLEARED EPISODE FOR THE AUDIENCE</span></div>
         </div>}
         {activeTab === "skills" && <div className={`skill-tree panel ${spotlight === "recipes" ? "spotlight" : ""}`} ref={recipesRef}>
           <div className="section-hero"><span>THE COOKBOOK INDEX</span><h1>RECIPES OF POWER</h1><p>Glossary nodes from the Cookbook graph. Clear rooms that name them. SYSTEM: collecting terms fills the shelf; composing them builds the city.</p><small className="recipe-count">{masteredRecipes}/{recipes.length} MASTERED</small></div>
@@ -1118,7 +1354,7 @@ export default function App() {
         </div>}
         <section className={`authoring-dock code-panel panel ${spotlight === "editor" ? "spotlight" : ""}`} ref={editorRef}>
           <div className="editor-toolbar">
-            <span><TerminalSquare size={15} /> ROOM TERMINAL</span>
+            <span><TerminalSquare size={15} /> {playbackScene ? "PLAYBACK TERMINAL" : "ROOM TERMINAL"}</span>
             <div><button className="active">{activeQuest?.language.toUpperCase() || "—"}</button></div>
           </div>
           <Editor
@@ -1131,14 +1367,15 @@ export default function App() {
             options={{ readOnly: activeQuest?.language === "none" || reviewPending, minimap: { enabled: false }, fontSize: 13, lineHeight: 21, padding: { top: 16 }, scrollBeyondLastLine: false, tabSize: 4 }}
           />
           <button className={`run-button ${spotlight === "run" ? "spotlight" : ""}`} onClick={runQuest} disabled={running || !activeQuest || status === "locked" || reviewPending} ref={runRef}>
-            {running ? <RefreshCw className="spin" /> : reviewPending ? <CheckCircle2 /> : <Play fill="currentColor" />} {running ? "JUDGES ARE THINKING..." : reviewPending ? "ROOM CLEARED — REVIEW USDA →" : activeQuest?.language === "none" ? "ACKNOWLEDGE BRIEF" : "RUN THE ROOM"}
+            {running ? <RefreshCw className="spin" /> : reviewPending ? <CheckCircle2 /> : <Play fill="currentColor" />} {running ? "JUDGES ARE THINKING..." : reviewPending ? "ROOM CLEARED — REVIEW USDA →" : playbackScene ? "RERUN THIS SCENE" : activeQuest?.language === "none" ? "ACKNOWLEDGE BRIEF" : "RUN THE ROOM"}
           </button>
         </section>
       </section>
       <aside className="editor-rail">
         <section className="challenge-card">
-          <div className="eyebrow"><span>{activeQuest?.kind.replaceAll("_", " ").toUpperCase() || "NO SIGNAL"}</span><b>+{activeQuest?.xp || 0} XP{activeQuest?.opinion_points ? ` · +${activeQuest.opinion_points} OP` : ""}</b></div>
+          <div className="eyebrow"><span>{playbackScene ? "PLAYBACK SCENE · " : "LIVE · "}{activeQuest?.kind.replaceAll("_", " ").toUpperCase() || "NO SIGNAL"}</span><b>+{activeQuest?.xp || 0} XP{activeQuest?.opinion_points ? ` · +${activeQuest.opinion_points} OP` : ""}</b></div>
           <h2>{activeQuest?.title || "Waiting for the System"}</h2><p>{activeQuest?.brief}</p>
+          {playbackScene && <p className="playback-note">Originally aired as {episodeCode(activeQuest.floor)}. The audience is watching the recap. Your live assignment has not moved.</p>}
           <div className="objective"><ChevronRight size={16} /><span><small>NEIGHBORHOOD</small>{activeQuest?.neighborhood}</span></div>
           {activeQuest && <div className="learning-route">
             <span className={lessonRead ? "done" : "current"}><b>1</b> LEARN</span><i />
@@ -1146,7 +1383,10 @@ export default function App() {
             <span className={reviewPending ? "done" : checks.length ? "current" : ""}><b>3</b> VALIDATE</span><i />
             <span className={reviewPending ? "current" : ""}><b>4</b> REVIEW</span>
           </div>}
-          {activeQuest && <button className="cookbook-link" onClick={() => setLessonOpen(true)}><BookOpen size={15} /> {lessonRead ? "REVIEW LESSON" : "LEARN THIS ROOM"}</button>}
+          {playbackScene && <button className="resume-live card" onClick={resumeLiveBroadcast}>
+            <Tv size={14} /> BACK TO THE LIVE BROADCAST
+          </button>}
+          {activeQuest && <button className="cookbook-link" onClick={() => setLessonOpen(true)}><BookOpen size={15} /> {playbackScene ? "REWATCH THE BRIEFING" : lessonRead ? "REVIEW LESSON" : "LEARN THIS ROOM"}</button>}
           {activeQuest && activeQuest.expects.length > 0 && <div className="expectations">
             <span className="expect-heading"><ListChecks size={14} /> THE TERMINAL CHECKS FOR</span>
             <ol>{activeQuest.expects.map((line, index) => {
@@ -1165,7 +1405,7 @@ export default function App() {
         </section>
         <section className={`usda-panel panel ${reviewPending ? "review-required" : ""} ${spotlight === "usda" ? "spotlight" : ""}`} ref={usdaRef}>
           <div className="usda-heading">
-            <span><Code2 size={15} /> AUTHORED USDA</span>
+            <span><Code2 size={15} /> {playbackScene ? "FILED USDA · ORIGINAL AIR" : "AUTHORED USDA"}</span>
             <div className="usda-tabs">
               <button className={usdaMode === "before" ? "active" : ""} onClick={() => setUsdaMode("before")}>BEFORE</button>
               <button className={usdaMode === "after" ? "active" : ""} onClick={() => setUsdaMode("after")} disabled={!usdaView.after_usda}>AFTER</button>

@@ -362,10 +362,62 @@ main { display:grid; grid-template-columns: 250px minmax(420px, 1fr) 450px; gap:
 .help-button { display:inline-flex; align-items:center; gap:6px; margin-right:10px; background:transparent; border:1px solid #4a434e; color:#c3bcc9; padding:8px 11px; font:700 8px "IBM Plex Mono"; letter-spacing:1.2px; cursor:pointer; }
 .help-button:hover { border-color:var(--yellow); color:var(--yellow); }
 
-.map-scope { display:flex; margin-top:15px; }
-.map-scope button { border:1px solid #4a434e; background:#1b181f; color:#8d8691; padding:7px 13px; font:700 7px "IBM Plex Mono"; letter-spacing:1.2px; cursor:pointer; }
-.map-scope button+button { border-left:0; }
-.map-scope button.active { background:var(--cream); color:var(--ink); border-color:var(--cream); }
+.broadcast.rerun { border-color:#6f5a1f; color:#d7cdaa; }
+.live-dot.rerun { background:var(--yellow); box-shadow:0 0 12px var(--yellow); }
+
+.episode-guide { display:flex; flex-wrap:wrap; align-items:stretch; gap:6px; margin-top:16px; }
+.episode-chip, .episode-step, .resume-live {
+  display:inline-flex; align-items:center; justify-content:center; gap:5px;
+  border:1px solid #4a434e; background:#1b181f; color:#8d8691;
+  font:700 7px "IBM Plex Mono"; letter-spacing:.8px; cursor:pointer;
+}
+.episode-chip {
+  flex-direction:column; gap:1px; min-width:46px; padding:6px 7px 5px;
+}
+.episode-chip em { font-style:normal; font-size:6px; letter-spacing:1.4px; color:#6f6879; }
+.episode-chip small { font-size:5.5px; letter-spacing:.6px; color:#6f6879; }
+.episode-chip.all { min-width:54px; flex-direction:row; }
+.episode-step { width:28px; }
+.episode-chip:disabled, .episode-step:disabled { opacity:.38; cursor:not-allowed; }
+.episode-chip.active { background:var(--cream); color:var(--ink); border-color:var(--cream); }
+.episode-chip.active em, .episode-chip.active small { color:inherit; }
+.episode-chip.cleared { border-color:#2f865d; color:#7dccab; }
+.episode-chip.cleared em, .episode-chip.cleared small { color:#4dcc91; }
+.episode-chip.cleared.active { background:#173329; color:var(--green); border-color:var(--green); }
+.episode-chip.live { border-color:#a78122; color:var(--yellow); }
+.episode-chip.live em, .episode-chip.live small { color:#d4a21a; }
+.episode-chip.live.active { background:var(--yellow); color:var(--ink); border-color:var(--yellow); }
+.episode-chip:hover:not(:disabled), .episode-step:hover:not(:disabled) { border-color:var(--yellow); color:var(--yellow); }
+.episode-chip.active:hover { color:var(--ink); }
+
+.playback-bumper {
+  display:grid; grid-template-columns:auto auto 1fr auto; align-items:center; gap:14px;
+  margin:0 18px 6px; padding:14px 16px; border:1px solid #6f5a1f;
+  background:linear-gradient(100deg,#2b2413,#17141b 55%);
+  position:relative; overflow:hidden;
+}
+.playback-bumper::after {
+  content:""; position:absolute; inset:0; pointer-events:none;
+  background:repeating-linear-gradient(180deg,transparent 0 2px,rgba(255,203,46,.04) 2px 3px);
+}
+.bumper-bug {
+  display:flex; align-items:center; gap:6px; padding:5px 8px; border:1px solid #a78122;
+  color:var(--yellow); font:700 8px "IBM Plex Mono"; letter-spacing:1.4px; background:#211c10;
+}
+.playback-bumper > svg { color:var(--yellow); }
+.playback-bumper span { display:block; color:var(--yellow); font-size:8px; font-weight:700; letter-spacing:2px; }
+.playback-bumper strong { display:block; margin-top:3px; font:900 italic 22px/1 "Barlow Condensed"; color:var(--cream); }
+.playback-bumper p { margin:6px 0 0; max-width:62ch; color:#c9bfae; font-size:8px; line-height:1.55; }
+.resume-live {
+  height:34px; padding:0 12px; border-color:#7a6320; background:#2b2413; color:var(--yellow); z-index:1;
+}
+.resume-live.card {
+  display:inline-flex; align-items:center; gap:7px; margin-top:10px; height:auto; padding:9px 12px;
+  font:700 8px "IBM Plex Mono"; letter-spacing:.7px;
+}
+.resume-live:hover { border-color:var(--yellow); color:var(--yellow); }
+.playback-note { margin:8px 0 0; color:#d7cdaa; font-size:8px; line-height:1.5; border-left:2px solid var(--yellow); padding:6px 0 6px 9px; background:#28221a; }
+.map.playback { box-shadow:inset 0 0 0 1px rgba(255,203,46,.18); }
 
 /* Above the lesson overlay (80): the tour opens the drawer, so its own
    controls have to stay clickable on top of it. */
@@ -420,6 +472,7 @@ main { display:grid; grid-template-columns: 250px minmax(420px, 1fr) 450px; gap:
 
 @media(max-width:1180px){
   main{grid-template-columns:210px 1fr;height:auto;min-height:calc(100vh - 74px)}.editor-rail{grid-column:1/-1;display:grid;grid-template-columns:300px 1fr;min-height:480px}.challenge-card{max-height:none;border-right:1px solid #4a3e4e}.usda-panel{min-height:480px}.run-button kbd{display:none}.preview-card{min-height:230px}
+  .playback-bumper{grid-template-columns:auto 1fr;margin:0 12px 8px}.playback-bumper>svg{display:none}.resume-live{grid-column:1/-1;justify-self:start}
 }
 @media(max-width:800px){
   .topbar{grid-template-columns:1fr auto;height:64px}.broadcast{display:none}.brand strong{font-size:20px}main{display:flex;flex-direction:column;padding:8px}.left-rail{display:grid;grid-template-columns:1fr 1fr}.preview-card{grid-column:1/-1;height:280px}.command-center{order:-1;min-height:900px}.authoring-dock{height:430px;flex:none}.editor-rail{display:flex;min-height:760px}.challenge-card{max-height:none}.usda-panel{min-height:460px}.floor{grid-template-columns:1fr;gap:18px}.floor-label strong{max-width:none}.room-track{justify-content:space-around}.room-wrap{flex-basis:92px;width:92px}.connector{width:20px}.skill-node{transform:none}

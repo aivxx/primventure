@@ -365,11 +365,20 @@ def test_nameplate_room_is_solvable_from_what_the_ui_states(
     world.mkdir()
     shutil.copy(WORLD_DIR / "root.usda", world / "root.usda")
     monkeypatch.setattr(runner_module, "WORLD_DIR", world)
-    quest = next(item for item in QuestStore().all() if item.id == "f0_nameplate")
+    catalog = QuestStore().all()
     saves = SaveStore(tmp_path / "save.json")
-    saves.save(PlayerState(completed_quests=["f0_first_prim"]))
     runner = QuestRunner(saves)
 
+    # The city starts empty, so /City exists only once the opening room has
+    # published it. Clearing that room is what this one's prerequisite means.
+    opener = next(item for item in catalog if item.id == "f0_first_prim")
+    opened = runner.run(
+        opener,
+        RunRequest(code=f'{opener.starter}stage.DefinePrim("/City", "Xform")\nstage.GetRootLayer().Save()\n'),
+    )
+    assert opened.success, [check.message for check in opened.results if not check.passed]
+
+    quest = next(item for item in catalog if item.id == "f0_nameplate")
     unchanged = runner.run(quest, RunRequest(code=quest.starter))
     assert not unchanged.success
     assert [check.passed for check in unchanged.results] == [False]

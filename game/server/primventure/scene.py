@@ -13,11 +13,15 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-from pxr import Usd, UsdGeom
+from pxr import Usd, UsdGeom, UsdLux
 
 
 # Muted concrete, so an unstyled district still reads as a building.
 DEFAULT_COLOR = (0.58, 0.54, 0.66)
+# Lights and empty lots are landmarks rather than geometry, so they carry their
+# own palette instead of borrowing the concrete used for buildings.
+LIGHT_COLOR = (1.0, 0.8, 0.18)
+PAD_COLOR = (0.42, 0.36, 0.52)
 # A published city is small; the cap only exists so a runaway PointInstancer
 # prototype cannot hand the browser an unbounded payload.
 MAX_PRIMS = 500
@@ -72,8 +76,37 @@ def _shape(prim: Usd.Prim, kind: str) -> dict[str, Any]:
     return {}
 
 
+def _is_light(prim: Usd.Prim) -> bool:
+    if prim.HasAPI(UsdLux.LightAPI):
+        return True
+    # Older schema registrations do not always answer HasAPI for typed lights.
+    return str(prim.GetTypeName()).endswith("Light")
+
+
+def _light(prim: Usd.Prim) -> dict[str, Any]:
+    """Lights carry no geometry, so the feed draws them from their own values."""
+    intensity = prim.GetAttribute("inputs:intensity").Get()
+    radius = prim.GetAttribute("inputs:radius").Get()
+    color = prim.GetAttribute("inputs:color").Get()
+    return {
+        "intensity": float(intensity) if intensity is not None else 1.0,
+        "radius": float(radius) if radius is not None else 0.5,
+        "color": [round(float(channel), 4) for channel in (color or LIGHT_COLOR)],
+    }
+
+
+def _renders_below(prim: Usd.Prim) -> bool:
+    """Whether anything under this prim already draws, pad included."""
+    for descendant in Usd.PrimRange(prim):
+        if descendant == prim:
+            continue
+        if descendant.IsA(UsdGeom.Gprim) or _is_light(descendant):
+            return True
+    return False
+
+
 def world_scene(root_layer: Path) -> dict[str, Any]:
-    """Every visible gprim on the composed stage, in world space."""
+    """Every visible gprim and landmark on the composed stage, in world space."""
     empty: dict[str, Any] = {"up_axis": "Y", "meters_per_unit": 1.0, "prims": []}
     if not root_layer.exists():
         return empty
@@ -85,21 +118,34 @@ def world_scene(root_layer: Path) -> dict[str, Any]:
     for prim in stage.Traverse():
         if len(prims) >= MAX_PRIMS:
             break
-        if not prim.IsA(UsdGeom.Gprim):
-            continue
         imageable = UsdGeom.Imageable(prim)
         if imageable and imageable.ComputeVisibility() == UsdGeom.Tokens.invisible:
             continue
         kind = str(prim.GetTypeName())
+        # Early floors teach lights, metadata, and time before they ever teach a
+        # gprim, so the feed also carries the landmarks that prove that work:
+        # lights as beacons, and an addressed-but-empty xform as a plot marker.
+        if prim.IsA(UsdGeom.Gprim):
+            detail = {
+                "role": "geometry",
+                "color": _display_color(UsdGeom.Gprim(prim)),
+                **_shape(prim, kind),
+            }
+        elif _is_light(prim):
+            detail = {"role": "light", **_light(prim)}
+        elif prim.IsA(UsdGeom.Xformable) and not _renders_below(prim):
+            detail = {"role": "pad", "color": [round(c, 4) for c in PAD_COLOR]}
+        else:
+            continue
         matrix = transforms.GetLocalToWorldTransform(prim)
         prims.append(
             {
                 "path": str(prim.GetPath()),
+                "name": prim.GetName(),
                 "type": kind,
                 # Row-major, matching USD's row-vector convention.
                 "matrix": [round(float(matrix[row][column]), 5) for row in range(4) for column in range(4)],
-                "color": _display_color(UsdGeom.Gprim(prim)),
-                **_shape(prim, kind),
+                **detail,
             }
         )
     return {
