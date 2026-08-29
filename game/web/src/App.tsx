@@ -107,12 +107,13 @@ function cookbookUrl(path: string) {
 }
 
 const TICKER = [
-  "CONTESTANT #USD-01 HAS ENTERED THE COMPOSITION",
-  "SPONSORS REMIND YOU THAT A DEF IS NOT AN OVER",
-  "FLOOR 09 HAS REQUESTED YOU BY NAME",
-  "OPINION POINTS ARE NON-REFUNDABLE",
-  "THE CROWD ENJOYS A WELL-FORMED LAYER STACK",
-  "NO CONTESTANT HAS BLAMED VALUE RESOLUTION AND BEEN CORRECT",
+  "A NEW CONTESTANT HAS ENTERED THE COMPOSITION",
+  "THE BROADCAST IS LIVE IN EVERY REMAINING TIMEZONE",
+  "NO EXPERIENCE REQUIRED · NONE DETECTED EITHER",
+  "TEN FLOORS REMAIN SEALED · NINE OF THEM ARE NOT YOUR PROBLEM YET",
+  "THE PREVIOUS CONTESTANT DECLINED TO READ THE BRIEF",
+  "SPONSORS REMIND YOU THAT PANIC IS NOT A STRATEGY",
+  "NOTHING HERE IS PERMANENT EXCEPT THE CITY YOU BUILD",
 ];
 
 function Landing({ onStart, hasProgress, nextQuest, quests, floors }: {
@@ -132,52 +133,90 @@ function Landing({ onStart, hasProgress, nextQuest, quests, floors }: {
     <div className="landing-inner">
       <header className="landing-hero">
         <div className="landing-mark"><span>P</span></div>
-        <span className="landing-eyebrow">SEASON 01 · THE COMPOSITION IS LIVE</span>
+        <span className="landing-eyebrow">SEASON 01 · LIVE, UNRENDERED, AND MILDLY EMBARRASSED</span>
         <h1 data-text="PRIMVENTURE">PRIMVENTURE</h1>
-        <p className="landing-tagline">An OpenUSD dungeon crawl where the combat is authoring.</p>
+        <p className="landing-tagline">
+          A dungeon crawl where nobody swings a sword. You type. The building either believes you or it does not.
+        </p>
+        <p className="landing-context">
+          The subject is <b>OpenUSD</b> — the open standard for describing 3D scenes across film, games, and simulation.
+          The lessons are NVIDIA's Learn OpenUSD curriculum. The judge is <b>usd-core</b>, the real library, which has
+          never once been impressed.
+        </p>
       </header>
 
       <section className="landing-transmission">
-        <div className="transmission-tag">INCOMING TRANSMISSION</div>
-        <p>The 3D production world has collapsed into <b>the Composition</b>.</p>
-        <p>Ten floors of a city that no longer resolves. Every room is a broken layer stack, and something is guarding each one.</p>
+        <div className="transmission-tag">SYSTEM BROADCAST · ORIENTATION · YOU CANNOT SKIP THIS</div>
         <p>
-          You are <b>Contestant #USD-01</b>, an underqualified Primwright. Your only weapon is authored code.
+          Welcome, Contestant. Congratulations on the courage it took to press a button. Something broke the world
+          where 3D gets made — film, games, simulation, all of it. Was it me? That is under review. What is left is a
+          city that no longer makes sense. Rooms disagree with each other. Buildings have forgotten their own shape.
+          Two floors are in litigation over which one is the fourth floor. I have taken no sides, publicly.
+        </p>
+        <p>
+          The city is called <b>the Composition</b>. I have sealed it into ten floors, for your safety and my ratings.
+          Every room holds exactly one thing that no longer works. Repair the thing and the room lets you leave. Finish
+          a floor and I release whatever has been pacing at the top of it, because a season needs structure. No, I will
+          not tell you what it is. Half the fun is yours. The other half is mine, and mine is bigger.
+        </p>
+        <p>
+          You have been <b>filed as a Primwright</b> — my term for someone who writes the instructions that tell a 3D
+          scene what it is. Do not be flattered. I did not interview you. I skimmed one line of your work history,
+          laughed, and printed a badge. It reads <em>Contestant #USD-01</em>. <em>Primwright</em>.
+          <em> Underqualified</em>. I ran out of room before I ran out of adjectives.
+        </p>
+        <p>
+          House rules, which you will ignore in roughly four minutes. I assign the work. I do not grade it — real
+          tooling does, so when you fail you are failing to an impartial third party and to me, personally, out loud.
+          Nothing you build is ever taken from you. Legal insisted. Everything you get right, the city keeps forever,
+          which I am told is called a portfolio and which I am told humans enjoy. Begin whenever you are ready. The
+          audience is already seated. They were promised a spectacle, and so far they have you.
           <span className="caret" />
         </p>
+        <div className="transmission-sign">— THE SYSTEM · HOST, JUDGE, AND NOT YOUR FRIEND</div>
+      </section>
+
+      <section className="landing-cast">
+        <div><span>THE COMPOSITION</span><p>The collapsed city. Ten floors. Reclaimed one honest fix at a time.</p></div>
+        <div><span>THE SYSTEM</span><p>Host, judge, building inspector. Enjoys the rooms you lose.</p></div>
+        <div><span>A PRIMWRIGHT</span><p>Your new title. You write what a 3D scene is. Skill optional at intake.</p></div>
       </section>
 
       <div className="landing-stats">
-        <div><b>{quests.length || "—"}</b><small>ROOMS</small></div>
-        <div><b>{bossCount || "—"}</b><small>BOSSES</small></div>
-        <div><b>10</b><small>FLOORS</small></div>
+        <div><b>{quests.length || "—"}</b><small>ROOMS TO FIX</small></div>
+        <div><b>{bossCount || "—"}</b><small>THINGS IN THE WAY</small></div>
+        <div><b>10</b><small>SEALED FLOORS</small></div>
         <div><b>01</b><small>CITY TO REBUILD</small></div>
       </div>
 
       <section className="landing-how">
-        <h2>HOW YOU FIGHT</h2>
+        <h2>COMBAT, SUCH AS IT IS</h2>
         <ol className="landing-steps">
-          <li><b>01</b><strong>Read the room</strong><span>A short brief, plus the lesson it came from.</span></li>
-          <li><b>02</b><strong>Author the fix</strong><span>Write real Python or USDA in the terminal.</span></li>
-          <li><b>03</b><strong>Face the judges</strong><span>Real <em>usd-core</em> opens your stage and rules on it.</span></li>
+          <li><b>01</b><strong>Read the room</strong><span>Two lines of job from the System, plus the lesson it was stolen from.</span></li>
+          <li><b>02</b><strong>State your case</strong><span>Finish the starter code in the room's terminal. It is ordinary Python.</span></li>
+          <li><b>03</b><strong>Face the judges</strong><span>OpenUSD opens what you wrote and rules on it, line by line.</span></li>
         </ol>
         <p className="landing-note">
-          Win and your work is published into a persistent USD city under <em>world/</em>. Lose and the System is
-          rude to you. Nothing is destroyed either way.
+          Win and your work is filed into a real 3D city that keeps growing on your disk. Miss and the System says
+          something unkind and hands the room straight back. Nothing you build is ever taken away — the worst outcome
+          here is being talked about.
         </p>
       </section>
 
       <section className="landing-tower">
-        <h2>THE TOWER</h2>
+        <h2>THE TOWER · TEN FLOORS, NO ELEVATOR</h2>
+        <p className="landing-note">
+          Cleared in order. Every floor teaches a new part of OpenUSD and ends with something that declines to let you
+          pass politely. The System does not post what that something is. The System finds this funnier.
+        </p>
         <div className="tower-grid">
           {floors.map(([floor, rooms]) => {
-            const boss = rooms.find((room) => room.kind === "floor_boss")
-              || rooms.find((room) => room.kind === "city_boss");
+            const bosses = rooms.filter((room) => room.kind.endsWith("boss")).length;
             return <div className={`tower-floor ${floor === 0 ? "open" : ""}`} key={floor}>
               <span className="tower-index">{String(floor).padStart(2, "0")}</span>
               <div>
                 <strong>{rooms[0]?.floor_name}</strong>
-                <small>{boss ? boss.title : `${rooms.length} rooms`}</small>
+                <small>{rooms.length} rooms · {bosses} guarded</small>
               </div>
               {floor === 0 ? <em className="tower-open">OPEN</em> : <LockKeyhole size={13} />}
             </div>;
@@ -191,11 +230,12 @@ function Landing({ onStart, hasProgress, nextQuest, quests, floors }: {
         </button>
         <p className="landing-next">
           {nextQuest
-            ? <>Floor 00 · first room: <b>{nextQuest.title}</b></>
+            ? <>Floor 00 · your first assignment: <b>{nextQuest.title}</b></>
             : "Connecting to the local arena…"}
         </p>
         <small className="landing-fine">
-          No OpenUSD experience needed · a guided walkthrough starts with your first room · runs locally on your machine
+          No OpenUSD experience required · a walkthrough holds your hand through room one · runs entirely on your own
+          machine, where the audience is theoretical
         </small>
       </div>
     </div>
