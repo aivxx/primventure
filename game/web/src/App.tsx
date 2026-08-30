@@ -91,6 +91,7 @@ const ONBOARDED_KEY = "primventure.onboarded.v2";
 const GUIDED_KEY = "primventure.guided";
 const LESSONS_READ_KEY = "primventure.lessons-read.v1";
 const USDA_REVIEW_KEY = "primventure.usda-review";
+const VIEW_KEY = "primventure.view.v1";
 
 type Tab = "map" | "skills" | "kiosk";
 // "city" tears down what was published and leaves the record standing; "all"
@@ -253,6 +254,22 @@ function lessonsRead(): Set<string> {
   } catch {
     return new Set();
   }
+}
+
+/** Where the player was looking last, so a reload does not relocate them. */
+type StoredView = { landing: boolean; tab: Tab; questId: string | null; floor: number | null; scope: "floor" | "all" };
+
+function storedView(): Partial<StoredView> {
+  try {
+    return JSON.parse(localStorage.getItem(VIEW_KEY) || "{}") as Partial<StoredView>;
+  } catch {
+    return {};
+  }
+}
+
+/** Merges rather than replaces, so a field that is not resolved yet keeps its stored value. */
+function rememberView(patch: Partial<StoredView>) {
+  localStorage.setItem(VIEW_KEY, JSON.stringify({ ...storedView(), ...patch }));
 }
 
 const TICKER = [
@@ -446,8 +463,13 @@ function Landing({ onStart, hasProgress, nextQuest, quests, floors }: {
             : "Connecting to the local arena…"}
         </p>
         <small className="landing-fine">
-          No OpenUSD experience required · a walkthrough holds your hand through room one · runs entirely on your own
-          machine, where the audience is theoretical
+          No OpenUSD experience required. This RPG-style game is based on NVIDIA's open-source{" "}
+          <a href="https://docs.nvidia.com/learn-openusd/latest/index.html" target="_blank" rel="noreferrer">Learn OpenUSD</a>{" "}
+          learning path and is meant as a study companion for the{" "}
+          <a href="https://www.nvidia.com/en-us/learn/certification/openusd-development/" target="_blank" rel="noreferrer">OpenUSD Development Certification</a>.
+          Primventure is not an official NVIDIA product. Designed and created by Ashley Malqui.
+          Contributions are welcome — questions, ideas, and pull requests to{" "}
+          <a href="mailto:ashmalqui@gmail.com">ashmalqui@gmail.com</a>.
         </small>
       </div>
     </div>
@@ -769,7 +791,10 @@ export default function App() {
   const [activeQuest, setActiveQuest] = useState<Quest | null>(null);
   const [code, setCode] = useState("");
   const [answers, setAnswers] = useState<Array<number | string>>([]);
-  const [activeTab, setActiveTab] = useState<Tab>("map");
+  const [activeTab, setActiveTab] = useState<Tab>(() => {
+    const tab = storedView().tab;
+    return tab === "skills" || tab === "kiosk" ? tab : "map";
+  });
   const [running, setRunning] = useState(false);
   const [assistBusy, setAssistBusy] = useState<"hint" | "peek" | null>(null);
   const [assistResult, setAssistResult] = useState<AssistResult | null>(null);
@@ -783,21 +808,29 @@ export default function App() {
   const [reviewPending, setReviewPending] = useState(false);
   const [revision, setRevision] = useState(0);
   const [toast, setToast] = useState<Toast | null>(null);
-  const [showLanding, setShowLanding] = useState(() => localStorage.getItem(ONBOARDED_KEY) !== "1");
+  const [showLanding, setShowLanding] = useState(() => {
+    const remembered = storedView().landing;
+    return typeof remembered === "boolean" ? remembered : localStorage.getItem(ONBOARDED_KEY) !== "1";
+  });
   const [guideStep, setGuideStep] = useState<number | null>(null);
-  const [mapScope, setMapScope] = useState<"floor" | "all">("floor");
-  const [browseFloor, setBrowseFloor] = useState<number | null>(null);
+  const [mapScope, setMapScope] = useState<"floor" | "all">(() => storedView().scope === "all" ? "all" : "floor");
+  const [browseFloor, setBrowseFloor] = useState<number | null>(() => {
+    const floor = storedView().floor;
+    return typeof floor === "number" ? floor : null;
+  });
   const [pointer, setPointer] = useState<{ x: number; y: number; side: PointerSide } | null>(null);
   const [lessonOpen, setLessonOpen] = useState(false);
   const [, setLessonRevision] = useState(0);
   const booted = useRef(false);
+  // Snapshot of the remembered view taken before anything can overwrite it.
+  const bootView = useRef(storedView());
   // Unsaved edits per room, so stepping away and back mid-thought keeps the exact
   // buffer. Cleared work falls back to the server's saved submission on reload.
   const drafts = useRef(new Map<string, string>());
   const lessonRef = useRef<HTMLElement>(null);
   const editorRef = useRef<HTMLElement>(null);
   const focusEditor = useRef<(() => void) | null>(null);
-  const runRef = useRef<HTMLElement>(null);
+  const runRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<HTMLDivElement>(null);
   const usdaRef = useRef<HTMLElement>(null);
   const levelRef = useRef<HTMLSpanElement>(null);
@@ -809,6 +842,7 @@ export default function App() {
   const saferoomRef = useRef<HTMLDivElement>(null);
 
   const refresh = async (advance = false) => {
+    const firstBoot = !booted.current;
     const [nextState, nextQuests, nextRecipes] = await Promise.all([
       api<PlayerState>("/state"), api<Quest[]>("/quests"), api<Recipe[]>("/recipes"),
     ]);
@@ -823,16 +857,24 @@ export default function App() {
       if (!advance && reviewQuest) return reviewQuest;
       if (advance && nextOpen) return nextOpen;
       if (current) return nextQuests.find((quest) => quest.id === current.id) || current;
+      if (firstBoot) {
+        const remembered = bootView.current.questId;
+        const rememberedQuest = remembered
+          ? nextQuests.find((quest) => quest.id === remembered && quest.unlocked)
+          : null;
+        if (rememberedQuest) return rememberedQuest;
+      }
       return nextOpen || nextQuests[0] || null;
     });
-    // Only skip the intro automatically on the first load of a run in progress.
-    // Reopening it from the wordmark should stick until the player dismisses it.
-    if (!booted.current) {
+    // Only skip the intro automatically on the first load of a run in progress,
+    // and only when the player has no remembered screen of their own. Reopening
+    // it from the wordmark should stick until the player dismisses it.
+    if (firstBoot) {
       booted.current = true;
       if (nextState.completed_quests.length > 0) {
         localStorage.setItem(ONBOARDED_KEY, "1");
         localStorage.setItem(GUIDED_KEY, "1");
-        setShowLanding(false);
+        if (typeof bootView.current.landing !== "boolean") setShowLanding(false);
       }
     }
   };
@@ -884,6 +926,17 @@ export default function App() {
   useEffect(() => {
     refresh().catch((error) => setToast({ kind: "error", title: "API OFFLINE", message: error.message }));
   }, []);
+  useEffect(() => {
+    // The room is omitted until one is resolved, otherwise the pre-boot null
+    // would erase the room this load is still restoring.
+    rememberView({
+      landing: showLanding,
+      tab: activeTab,
+      floor: browseFloor,
+      scope: mapScope,
+      ...(activeQuest ? { questId: activeQuest.id } : {}),
+    });
+  }, [showLanding, activeTab, activeQuest?.id, browseFloor, mapScope]);
   useEffect(() => {
     if (!activeQuest) return;
     // A draft can legitimately be empty, so only it gets to short-circuit; an
@@ -1547,7 +1600,7 @@ export default function App() {
         <section className="challenge-card">
           <div className="eyebrow"><span>{playbackScene ? "PLAYBACK SCENE · " : "LIVE · "}{activeQuest?.kind.replaceAll("_", " ").toUpperCase() || "NO SIGNAL"}</span><b>+{activeQuest?.xp || 0} XP{activeQuest?.opinion_points ? ` · +${activeQuest.opinion_points} OP` : ""}</b></div>
           <h2>{activeQuest?.title || "Waiting for the System"}</h2><p>{activeQuest?.brief}</p>
-          {playbackScene && <p className="playback-note">Originally aired as {episodeCode(activeQuest.floor)}. The audience is watching the recap. Your live assignment has not moved.</p>}
+          {playbackScene && activeQuest && <p className="playback-note">Originally aired as {episodeCode(activeQuest.floor)}. The audience is watching the recap. Your live assignment has not moved.</p>}
           <div className="objective"><ChevronRight size={16} /><span><small>NEIGHBORHOOD</small>{activeQuest?.neighborhood}</span></div>
           {activeQuest && <div className="learning-route">
             <span className={lessonRead ? "done" : "current"}><b>1</b> LEARN</span><i />

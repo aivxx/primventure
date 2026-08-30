@@ -385,7 +385,9 @@ main { display:grid; grid-template-columns: 250px minmax(420px, 1fr) 450px; gap:
 .landing-cta:hover { background:#ffe069; }
 .landing-next { margin:18px 0 0; font-size:13px; color:#b0a8ba; }
 .landing-next b { color:var(--cream); }
-.landing-fine { display:block; margin-top:10px; color:#807a89; font-size:10.5px; letter-spacing:.6px; }
+.landing-fine { display:block; margin-top:10px; max-width:52rem; color:#807a89; font-size:10.5px; line-height:1.55; letter-spacing:.4px; }
+.landing-fine a { color:#c4b8a0; text-decoration:underline; text-underline-offset:2px; }
+.landing-fine a:hover { color:var(--yellow); }
 
 .help-button { display:inline-flex; align-items:center; gap:6px; margin-right:10px; background:transparent; border:1px solid #4a434e; color:#c3bcc9; padding:8px 11px; font:700 8px "IBM Plex Mono"; letter-spacing:1.2px; cursor:pointer; }
 .help-button:hover { border-color:var(--yellow); color:var(--yellow); }
