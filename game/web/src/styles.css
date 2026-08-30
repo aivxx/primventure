@@ -237,7 +237,20 @@ main { display:grid; grid-template-columns: 250px minmax(420px, 1fr) 450px; gap:
 .boss-question{display:block;position:relative;margin-top:12px;color:#d7cdaa;font-size:8px;line-height:1.45}.boss-question input,.boss-question select{display:block;width:100%;margin-top:5px;padding:8px;background:#141217;border:1px solid #514758;color:var(--cream);font:8px "IBM Plex Mono"}
 .code-panel { flex:1; min-height:350px; display:flex;flex-direction:column;border-left:0;border-right:0; }
 .authoring-dock{flex:1 1 50%;min-height:330px;margin-top:12px;border:1px solid #37313c}
-.authoring-dock>.run-button{flex:none;width:calc(100% - 24px);margin:9px 12px 12px}
+.authoring-dock>.run-slot{flex:none;width:calc(100% - 24px);margin:9px 12px 12px}
+.authoring-dock .run-button{width:100%;margin:0}
+.boss-confirm{padding:13px 15px 14px;border:1px solid #7a2f3a;background:linear-gradient(140deg,rgba(255,57,83,.16),#1d1418 62%)}
+.boss-confirm>span{display:block;margin-bottom:7px;color:var(--red);font-size:8px;font-weight:700;letter-spacing:2.2px}
+.boss-confirm p{margin:0;color:#e8d7db;font-size:9px;line-height:1.55}
+.boss-confirm p b{color:var(--yellow)}
+.boss-confirm .confirm-actions{margin-top:11px;gap:8px}
+.boss-confirm .confirm-actions .yes{flex:1;min-height:40px;border:0;background:var(--red);color:#150e10;font:800 10px "IBM Plex Mono";letter-spacing:.6px;display:flex;align-items:center;justify-content:center;gap:8px;cursor:pointer}
+.boss-confirm .confirm-actions .yes:hover:not(:disabled){background:#f2566a}
+.boss-confirm .confirm-actions .yes:disabled{opacity:.55;cursor:wait}
+.boss-confirm .confirm-actions .no{padding:0 14px;border:1px solid #6a5c62;background:transparent;color:#cfc3c7;font:700 9px "IBM Plex Mono";cursor:pointer}
+.boss-confirm .confirm-actions .no:hover:not(:disabled){border-color:var(--cream);color:var(--cream)}
+.run-button.boss{background:var(--red);color:#150e10;box-shadow:inset 0 -4px 0 rgba(0,0,0,.28)}
+.run-button.boss:hover:not(:disabled){background:#f2566a}
 .editor-toolbar{height:39px;flex:none;display:flex;align-items:center;justify-content:space-between;padding:0 10px;border-bottom:1px solid #38323c;font-size:8px;font-weight:700}.editor-toolbar>span{display:flex;gap:6px;align-items:center}.editor-toolbar button{background:transparent;color:#77717c;border:0;border-left:1px solid #39333d;padding:8px;cursor:pointer;font-size:8px}.editor-toolbar button.active{color:var(--yellow)}
 .run-button{margin:12px;border:0;background:var(--yellow);color:#12100a;min-height:49px;font-weight:800;font-size:11px;display:flex;justify-content:center;align-items:center;gap:9px;cursor:pointer;clip-path:polygon(2% 0,100% 0,98% 100%,0 100%);box-shadow:inset 0 -4px 0 rgba(0,0,0,.22)}.run-button:hover{background:#ffe069}.run-button:disabled{filter:grayscale(.7);cursor:not-allowed}.run-button.is-running{cursor:wait}.run-button svg{width:17px}.run-button kbd{position:absolute;right:27px;font-size:8px;color:#75601c}.spin{animation:spin 1s linear infinite}
 .usda-panel{flex:1;min-height:0;display:flex;flex-direction:column;overflow:hidden}

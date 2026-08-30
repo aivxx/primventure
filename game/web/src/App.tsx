@@ -130,7 +130,7 @@ const GUIDE_STEPS: Array<{ target: GuideTarget; title: string; body: string }> =
   {
     target: "run",
     title: "Run the room",
-    body: "usd-core opens your stage and checks it against the list in the room card. Nothing is lost when a check fails, so run as often as you need to.",
+    body: "usd-core opens your stage and checks it against the list in the room card. Ordinary rooms cost nothing to retry. Boss rooms ask you to confirm first, because a wrong answer costs XP.",
   },
   {
     target: "usda",
@@ -775,6 +775,7 @@ export default function App() {
   const [assistResult, setAssistResult] = useState<AssistResult | null>(null);
   const [pendingSpend, setPendingSpend] = useState<"hint_tokens" | "system_peeks" | null>(null);
   const [pendingReset, setPendingReset] = useState<ResetScope | null>(null);
+  const [pendingBossRun, setPendingBossRun] = useState(false);
   const [resetting, setResetting] = useState(false);
   const [checks, setChecks] = useState<boolean[]>([]);
   const [usdaView, setUsdaView] = useState<USDAView>({ before_usda: "", after_usda: "" });
@@ -796,7 +797,7 @@ export default function App() {
   const lessonRef = useRef<HTMLElement>(null);
   const editorRef = useRef<HTMLElement>(null);
   const focusEditor = useRef<(() => void) | null>(null);
-  const runRef = useRef<HTMLButtonElement>(null);
+  const runRef = useRef<HTMLElement>(null);
   const mapRef = useRef<HTMLDivElement>(null);
   const usdaRef = useRef<HTMLElement>(null);
   const levelRef = useRef<HTMLSpanElement>(null);
@@ -891,6 +892,7 @@ export default function App() {
     setAnswers(activeQuest.questions?.map(() => "") || []);
     setAssistResult(null);
     setPendingSpend(null);
+    setPendingBossRun(false);
     setChecks([]);
     const owesReview = localStorage.getItem(USDA_REVIEW_KEY) === activeQuest.id;
     setReviewPending(owesReview);
@@ -1057,6 +1059,10 @@ export default function App() {
   const spotlight = guideStep === null ? null : GUIDE_STEPS[guideStep].target;
   const xpFloor = (state.level - 1) * 100;
   const xpProgress = ((state.xp - xpFloor) / Math.max(state.next_level_xp - xpFloor, 1)) * 100;
+  const liveBossFight = Boolean(
+    activeQuest?.kind.endsWith("boss") && !activeQuest.completed && !playbackScene && !reviewPending,
+  );
+  const bossFee = Math.min(25, Math.max(0, state.xp - xpFloor));
 
   const runQuest = async () => {
     if (!activeQuest) return;
@@ -1105,6 +1111,15 @@ export default function App() {
     } finally {
       setRunning(false);
     }
+  };
+
+  const requestRun = () => {
+    if (liveBossFight && !pendingBossRun) {
+      setPendingBossRun(true);
+      return;
+    }
+    setPendingBossRun(false);
+    void runQuest();
   };
 
   const useHint = async () => {
@@ -1505,9 +1520,27 @@ export default function App() {
             onMount={(editor) => { focusEditor.current = () => editor.focus(); }}
             options={{ readOnly: activeQuest?.language === "none" || reviewPending, minimap: { enabled: false }, fontSize: 13, lineHeight: 21, padding: { top: 16 }, scrollBeyondLastLine: false, tabSize: 4 }}
           />
-          <button className={`run-button ${running ? "is-running" : ""} ${spotlight === "run" ? "spotlight" : ""}`} onClick={runQuest} disabled={running || !activeQuest || status === "locked" || reviewPending} ref={runRef}>
-            {running ? <RefreshCw className="spin" /> : reviewPending ? <CheckCircle2 /> : <Play fill="currentColor" />} {running ? "JUDGES ARE THINKING..." : reviewPending ? "ROOM CLEARED — REVIEW USDA →" : playbackScene ? "RERUN THIS SCENE" : activeQuest?.language === "none" ? "ACKNOWLEDGE BRIEF" : "RUN THE ROOM"}
-          </button>
+          <div className="run-slot" ref={runRef}>
+            {pendingBossRun && liveBossFight
+              ? <div className={`boss-confirm ${spotlight === "run" ? "spotlight" : ""}`}>
+                  <span>READY TO CHALLENGE?</span>
+                  <p>
+                    {bossFee > 0
+                      ? <>A wrong answer costs <b>{bossFee} XP</b>. Your level stays {state.level}. </>
+                      : <>You're on the floor of this level, so a miss costs no XP this time. </>}
+                    A clear is the only way onto the next room. Are you sure you're ready?
+                  </p>
+                  <div className="confirm-actions">
+                    <button className="yes" onClick={requestRun} disabled={running}>
+                      {running ? <RefreshCw className="spin" /> : <Skull />} I'M READY · CHALLENGE THE BOSS
+                    </button>
+                    <button className="no" onClick={() => setPendingBossRun(false)} disabled={running}>NOT YET</button>
+                  </div>
+                </div>
+              : <button className={`run-button ${running ? "is-running" : ""} ${liveBossFight ? "boss" : ""} ${spotlight === "run" ? "spotlight" : ""}`} onClick={requestRun} disabled={running || !activeQuest || status === "locked" || reviewPending}>
+                  {running ? <RefreshCw className="spin" /> : reviewPending ? <CheckCircle2 /> : liveBossFight ? <Skull /> : <Play fill="currentColor" />} {running ? "JUDGES ARE THINKING..." : reviewPending ? "ROOM CLEARED — REVIEW USDA →" : playbackScene ? "RERUN THIS SCENE" : activeQuest?.language === "none" ? "ACKNOWLEDGE BRIEF" : liveBossFight ? "CHALLENGE THE BOSS" : "RUN THE ROOM"}
+                </button>}
+          </div>
         </section>
       </section>
       <aside className="editor-rail">
