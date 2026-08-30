@@ -133,7 +133,11 @@ main { display:grid; grid-template-columns: 250px minmax(420px, 1fr) 450px; gap:
 .recipe-cluster header span { font:700 10px "Barlow Condensed"; letter-spacing:1.4px; color:var(--purple); text-transform:uppercase; }
 .recipe-cluster header b { font-size:8px; color:#8d8691; }
 .recipe-cluster .skill-grid { padding:12px 0 0; }
-.class-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:12px; padding:18px 25px 0; }
+.class-choice { margin:18px 25px 0; }
+.class-explainer { padding:14px 16px; border:1px solid #4a3e4e; border-left:3px solid var(--purple); background:#151319; }
+.class-explainer span { color:var(--yellow); font-size:8px; font-weight:700; letter-spacing:1.7px; }
+.class-explainer p { margin:7px 0 0; color:#a59daa; font-size:8px; line-height:1.65; }
+.class-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:12px; padding-top:12px; }
 .class-grid article { min-height:210px; padding:20px; background:#19171c; border:1px solid #39343d; }
 .class-grid article.owned { border-color:#6f4b99; }
 .class-grid h3 { font:800 20px "Barlow Condensed"; margin:14px 0 5px; }
@@ -235,7 +239,7 @@ main { display:grid; grid-template-columns: 250px minmax(420px, 1fr) 450px; gap:
 .authoring-dock{flex:1 1 50%;min-height:330px;margin-top:12px;border:1px solid #37313c}
 .authoring-dock>.run-button{flex:none;width:calc(100% - 24px);margin:9px 12px 12px}
 .editor-toolbar{height:39px;flex:none;display:flex;align-items:center;justify-content:space-between;padding:0 10px;border-bottom:1px solid #38323c;font-size:8px;font-weight:700}.editor-toolbar>span{display:flex;gap:6px;align-items:center}.editor-toolbar button{background:transparent;color:#77717c;border:0;border-left:1px solid #39333d;padding:8px;cursor:pointer;font-size:8px}.editor-toolbar button.active{color:var(--yellow)}
-.run-button{margin:12px;border:0;background:var(--yellow);color:#12100a;min-height:49px;font-weight:800;font-size:11px;display:flex;justify-content:center;align-items:center;gap:9px;cursor:pointer;clip-path:polygon(2% 0,100% 0,98% 100%,0 100%);box-shadow:inset 0 -4px 0 rgba(0,0,0,.22)}.run-button:hover{background:#ffe069}.run-button:disabled{filter:grayscale(.7);cursor:wait}.run-button svg{width:17px}.run-button kbd{position:absolute;right:27px;font-size:8px;color:#75601c}.spin{animation:spin 1s linear infinite}
+.run-button{margin:12px;border:0;background:var(--yellow);color:#12100a;min-height:49px;font-weight:800;font-size:11px;display:flex;justify-content:center;align-items:center;gap:9px;cursor:pointer;clip-path:polygon(2% 0,100% 0,98% 100%,0 100%);box-shadow:inset 0 -4px 0 rgba(0,0,0,.22)}.run-button:hover{background:#ffe069}.run-button:disabled{filter:grayscale(.7);cursor:not-allowed}.run-button.is-running{cursor:wait}.run-button svg{width:17px}.run-button kbd{position:absolute;right:27px;font-size:8px;color:#75601c}.spin{animation:spin 1s linear infinite}
 .usda-panel{flex:1;min-height:0;display:flex;flex-direction:column;overflow:hidden}
 .usda-heading{height:42px;flex:none;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #38323c;padding-left:12px}
 .usda-heading>span{display:flex;align-items:center;gap:7px;font-size:8px;font-weight:700;letter-spacing:1.2px}
@@ -450,6 +454,13 @@ main { display:grid; grid-template-columns: 250px minmax(420px, 1fr) 450px; gap:
 .guide-pointer.right { transform:translate(-100%,-50%); animation:point-right 1.15s ease-in-out infinite; }
 .guide-pointer.left { transform:translate(0,-50%) scaleX(-1); animation:point-left 1.15s ease-in-out infinite; }
 .guide-pointer.left .pointer-step { transform:scaleX(-1); }
+/* `.up` stacks the callout under a header target and turns the chevrons to face
+   it, so the leading arrow is the topmost one. */
+.guide-pointer.up { flex-direction:column-reverse; transform:translate(-50%,0); animation:point-up 1.15s ease-in-out infinite; }
+.guide-pointer.up svg { transform:rotate(-90deg); }
+.guide-pointer.up svg:last-child { margin-left:0; margin-bottom:-15px; opacity:1; }
+.guide-pointer.up svg:first-of-type { opacity:.5; }
+.guide-pointer.up .pointer-step { margin:3px 0 0; }
 .pointer-step { display:grid; place-items:center; width:38px; height:38px; margin-right:4px; background:var(--yellow); color:#12100a; font:900 24px "Barlow Condensed"; clip-path:polygon(14% 0,100% 0,86% 100%,0 100%); box-shadow:0 0 26px rgba(255,203,46,.55); }
 .guide-pointer svg { width:27px; height:27px; stroke-width:3; color:var(--yellow); filter:drop-shadow(0 0 10px rgba(255,203,46,.85)); }
 .guide-pointer svg:last-child { margin-left:-16px; opacity:.5; }
@@ -469,6 +480,7 @@ main { display:grid; grid-template-columns: 250px minmax(420px, 1fr) 450px; gap:
 @keyframes slide-in{from{opacity:0;transform:translateX(-26px)}to{opacity:1;transform:none}}
 @keyframes point-right{50%{transform:translate(calc(-100% + 14px),-50%)}}
 @keyframes point-left{50%{transform:translate(-14px,-50%) scaleX(-1)}}
+@keyframes point-up{50%{transform:translate(-50%,-14px)}}
 @keyframes blink{50%{opacity:0}}
 @keyframes cta-glow{50%{box-shadow:inset 0 -4px 0 rgba(0,0,0,.22),0 0 26px rgba(255,203,46,.4)}}
 @keyframes glitch-a{0%,88%,100%{clip-path:inset(0 0 62% 0);transform:translate(-3px,-1px)}91%{clip-path:inset(12% 0 40% 0);transform:translate(-7px,1px)}95%{clip-path:inset(0 0 78% 0);transform:translate(4px,-2px)}}
@@ -503,7 +515,7 @@ main { display:grid; grid-template-columns: 250px minmax(420px, 1fr) 450px; gap:
 }
 @media(max-width:520px){
   .help-button span{display:none}
-  .topbar{padding:0 11px}.player-strip .avatar,.level{display:none}.left-rail{display:flex}.map-title{padding:22px 18px}.completion{display:none}.floor-list{padding:3px 16px}.room{width:45px;height:45px;margin:16px auto 18px}.room>span{bottom:7px;right:7px}.room-track{gap:8px}.room-wrap{flex-basis:86px;width:86px}.room-wrap small{font-size:11px;margin-top:12px}.connector{display:none}.legend{padding:10px 16px;gap:10px;flex-wrap:wrap}.mode-tabs button{padding:0 10px;font-size:7px}.skill-grid,.shop-grid{grid-template-columns:1fr 1fr;padding:13px}.skill-node{min-height:175px}.system-toast{right:16px;top:76px}
+  .topbar{padding:0 11px}.player-strip>div{display:none}.left-rail{display:flex}.map-title{padding:22px 18px}.completion{display:none}.floor-list{padding:3px 16px}.room{width:45px;height:45px;margin:16px auto 18px}.room>span{bottom:7px;right:7px}.room-track{gap:8px}.room-wrap{flex-basis:86px;width:86px}.room-wrap small{font-size:11px;margin-top:12px}.connector{display:none}.legend{padding:10px 16px;gap:10px;flex-wrap:wrap}.mode-tabs button{padding:0 10px;font-size:7px}.skill-grid,.shop-grid{grid-template-columns:1fr 1fr;padding:13px}.skill-node{min-height:175px}.system-toast{right:16px;top:76px}
   .lesson-drawer>header{padding:10px 12px}.lesson-drawer>header strong{font-size:19px}.lesson-actions a{display:none}
   .lesson-content{padding:16px 14px 20px}.system-line{grid-template-columns:26px 1fr;gap:8px}.system-avatar{width:26px;height:26px;font-size:8px}.system-line.intro p{font-size:15px}.lesson-beat h3{font-size:19px}
 }

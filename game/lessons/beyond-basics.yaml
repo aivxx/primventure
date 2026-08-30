@@ -86,7 +86,7 @@ lessons:
           - "Creating primvars:displayColor with CreateAttribute omits the UsdGeom.Primvar interface unless the naming and metadata are authored correctly."
           - "Indexed primvars separate a compact value table from indices; Get() alone does not expand indexed values."
       - kind: recap
-        heading: What you now owe the city
+        heading: What you now know
         body: |
           Primvars are namespaced attributes that carry rendering and geometric interpolation
           semantics. Choose constant, uniform, vertex, varying, or faceVarying according to the
@@ -202,7 +202,7 @@ lessons:
           - "Sdf.ChangeBlock coalesces change processing; edits already authored survive a later failure inside the block."
           - "Keep a change block short and free of unrelated queries or expensive work."
       - kind: recap
-        heading: What you now owe the city
+        heading: What you now know
         body: |
           Custom properties extend prims with typed workflow data, and namespaces provide ownership
           and grouping. Use a schema when the data becomes a durable shared contract, and use
@@ -293,7 +293,7 @@ lessons:
           - "SetActive authors into the current edit target, which may leave the layer that originally defined the prim untouched."
           - "A stronger active=true opinion can restore a prim that a weaker layer deactivated."
       - kind: recap
-        heading: What you now owe the city
+        heading: What you now know
         body: |
           Active metadata controls whether a prim subtree participates in the composed stage.
           Deactivation preserves authored specs, excludes the prim from default traversal, prunes
@@ -403,7 +403,7 @@ lessons:
           - "GetChildren is one level deep and cannot replace a recursive PrimRange."
           - "Checking GetTypeName() text is less robust than prim.IsA(schemaType) for schema inheritance."
       - kind: recap
-        heading: What you now owe the city
+        heading: What you now know
         body: |
           Traversal walks prims depth-first through Usd.PrimRange. Default traversal selects active,
           loaded, defined, non-abstract prims; predicates refine selection, IsA performs schema-aware
@@ -502,7 +502,7 @@ lessons:
           - "framesPerSecond is a playback hint, while timeCodesPerSecond is the authored temporal scale."
           - "Validate referenced assets before assembly because stage metadata alone cannot repair mismatched content."
       - kind: recap
-        heading: What you now owe the city
+        heading: What you now know
         body: |
           metersPerUnit and upAxis declare stage-wide spatial conventions, and composition leaves
           their differences intact. Pipelines must correct spatial and physics mismatches;
@@ -603,7 +603,7 @@ lessons:
           - "Components sit at the leaves of the model hierarchy; mark important interior nodes with subcomponent."
           - "A custom kind normally requires registry plugin configuration in a full OpenUSD installation."
       - kind: recap
-        heading: What you now owe the city
+        heading: What you now know
         body: |
           Kind metadata classifies model hierarchy roles independently of prim schema type. Groups
           and assemblies organize models, components are reusable leaf assets, and subcomponents
@@ -715,7 +715,7 @@ lessons:
           - "The render index coordinates and tracks the renderable scene between those delegates."
           - "usdGenSchema codegen, custom plugin compilation, and a rendering application all require more than a usd-core install."
       - kind: recap
-        heading: What you now owe the city
+        heading: What you now know
         body: |
           Hydra bridges scene data and rendering through a scene delegate, render index, and render
           delegate. HdStorm is the included real-time delegate, while custom delegates extend
@@ -855,7 +855,7 @@ lessons:
           - "A local authored value is stronger than the same property arriving through a reference."
           - "Flattening removes the authored composition structure needed for non-destructive collaboration."
       - kind: recap
-        heading: What you now owe the city
+        heading: What you now know
         body: |
           Composition orders sources and value resolution evaluates their data-type-specific
           opinions on demand. Attribute values can come from clips, samples, defaults, or

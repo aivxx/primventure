@@ -102,7 +102,7 @@ lessons:
           - SetCustomData replaces the complete dictionary, while SetCustomDataByKey preserves sibling entries.
           - Keep client-specific restructuring in a transformation step where it can be reused or skipped.
       - kind: recap
-        heading: What cleared customs
+        heading: What you now know
         body: |
           Data exchange maps source concepts into or out of OpenUSD through application I/O,
           converters, or file format plugins. A robust pipeline extracts faithfully, transforms
@@ -223,7 +223,7 @@ lessons:
           - Authoring subdivisionScheme none tells consumers to treat the source geometry as polygonal.
           - Author normals only from source data so the difference between supplied and absent normals survives.
       - kind: recap
-        heading: What left steerage
+        heading: What you now know
         body: |
           Mesh extraction converts foreign vertex and face records into per-mesh points, flattened
           face indices, ordered face counts, and optional normals. Explicit polygonal subdivision
@@ -334,7 +334,7 @@ lessons:
           - Topology arrays must remain consistent with points and with one another.
           - Retain useful transient data until downstream transformations have consumed it.
       - kind: recap
-        heading: What the Overseer counted
+        heading: What you now know
         body: |
           Extraction is a faithful, inspectable baseline for transformation. Complete mesh data
           includes the positions, bounds, and topology required by its contract, while conceptual
@@ -445,7 +445,7 @@ lessons:
           - upAxis metadata declares the convention, while transformed data or a conversion transform performs the rotation.
           - Calling AddTranslateOp twice creates two translate ops unless distinct suffixes and intended ordering are managed.
       - kind: recap
-        heading: What reached the right track
+        heading: What you now know
         body: |
           Transformation can turn faithful but flat extraction into a referenceable asset by
           reparenting prims beneath a default root. Stage up axis declares a convention, while xform
@@ -549,7 +549,7 @@ lessons:
           - Apply a scale exactly once; scaling values and also compensating with misleading metadata double-converts the asset.
           - Unauthored units force consumers to rely on fallback assumptions that may differ across workflows.
       - kind: recap
-        heading: What the Gauge now certifies
+        heading: What you now know
         body: |
           Transformation adapts extracted USD through reusable options, restructuring, pruning, and
           optimization. metersPerUnit declares the scale of scene coordinates while those
@@ -655,7 +655,7 @@ lessons:
           - Kind is a model-hierarchy contract with defined tokens and structural rules.
           - A validator should report all actionable failures when possible rather than stopping at the first.
       - kind: recap
-        heading: What satisfied the Warden
+        heading: What you now know
         body: |
           Asset validation encodes interoperability and pipeline assumptions as executable rules.
           usdchecker-style checks supplement code tests by inspecting the delivered stage's composed
@@ -774,7 +774,7 @@ lessons:
           - Call stage.GetRootLayer().Save() before validating so the checks inspect the delivered file.
           - Check the contract terms of default prim, up axis, units, kind, and required prims, alongside coarse signals such as polygon count or file size.
       - kind: recap
-        heading: What defeated the Engine
+        heading: What you now know
         body: |
           End-to-end intake testing proves that foreign data was explicitly parsed, faithfully
           authored, deliberately transformed, stamped with durable provenance, saved, reopened, and

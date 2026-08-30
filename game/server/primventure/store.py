@@ -232,6 +232,11 @@ def level_for_xp(xp: int) -> int:
     return 1 + xp // 100
 
 
+def xp_holding_level(xp: int) -> int:
+    """The XP a player may lose before the curve demotes them."""
+    return xp - (level_for_xp(xp) - 1) * 100
+
+
 def quest_view(
     quest: Quest,
     state: PlayerState,
@@ -248,5 +253,6 @@ def quest_view(
     data["opinion_points"] = opinion_points_for(quest)
     data["expects"] = describe_assertions(quest.validator)
     data["lesson"] = lesson
+    data["submission"] = state.submissions.get(quest.id, "")
     return data
 

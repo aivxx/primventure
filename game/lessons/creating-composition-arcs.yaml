@@ -74,7 +74,7 @@ lessons:
           - A missing layer path produces an unresolved dependency rather than copying its content.
           - Save the root layer after changing subLayerPaths; saving only the child layers is insufficient.
       - kind: recap
-        heading: What you now owe the city
+        heading: What you now know
         body: |
           Sublayers combine whole layers without path remapping. Author their paths on the root
           Sdf.Layer, list the strongest workstream first, use portable asset paths, and save the
@@ -158,7 +158,7 @@ lessons:
           - Choose a sublayer when the requirement is to preserve the same namespace without remapping.
           - Reordering resolves every conflict between the affected layers, well beyond the property currently inspected.
       - kind: recap
-        heading: What you now owe the city
+        heading: What you now know
         body: |
           Sublayers include complete layers in a shared namespace. The root layer is strongest,
           then listed sublayers proceed from first to last, recursively. Reordering the list changes
@@ -247,7 +247,7 @@ lessons:
           - Keep required dependencies inside the referenced source hierarchy.
           - Use payloads when heavy content must be loadable on demand.
       - kind: recap
-        heading: What you now owe the city
+        heading: What you now know
         body: |
           References compose reusable source hierarchies at destination prims. Add them through
           GetReferences, rely on a default prim only when one exists, and author destination-local
@@ -329,7 +329,7 @@ lessons:
           - Referencing a layer with a target prim composes that prim's subtree alone.
           - Avoid external relationship targets unless the asset contract explicitly requires the consumer to provide them.
       - kind: recap
-        heading: What you now owe the city
+        heading: What you now know
         body: |
           A reference composes only its targeted prim subtree. Keep geometry, materials, bindings,
           and other required dependencies beneath the asset root, make that root the default prim,
@@ -415,7 +415,7 @@ lessons:
           - Local properties on the payload prim can remain available while its deferred contents are unloaded.
           - Saving after AddPayload persists the arc; load state itself is runtime stage state.
       - kind: recap
-        heading: What you now owe the city
+        heading: What you now know
         body: |
           Author payloads with GetPayloads().AddPayload, target a default prim or explicit prim
           path, and use Load and Unload to control deferred composition without erasing the arc.
@@ -496,7 +496,7 @@ lessons:
           - Efficiency still depends on asset structure, which a payload alone cannot repair.
           - Flattening the stage to sidestep payload population trades one problem for a much larger file.
       - kind: recap
-        heading: What you now owe the city
+        heading: What you now know
         body: |
           Payloads are reference-like arcs with demand loading. Open large stages with LoadNone,
           discover or navigate to payload roots, and load only the working set while keeping
@@ -579,7 +579,7 @@ lessons:
           - Changes authored in one consuming scenario stay within it and leave independent scenarios alone.
           - Use references for isolated reusable instances and inherits when coordinated broadcast behavior is required.
       - kind: recap
-        heading: What you now owe the city
+        heading: What you now know
         body: |
           Class prims store abstract, non-imageable scene description. Inherits arcs broadcast
           that description and stronger contextual overrides to many destinations, while local
@@ -664,7 +664,7 @@ lessons:
           - Author the arc on the destination prim; the class source only holds the fallback data.
           - GetSpecializes and GetInherits encode different strength semantics, so pick the one matching the intended authority.
       - kind: recap
-        heading: What you now owe the city
+        heading: What you now know
         body: |
           Specializes broadcasts reusable fallback specs and sits last in LIVRPS. It resembles
           inherits structurally but yields to every stronger authored category, making it suitable
@@ -778,7 +778,7 @@ lessons:
           - "SetEditTarget changes where future opinions are written; existing opinions keep their current strength."
           - A layer must belong to an appropriate composition context before it can serve as a useful edit target.
       - kind: recap
-        heading: What you now owe the city
+        heading: What you now know
         body: |
           Layers store sparse prim and property specs containing opinions. A stage builds prim
           indexes and resolves those opinions into composed objects. Use composition arcs to
@@ -863,7 +863,7 @@ lessons:
           - GetPropertyStack is the focused view for a specific attribute or relationship.
           - Removing weaker arcs to make debugging simpler changes the composition and can conceal the actual cause.
       - kind: recap
-        heading: What you now owe the city
+        heading: What you now know
         body: |
           Trace composition at property granularity. Use GetPrimStack for the contributing prim
           specs, GetPropertyStack for the exact competing property specs, and inspect each spec's
@@ -966,7 +966,7 @@ lessons:
           - An external reference without a prim path requires a default prim in the referenced layer.
           - Stack inspection identifies authored opinion strength more directly than generic runtime tracing.
       - kind: recap
-        heading: What you now owe the city
+        heading: What you now know
         body: |
           LIVRPS orders Local, Inherits, Variant sets, References, Payloads, and Specializes from
           strongest to weakest. Local spans the root and recursive sublayers of one layer stack,

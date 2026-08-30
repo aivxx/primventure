@@ -82,7 +82,7 @@ lessons:
           - A schema attribute's fallback may make Get return a value even though no value is authored.
           - Generic CreateAttribute requires the exact property name and Sdf value type, so schema accessors are safer.
       - kind: recap
-        heading: What you now owe the city
+        heading: What you now know
         body: |
           Schemas turn generic prim containers into standardized scene elements. IsA schemas
           establish a prim's type, API schemas provide additional capabilities, and schema-specific
@@ -171,7 +171,7 @@ lessons:
           - Reordering subLayerPaths changes the result without changing either source layer.
           - Missing or incorrectly anchored paths prevent the intended layer from contributing.
       - kind: recap
-        heading: What you now owe the city
+        heading: What you now know
         body: |
           Layers modularize scene description, and a stage composes their opinions into one
           scenegraph. Sublayers build a local layer stack, with direct opinions above sublayers and
@@ -270,7 +270,7 @@ lessons:
           - Class prims stay out of ordinary stage traversal and rendering.
           - SetSpecifier operates at the current edit target and can change intent unexpectedly.
       - kind: recap
-        heading: What you now owe the city
+        heading: What you now know
         body: |
           def establishes concrete existence, over contributes sparse non-destructive opinions,
           and class supplies abstract reusable opinions. Composition resolves contributions at one
@@ -377,7 +377,7 @@ lessons:
           - Editing the shared source changes every consumer, while a destination-local opinion changes only that use.
           - Defining copied geometry forfeits the shared maintenance benefit of references.
       - kind: recap
-        heading: What you now owe the city
+        heading: What you now know
         body: |
           References compose reusable source prims and descendants onto destination prims.
           External references use asset identifiers, internal references use same-stage paths,
@@ -468,7 +468,7 @@ lessons:
           - Each stage saves on its own, so a separately created asset stage needs its own save call.
           - A default prim selects content while the stage's pseudo-root stays exactly as it was.
       - kind: recap
-        heading: What you now owe the city
+        heading: What you now know
         body: |
           defaultPrim metadata names a top-level prim as the asset entry point. It guides tools,
           satisfies asset validation, and lets external references and payloads omit a source prim
@@ -572,7 +572,7 @@ lessons:
           - An unloaded payload contributes no payload contents until loaded.
           - GetPropertyStack reveals value sources; GetPrimStack reveals broader prim-spec contributions.
       - kind: recap
-        heading: What you now owe the city
+        heading: What you now know
         body: |
           USD resolves conflicts by deterministic LIVRPS order: Local, Inherits, Variant sets,
           References, Payloads, Specializes. The rule applies recursively, lets local destination
@@ -673,7 +673,7 @@ lessons:
           - Changing the selection leaves the contents of both variants intact.
           - AddVariantSet and AddVariant create choices; SetVariantSelection only chooses among them.
       - kind: recap
-        heading: What you now owe the city
+        heading: What you now know
         body: |
           Variant sets hold named alternatives on one prim. Select a variant and use its variant
           edit context to author choice-specific opinions, then author selections wherever each

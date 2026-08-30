@@ -111,7 +111,7 @@ lessons:
           - "Forgetting stage.GetRootLayer().Save() or stage.Save() means the validator sees an empty stage."
           - "Passing a bad type name creates a prim with a type token no schema claims."
       - kind: recap
-        heading: What you now owe the city
+        heading: What you now know
         body: |
           Prims are containers identified by scenegraph paths. A type name declares what kind of
           data belongs in that container. Nesting prims creates the hierarchy that every later
@@ -127,7 +127,7 @@ lessons:
     intro: >-
       Prims are containers. Congratulations, you own empty boxes. Attributes are the part where
       the boxes contain something, which the audience tells me is the interesting part. Attributes
-      are also where value resolution starts quietly deciding things behind your back.
+      are also where the scene starts quietly answering questions you never wrote down.
     beats:
       - kind: concept
         heading: Attributes are typed name-value pairs on a prim
@@ -147,20 +147,35 @@ lessons:
           - Attributes are authored into layers, and composition combines opinions from those layers into a resolved value.
           - "An attribute can hold a default value, time samples, or both."
       - kind: concept
-        heading: Fallbacks mean Get can succeed with nothing authored
+        heading: Authoring one means declaring a type, then setting a value
         system: >-
-          The value exists, the file is empty, and no one is lying to you. Yes, this upsets people.
+          Two steps. Contestants routinely perform one of them and then look at me expectantly.
         body: |
-          Schema attributes carry fallback values defined by the schema itself. Calling Get on an
-          unauthored schema attribute returns that fallback, and the value never appears in the
-          USDA text because nothing was authored.
+          An attribute does not exist on a prim until something declares it. Declaring means
+          naming it and fixing its data type, which is what the Sdf value types above are for.
+          Setting means giving it an actual value. Both steps write into a layer, and only then
+          does the attribute appear in the file.
 
-          This is value resolution doing its job. Once you author a default value with Set, the
-          authored opinion wins over the fallback and the value appears in the layer.
+          Some attributes are declared for you. A prim's type carries a schema, and that schema
+          names the attributes the prim is expected to have, so a Sphere arrives already knowing
+          it has a radius. Anything a schema does not define is a custom attribute, which you
+          declare yourself. USDA marks those with the keyword custom so a reader can tell at a
+          glance which properties came from the type and which came from you.
+
+          A city name belongs to no schema, so authoring one on an Xform reads like this.
+        code: |
+          def Xform "City"
+          {
+              custom string cityName = "Primventure"
+          }
+
+          # custom  no schema defines this attribute, so you declared it yourself
+          # string  the data type, fixed when the attribute was declared
+          # =       the value you set
         points:
-          - "Unauthored plus fallback returns a value, but the USDA file shows no opinion."
-          - "Authored default appears in the layer and takes precedence over the schema fallback."
-          - "HasAuthoredValue distinguishes an authored opinion from a fallback."
+          - Declaring fixes the name and type, and setting supplies the value. An attribute needs both before it shows up in a layer.
+          - Schema attributes are already declared by the prim's type, so for those you only set a value.
+          - "You do not type the custom keyword yourself. It appears because no schema claims the attribute."
       - kind: api
         heading: Prefer schema accessors, fall back to the generic API
         system: >-
@@ -187,6 +202,36 @@ lessons:
 
           prim.GetAttributes()      # every attribute on the prim
           prim.GetPropertyNames()   # names only
+      - kind: concept
+        heading: Reading an attribute nobody authored
+        system: >-
+          The value exists, the file is empty, and no one is lying to you. Yes, this upsets people.
+        body: |
+          Schema attributes behave differently from custom ones when nothing has been set. Along
+          with declaring that a Sphere has a radius, the schema states what that radius should be
+          in a scene that never mentions it. That built-in default is called the fallback, and Get
+          returns it without complaint.
+
+          So a Sphere you just defined reports a radius of 1.0 while its USDA is completely empty.
+          Nothing is broken. Reading an attribute resolves a value from the strongest source
+          available, and with nothing authored the schema fallback is the only source there is.
+          Set a radius yourself and your value outranks the fallback, and only then is a number
+          written into the layer.
+
+          Custom attributes have no schema standing behind them, so they have no fallback. A
+          cityName you have not set yet is not empty text; there is simply nothing to read.
+        code: |
+          sphere = UsdGeom.Sphere.Define(stage, "/World/Sphere")   # nothing authored yet
+
+          sphere.GetRadiusAttr().Get()               # 1.0, supplied by the schema
+          sphere.GetRadiusAttr().HasAuthoredValue()  # False, the file says nothing
+
+          sphere.GetRadiusAttr().Set(2.0)            # now the layer has an opinion
+          sphere.GetRadiusAttr().HasAuthoredValue()  # True
+        points:
+          - A fallback is the schema's answer for an attribute the scene never mentions, which is how Get succeeds against an empty file.
+          - A value you author always outranks a fallback, and only authored values are written to the layer.
+          - "HasAuthoredValue tells you whether a value came from the file or from the schema."
       - kind: pitfall
         heading: Where contestants lose the room
         system: >-
@@ -199,11 +244,12 @@ lessons:
           - "displayColor is an array-valued primvar, so wrap the triple in a list: [(0, 1, 0)]."
           - "Passing a time code to Set authors a time sample instead of the default value."
       - kind: recap
-        heading: What you now owe the city
+        heading: What you now know
         body: |
-          Attributes store typed data on prims, resolve from authored opinions or schema
-          fallbacks, and can vary over time. Schema accessors are the preferred interface;
-          CreateAttribute with an explicit Sdf value type covers everything else.
+          Attributes hold typed data on prims. Authoring one means declaring a name and a type,
+          then setting a value. Reading one gives you the value you authored, or the schema's
+          fallback when nobody authored anything. Prefer a schema accessor when the schema owns
+          the data; reach for CreateAttribute with an explicit Sdf type when nothing does.
     apply:
       f0_nameplate: >-
         Author cityName as a string attribute set to Primventure — exactly, punctuation included,
@@ -303,7 +349,7 @@ lessons:
           - "UsdGeom.SetStageUpAxis is a free function in UsdGeom; pass the stage as its first argument."
           - "CreateNew raises if the file exists. Use Open when the room already made the stage for you."
       - kind: recap
-        heading: What you now owe the city
+        heading: What you now know
         body: |
           A stage is the composed scenegraph assembled from layers, anchored by a root layer, and
           described by stage metadata. Default prim and up axis are the two contracts every
@@ -389,7 +435,7 @@ lessons:
           - "documentation is a well-known key. Arbitrary top-level keys need a schema."
           - "kind participates in model hierarchy rules, so its value comes from a fixed vocabulary."
       - kind: recap
-        heading: What you now owe the city
+        heading: What you now know
         body: |
           Metadata annotates scene description outside the schema, never animates, and is the
           right home for provenance, documentation, kind, and pipeline data. Attributes remain
@@ -476,7 +522,7 @@ lessons:
           - "Metadata cannot be time sampled, so animated data belongs on attributes."
           - "AddTranslateOp on a prim that already has one appends another op to xformOpOrder."
       - kind: recap
-        heading: What you now owe the city
+        heading: What you now know
         body: |
           Time samples attach values to time codes on a single attribute, the stage's start and
           end time codes declare the playback range, and interpolation fills the gaps between
@@ -543,7 +589,7 @@ lessons:
           - "Dangling targets fail silently. Verify with GetTargets and a prim existence check."
           - "Use a relationship to link objects, and an attribute when you actually need a value."
       - kind: recap
-        heading: What you now owe the city
+        heading: What you now know
         body: |
           Relationships are properties that hold scene paths, letting one prim point at others
           without duplicating them. They are how USD expresses connection instead of copying.
@@ -633,7 +679,7 @@ lessons:
           - "Prim names are quoted; type names are not."
           - "Stage metadata such as defaultPrim belongs in the top parentheses, above every prim block."
       - kind: recap
-        heading: What you now owe the city
+        heading: What you now know
         body: |
           USDA is text, USDC is binary, .usd is either, and USDZ packages a stage for delivery.
           Reading USDA fluently is how you verify what your authoring code actually wrote.

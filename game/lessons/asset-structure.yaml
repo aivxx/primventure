@@ -84,7 +84,7 @@ lessons:
           - Apply namespace edits before saving, and save the layer that owns the edited specs.
           - defaultPrim is authored on its own, independently of any payload or reference on the prim.
       - kind: recap
-        heading: What you now owe the city
+        heading: What you now know
         body: |
           A well-formed asset has a defined entry point that encloses all content and dependencies.
           defaultPrim advertises that root as the implicit target of external references and
@@ -184,7 +184,7 @@ lessons:
           - Keep materials in Looks and meshes in Geometry so the semantics stay unambiguous during navigation.
           - Conventions such as leading underscores can signal internal paths, though enforcement is left to your pipeline.
       - kind: recap
-        heading: What you now owe the city
+        heading: What you now know
         body: |
           A navigable asset keeps all content beneath its entry point and partitions contributions
           into semantically clear scopes. Geometry and Looks separate modeling from surfacing,
@@ -276,7 +276,7 @@ lessons:
           - Reversing sublayer order silently reverses which conflicting opinion wins.
           - Save every newly authored workstream layer as well as the root layer that lists it.
       - kind: recap
-        heading: What you now owe the city
+        heading: What you now know
         body: |
           Workstream layers isolate independent contributions and compose them through a
           deliberately ordered layer stack. Sparse authoring preserves ownership, earlier
@@ -370,7 +370,7 @@ lessons:
           - An asset path without a prim path requires the contents layer to expose a default prim.
           - Lofted fields must stay synchronized with the fields they control inside contents.
       - kind: recap
-        heading: What you now owe the city
+        heading: What you now know
         body: |
           The reference-payload pattern presents one thin, stable interface for downstream
           references and hides heavy implementation behind an unloadable payload. Lofted metadata,
@@ -466,7 +466,7 @@ lessons:
           - A descendant primvar of the same name overrides the inherited entry-point value.
           - Prefix conventions such as asset_ can avoid collisions in broad production interfaces.
       - kind: recap
-        heading: What you now owe the city
+        heading: What you now know
         body: |
           Asset parameters turn a stable entry point into a supported control surface. Variants
           package discrete compositional choices, primvars provide lightweight inherited values,
@@ -560,7 +560,7 @@ lessons:
           - Author only the controlling selection on the interface and leave the heavy surfacing opinions inside Looks.
           - Verify both the public selection and the resulting internal selection after authoring.
       - kind: recap
-        heading: What you now owe the city
+        heading: What you now know
         body: |
           A lofted variant set mirrors internal choices on the asset entry point. Each public
           variant conditionally selects its matching internal variant, preserving a stable,
@@ -651,7 +651,7 @@ lessons:
           - Asset name lives in assetInfo, separate from displayName and from the prim name.
           - A default prim may be a component, but defaultPrim and kind are independent contracts.
       - kind: recap
-        heading: What you now owe the city
+        heading: What you now know
         body: |
           A component is a complete, referenceable leaf in model hierarchy. Usd.ModelAPI authors
           its Kind.Tokens.component classification and assetInfo identity, allowing tools to
@@ -740,7 +740,7 @@ lessons:
           - A reference without an explicit prim path needs a valid default prim in the source asset.
           - Each child receives its component role from its own authored or referenced metadata.
       - kind: recap
-        heading: What you now owe the city
+        heading: What you now know
         body: |
           Assemblies are aggregate group models that arrange reusable components, groups, or other
           assemblies. References preserve each member's published contract while the assembly
@@ -827,7 +827,7 @@ lessons:
           - Groups may organize components, but a component cannot contain group ancestors of another component.
           - Model hierarchy validity rests on kind metadata, which matching appearance alone cannot confirm.
       - kind: recap
-        heading: What you now owe the city
+        heading: What you now know
         body: |
           Group-kind prims create shallow, queryable partitions among models. They can sit beneath
           assemblies and above components, adding navigability without changing appearance or
@@ -924,7 +924,7 @@ lessons:
           - Deep kind tagging adds composition cost and defeats model traversal pruning.
           - Valid inheritance for a custom kind comes from registered plugin metadata, which SetKind alone cannot supply.
       - kind: recap
-        heading: What you now owe the city
+        heading: What you now know
         body: |
           Sound model hierarchies are operational, shallow, consistent, and conservative about
           extension. Groups and assemblies organize above component leaf boundaries, allowing
@@ -1043,7 +1043,7 @@ lessons:
           - Save the root layer after all stage, prim, and composition metadata is authored.
           - Verify the source asset has defaultPrim before omitting the reference prim path.
       - kind: recap
-        heading: What you now owe the city
+        heading: What you now know
         body: |
           Scalable assets expose legible and navigable interfaces, preserve modular reuse, and
           control composition cost. A complete contract explicitly authors entry point, axis,

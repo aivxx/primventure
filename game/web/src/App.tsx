@@ -25,7 +25,7 @@ type Quest = {
   brief: string; language: Language; starter: string; xp: number; reward?: string | object;
   cookbook: string; unlocked: boolean; completed: boolean; exam_tasks: string[];
   stats: Record<string, number>; questions?: Question[]; lesson?: Lesson | null;
-  opinion_points: number; expects: string[];
+  opinion_points: number; expects: string[]; submission: string;
 };
 type ShopItem = {
   name: string; description: string; cost: number; repeatable?: boolean;
@@ -56,17 +56,17 @@ const CLASS_PATHS = [
   {
     id: "Compositor",
     title: "Compositor",
-    blurb: "You argue in LIVERPS. Layers, arcs, and opinions are your weapons.",
+    blurb: "Your focus is how layers, composition arcs, and competing opinions resolve into a stage.",
   },
   {
     id: "Aggregator",
     title: "Aggregator",
-    blurb: "You assemble the city. Payloads, kinds, and workstreams stay inspectable.",
+    blurb: "Your focus is assembling scalable assets with payloads, kinds, instancing, and inspectable workstreams.",
   },
   {
     id: "Exchanger",
     title: "Exchanger",
-    blurb: "You translate the outside world. Units, checkers, and honest extracts.",
+    blurb: "Your focus is moving data between OpenUSD and other tools with honest units, validation, and provenance.",
   },
 ] as const;
 
@@ -96,18 +96,22 @@ type Tab = "map" | "skills" | "kiosk";
 // "city" tears down what was published and leaves the record standing; "all"
 // takes the save with it.
 type ResetScope = "city" | "all";
-type GuideTarget = "lesson" | "editor" | "run" | "usda" | "map" | "payout" | "consumables" | "saferoom" | "recipes" | "feed";
+type GuideTarget = "lesson" | "editor" | "run" | "usda" | "map" | "level" | "payout" | "consumables" | "class" | "saferoom" | "recipes" | "feed";
 // Panels on the left edge have no room for an arrow beside them, and the
 // tutorial card owns the bottom left, so those targets get pointed at from the
-// right instead of being covered by their own callout.
-const POINTER_SIDE: Record<GuideTarget, "left" | "right"> = {
+// right instead of being covered by their own callout. Targets in the header
+// strip have nothing beside them either, so they get pointed at from below.
+type PointerSide = "left" | "right" | "up";
+const POINTER_SIDE: Record<GuideTarget, PointerSide> = {
   lesson: "right",
   editor: "right",
   run: "left",
   usda: "right",
   map: "right",
+  level: "up",
   payout: "left",
   consumables: "left",
+  class: "right",
   saferoom: "right",
   recipes: "right",
   feed: "left",
@@ -139,6 +143,11 @@ const GUIDE_STEPS: Array<{ target: GuideTarget; title: string; body: string }> =
     body: "Clear the rooms to learn the floor. The boss is the exit exam, and your cleared work stacks up as a real USD city in world/. Cleared floors become playback episodes. The audience rewatches those reruns while you stay on the live broadcast.",
   },
   {
+    target: "level",
+    title: "Find your level here",
+    body: "Your current level is always in the LVL badge at the top right. Clearing a room pays its XP once, and every 100 XP raises that number. Prerequisites are not the only lock: some rooms also require a level. Losing to a boss costs XP but never lowers your level.",
+  },
+  {
     target: "payout",
     title: "Get paid in Opinion Points",
     body: "Opinion Points are the only currency, and boss rooms are what pay them. This counter holds your balance and names the next room that will top it up.",
@@ -149,9 +158,14 @@ const GUIDE_STEPS: Array<{ target: GuideTarget; title: string; body: string }> =
     body: "Hint Tokens buy you a clue for the room you are stuck on. Opinion X-Rays show the composed layer stack after you clear a room. Click one here to use it, and hit SAFEROOM to buy more once a boss has paid you.",
   },
   {
+    target: "class",
+    title: "Declare a class at level 2",
+    body: "At level 2, choose one permanent class in the Saferoom: Compositor for layers and composition arcs, Aggregator for scalable asset assembly, or Exchanger for moving data between tools. A class records the OpenUSD discipline you identify with; it grants no bonuses and locks no lessons, so choose by interest. Only a full crawl reset lets you choose again.",
+  },
+  {
     target: "saferoom",
     title: "Restock in the Saferoom",
-    body: "This is where Opinion Points turn into supplies: more Hint Tokens and X-Rays, permanent upgrades, and from level 2 your class path. Nothing sold here clears a room for you.",
+    body: "This is where Opinion Points turn into supplies: more Hint Tokens and X-Rays, plus permanent upgrades. Nothing sold here clears a room for you.",
   },
   {
     target: "recipes",
@@ -394,9 +408,10 @@ function Landing({ onStart, hasProgress, nextQuest, quests, floors }: {
           <li><b>03</b><strong>Face the judges</strong><span>OpenUSD opens what you wrote and rules on it, line by line.</span></li>
         </ol>
         <p className="landing-note">
-          Win and your work is filed into a real 3D city that keeps growing on your disk. Miss and the System says
-          something unkind and hands the room straight back. Nothing you build is ever taken away — the worst outcome
-          here is being talked about.
+          Win and your work is filed into a real 3D city that keeps growing on your disk, and the room pays XP once —
+          every 100 of it is a level, and a few rooms will not open below one. Miss and the System says something
+          unkind and hands the room straight back. Nothing you build is ever taken away; losing to a boss costs a
+          little XP and never a level.
         </p>
       </section>
 
@@ -771,20 +786,25 @@ export default function App() {
   const [guideStep, setGuideStep] = useState<number | null>(null);
   const [mapScope, setMapScope] = useState<"floor" | "all">("floor");
   const [browseFloor, setBrowseFloor] = useState<number | null>(null);
-  const [pointer, setPointer] = useState<{ x: number; y: number; side: "left" | "right" } | null>(null);
+  const [pointer, setPointer] = useState<{ x: number; y: number; side: PointerSide } | null>(null);
   const [lessonOpen, setLessonOpen] = useState(false);
   const [, setLessonRevision] = useState(0);
   const booted = useRef(false);
+  // Unsaved edits per room, so stepping away and back mid-thought keeps the exact
+  // buffer. Cleared work falls back to the server's saved submission on reload.
+  const drafts = useRef(new Map<string, string>());
   const lessonRef = useRef<HTMLElement>(null);
   const editorRef = useRef<HTMLElement>(null);
   const focusEditor = useRef<(() => void) | null>(null);
   const runRef = useRef<HTMLButtonElement>(null);
   const mapRef = useRef<HTMLDivElement>(null);
   const usdaRef = useRef<HTMLElement>(null);
+  const levelRef = useRef<HTMLSpanElement>(null);
   const payoutRef = useRef<HTMLElement>(null);
   const consumablesRef = useRef<HTMLElement>(null);
   const feedRef = useRef<HTMLElement>(null);
   const recipesRef = useRef<HTMLDivElement>(null);
+  const classRef = useRef<HTMLDivElement>(null);
   const saferoomRef = useRef<HTMLDivElement>(null);
 
   const refresh = async (advance = false) => {
@@ -865,7 +885,9 @@ export default function App() {
   }, []);
   useEffect(() => {
     if (!activeQuest) return;
-    setCode(activeQuest.starter || "");
+    // A draft can legitimately be empty, so only it gets to short-circuit; an
+    // unsaved room reports no submission and falls through to the starter.
+    setCode(drafts.current.get(activeQuest.id) ?? (activeQuest.submission || activeQuest.starter || ""));
     setAnswers(activeQuest.questions?.map(() => "") || []);
     setAssistResult(null);
     setPendingSpend(null);
@@ -874,6 +896,9 @@ export default function App() {
     setReviewPending(owesReview);
     setUsdaMode(activeQuest.completed || owesReview ? "after" : "before");
   }, [activeQuest?.id]);
+  useEffect(() => {
+    if (activeQuest) drafts.current.set(activeQuest.id, code);
+  }, [activeQuest?.id, code]);
   useEffect(() => {
     if (!activeQuest) return;
     if (!showLanding && activeQuest.lesson && !activeQuest.completed && !lessonsRead().has(activeQuest.id)) {
@@ -918,15 +943,15 @@ export default function App() {
     const target = GUIDE_STEPS[guideStep].target;
     // Some steps describe a tab, so the tour opens it for them. The closing step
     // returns to the map, which is where the player actually starts.
-    const tab = ({ map: "map", recipes: "skills", saferoom: "kiosk", feed: "map" } as Record<string, Tab>)[target];
+    const tab = ({ map: "map", recipes: "skills", class: "kiosk", saferoom: "kiosk", feed: "map" } as Record<string, Tab>)[target];
     if (tab) setActiveTab(tab);
     // The drawer covers the screen, so it has to step aside once the tour
     // moves on to the terminal behind it.
     setLessonOpen(target === "lesson");
   }, [guideStep]);
 
-  // Park the arrow just outside the left edge of whatever the tutorial is
-  // describing, so the callout and the outline agree on the target.
+  // Park the arrow just outside the edge of whatever the tutorial is describing,
+  // so the callout and the outline agree on the target.
   useEffect(() => {
     if (guideStep === null) {
       setPointer(null);
@@ -939,8 +964,10 @@ export default function App() {
       run: runRef.current,
       map: mapRef.current,
       usda: usdaRef.current,
+      level: levelRef.current,
       payout: payoutRef.current,
       consumables: consumablesRef.current,
+      class: classRef.current,
       saferoom: saferoomRef.current,
       recipes: recipesRef.current,
       feed: feedRef.current,
@@ -952,6 +979,16 @@ export default function App() {
         return;
       }
       const side = POINTER_SIDE[target];
+      if (side === "up") {
+        // Header targets sit above every panel, so the arrow tucks under them
+        // and points back up rather than reaching in from a side.
+        setPointer({
+          x: Math.min(Math.max(rect.left + rect.width / 2, 60), window.innerWidth - 60),
+          y: rect.bottom + 10,
+          side,
+        });
+        return;
+      }
       const centered = rect.top + Math.min(rect.height / 2, 150);
       const x = side === "left"
         ? Math.min(rect.right + 22, window.innerWidth - 104)
@@ -1129,7 +1166,7 @@ export default function App() {
       setToast({
         kind: "success",
         title: "CLASS PATH LOCKED",
-        message: `SYSTEM: ${id} recorded. You may still clear every floor. Class affects flavor; skill clears rooms.`,
+        message: `SYSTEM: ${id} recorded as your discipline. It grants no bonus and closes no rooms; skill still clears the tower.`,
       });
     } catch (error) {
       setToast({ kind: "error", title: "PATH DENIED", message: error instanceof Error ? error.message : "The kiosk refused." });
@@ -1145,7 +1182,12 @@ export default function App() {
       // pointers before reloading. The review key especially: it would send
       // refresh() back to a room the wipe just un-cleared.
       localStorage.removeItem(USDA_REVIEW_KEY);
-      if (scope === "all") localStorage.removeItem(LESSONS_READ_KEY);
+      if (scope === "all") {
+        localStorage.removeItem(LESSONS_READ_KEY);
+        // A city reset keeps the record, so saved source stays useful for reruns.
+        // A full wipe un-clears every room, so the terminals go back to starters.
+        drafts.current.clear();
+      }
       setActiveQuest(null);
       setChecks([]);
       setReviewPending(false);
@@ -1233,7 +1275,8 @@ export default function App() {
       </div>
       <div className="player-strip">
         <button className="help-button" onClick={() => setGuideStep(0)}><HelpCircle size={14} /> HOW TO PLAY</button>
-        <div className="avatar">{state.contestant.slice(-2)}</div><div><small>{state.title}</small><strong>{state.contestant}</strong></div><span className="level">LVL {state.level}</span>
+        <div className="avatar">{state.contestant.slice(-2)}</div><div><small>{state.title}</small><strong>{state.contestant}</strong></div>
+        <span className={`level ${spotlight === "level" ? "spotlight" : ""}`} ref={levelRef}>LVL {state.level}</span>
       </div>
     </header>
     <main>
@@ -1244,6 +1287,10 @@ export default function App() {
           <div className="meter health"><i style={{ width: `${quests.length ? state.completed_quests.length / quests.length * 100 : 0}%` }} /></div>
           <div className="stat-line"><span><Zap size={15} /> EXPERIENCE</span><b>{state.xp}/{state.next_level_xp}</b></div>
           <div className="meter xp"><i style={{ width: `${xpProgress}%` }} /></div>
+          <p className="currency-note">
+            Each room pays its XP once, and <b>100 XP</b> is a level. Some rooms stay shut below a
+            level. Losing to a boss costs XP, never a level.
+          </p>
           <div className="currency"><CircleDollarSign size={18} /><div><small>OPINION POINTS</small><b>{state.opinion_points}</b></div></div>
           <p className="currency-note">
             Earned by clearing boss rooms. {nextPayingQuest
@@ -1393,7 +1440,12 @@ export default function App() {
         </div>}
         {activeTab === "kiosk" && <div className={`kiosk panel ${spotlight === "saferoom" ? "spotlight" : ""}`} ref={saferoomRef}>
           <div className="section-hero"><span>SAFEROOM KIOSK // OPINIONS FINAL</span><h1>SPEND TO SURVIVE</h1><p>SYSTEM: Everything here costs Opinion Points, and Opinion Points come from clearing boss rooms. {nextPayingQuest ? `Your next payout is ${nextPayingQuest.title}, worth ${nextPayingQuest.opinion_points}.` : "You have cleared every paying room on this route."} Consumables land in the left rail. Upgrades never clear rooms for you.</p><small className="recipe-count">{state.opinion_points} OP BANKED</small></div>
-          <div className="class-grid">{CLASS_PATHS.map((path) => {
+          <div className={`class-choice ${spotlight === "class" ? "spotlight" : ""}`} ref={classRef}>
+            <div className="class-explainer">
+              <span>CLASS PATH // AVAILABLE AT LEVEL 2</span>
+              <p>Choose the OpenUSD discipline that fits your interests. This is a permanent identity choice, not a power upgrade: classes grant no bonus and close no rooms. A full crawl reset is the only way to choose again.</p>
+            </div>
+            <div className="class-grid">{CLASS_PATHS.map((path) => {
             const selected = state.specialization === path.id;
             const lockedOut = Boolean(state.specialization) && !selected;
             const tooSoon = state.level < 2;
@@ -1403,7 +1455,8 @@ export default function App() {
                 {selected ? "DECLARED" : tooSoon ? "LEVEL 2 REQUIRED" : lockedOut ? "PATH CLOSED" : "DECLARE PATH"}
               </button>
             </article>;
-          })}</div>
+            })}</div>
+          </div>
           {shopSections.map((section) => <div className="shop-section" key={section.id}>
             <div className="shop-heading">{section.heading}</div>
             <div className="shop-grid">{section.items.map(([id, item], index) => {
@@ -1452,7 +1505,7 @@ export default function App() {
             onMount={(editor) => { focusEditor.current = () => editor.focus(); }}
             options={{ readOnly: activeQuest?.language === "none" || reviewPending, minimap: { enabled: false }, fontSize: 13, lineHeight: 21, padding: { top: 16 }, scrollBeyondLastLine: false, tabSize: 4 }}
           />
-          <button className={`run-button ${spotlight === "run" ? "spotlight" : ""}`} onClick={runQuest} disabled={running || !activeQuest || status === "locked" || reviewPending} ref={runRef}>
+          <button className={`run-button ${running ? "is-running" : ""} ${spotlight === "run" ? "spotlight" : ""}`} onClick={runQuest} disabled={running || !activeQuest || status === "locked" || reviewPending} ref={runRef}>
             {running ? <RefreshCw className="spin" /> : reviewPending ? <CheckCircle2 /> : <Play fill="currentColor" />} {running ? "JUDGES ARE THINKING..." : reviewPending ? "ROOM CLEARED — REVIEW USDA →" : playbackScene ? "RERUN THIS SCENE" : activeQuest?.language === "none" ? "ACKNOWLEDGE BRIEF" : "RUN THE ROOM"}
           </button>
         </section>
@@ -1570,7 +1623,7 @@ export default function App() {
               {beat.code && <pre><code>{beat.code.replace(/\n$/, "")}</code></pre>}
             </article>)}
             <section className="lesson-apply">
-              <span className="apply-tag">THAT IS THE FIGHT</span>
+              <span className="apply-tag">YOUR TASK IN THIS ROOM</span>
               <SystemLine text={activeQuest.lesson.apply} tone="apply" />
             </section>
             <button className="lesson-ack" onClick={acknowledgeLesson}>

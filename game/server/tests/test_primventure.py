@@ -20,6 +20,7 @@ from primventure.store import (
     quest_view,
     space_out_steps,
     with_save_line,
+    xp_holding_level,
 )
 
 
@@ -204,6 +205,67 @@ def test_orientation_awards_only_once(tmp_path: Path) -> None:
     assert state.recipes == ["Prim"]
 
 
+def _boss_that_gates_on_level_two() -> Quest:
+    return Quest(
+        id="gate",
+        title="Gate",
+        floor=0,
+        neighborhood="Threshold",
+        kind="floor_boss",
+        level_required=2,
+        brief="Pass.",
+        language="none",
+        cookbook="docs/index.md",
+        questions=[Question(prompt="Ready?", choices=["no", "yes"], answer=1)],
+    )
+
+
+def test_a_boss_fee_never_costs_the_level_its_room_requires(tmp_path: Path) -> None:
+    """A demotion would lock the player out of the room that just charged them."""
+    saves = SaveStore(tmp_path / "save.json")
+    runner = QuestRunner(saves)
+    boss = _boss_that_gates_on_level_two()
+    saves.save(PlayerState(xp=110, level=2))
+
+    charged = runner.run(boss, RunRequest(answers=[0]))
+
+    assert not charged.success
+    assert (saves.load().xp, saves.load().level) == (100, 2)
+    assert "Boss fee: 10 XP." in charged.system_message
+    assert quest_view(boss, saves.load())["unlocked"]
+
+    # Sitting on the level's floor there is nothing left the fee may take.
+    free = runner.run(boss, RunRequest(answers=[0]))
+
+    assert saves.load().xp == 100
+    assert "Boss fee" not in free.system_message
+    assert quest_view(boss, saves.load())["unlocked"]
+
+
+def test_a_fee_never_carries_a_player_across_a_level_boundary() -> None:
+    for xp in range(0, 600):
+        assert level_for_xp(xp - min(25, xp_holding_level(xp))) == level_for_xp(xp)
+
+
+def test_no_boss_fee_can_lock_the_room_that_charged_it() -> None:
+    """Rooms gate on level and each pays its XP once, so a demotion is a dead end."""
+    for boss in (quest for quest in QuestStore().all() if quest.kind.endswith("boss")):
+        # The tightest case is a player who arrived on the bare minimum level.
+        entry = (boss.level_required - 1) * 100
+        billed = entry - min(25, xp_holding_level(entry))
+        assert level_for_xp(billed) >= boss.level_required, boss.id
+
+
+def test_floor_00_hands_its_boss_enough_xp_to_survive_a_wrong_answer() -> None:
+    """Everyone reaches this boss on the same XP, so a fee here hits every player."""
+    catalog = QuestStore().all()
+    boss = next(quest for quest in catalog if quest.id == "f0_gatekeeper")
+    arrival = sum(quest.xp for quest in catalog if quest.floor == 0 and quest.id != boss.id)
+
+    assert level_for_xp(arrival) >= boss.level_required
+    assert level_for_xp(arrival - min(25, xp_holding_level(arrival))) >= boss.level_required
+
+
 def test_quest_view_does_not_leak_answers() -> None:
     quest = Quest(
         id="boss",
@@ -364,6 +426,79 @@ def test_reset_rejects_a_scope_it_does_not_know(tmp_path: Path, monkeypatch) -> 
     assert client.post("/api/reset", params={"scope": "districts"}).status_code == 422
     # A refused scope must not have demolished anything on its way out.
     assert (world / "workstreams").exists()
+
+
+def _cleared_opener(tmp_path: Path, monkeypatch) -> tuple[SaveStore, Quest, str]:
+    """Clear the opening room for real and hand back the source that cleared it."""
+    world = tmp_path / "world"
+    world.mkdir()
+    shutil.copy(WORLD_DIR / "root.usda", world / "root.usda")
+    monkeypatch.setattr(runner_module, "WORLD_DIR", world)
+    quest = next(item for item in QuestStore().all() if item.id == "f0_first_prim")
+    source = f'{quest.starter}stage.DefinePrim("/City", "Xform")\nstage.GetRootLayer().Save()\n'
+    saves = SaveStore(tmp_path / "save.json")
+    cleared = QuestRunner(saves).run(quest, RunRequest(code=source))
+    assert cleared.success, [check.message for check in cleared.results if not check.passed]
+    return saves, quest, source
+
+
+def test_clearing_a_room_saves_the_source_it_cleared_with(
+    tmp_path: Path, monkeypatch
+) -> None:
+    """Walking back into a cleared room has to show the player their own work."""
+    saves, quest, source = _cleared_opener(tmp_path, monkeypatch)
+
+    assert quest_view(quest, saves.load())["submission"] == source
+
+
+def test_a_room_nobody_has_cleared_offers_only_its_starter() -> None:
+    quest = next(item for item in QuestStore().all() if item.id == "f0_first_prim")
+
+    assert quest_view(quest, PlayerState())["submission"] == ""
+
+
+def test_a_failed_rerun_leaves_the_saved_source_alone(
+    tmp_path: Path, monkeypatch
+) -> None:
+    """Tinkering in a cleared room must not cost the player the version that worked."""
+    saves, quest, source = _cleared_opener(tmp_path, monkeypatch)
+
+    broken = QuestRunner(saves).run(
+        quest, RunRequest(code=f"{quest.starter}# authored nothing\n")
+    )
+
+    assert not broken.success
+    assert quest_view(quest, saves.load())["submission"] == source
+
+
+def test_state_payload_leaves_saved_source_to_the_quest_view(
+    tmp_path: Path, monkeypatch
+) -> None:
+    """Polling refetches state constantly, so authored code must not ride along."""
+    client, _ = _reset_client(tmp_path, monkeypatch)
+
+    assert "submissions" not in client.get("/api/state").json()
+    assert "submissions" not in client.post("/api/reset", params={"scope": "city"}).json()
+
+
+def test_a_city_reset_keeps_saved_source_and_a_full_wipe_drops_it(
+    tmp_path: Path, monkeypatch
+) -> None:
+    """Demolishing the skyline keeps the record, so reruns start from your own code."""
+    from primventure import api as api_module
+
+    client, _ = _reset_client(tmp_path, monkeypatch)
+    state = api_module.saves.load()
+    state.submissions["f0_first_prim"] = "# the version that cleared it\n"
+    api_module.saves.save(state)
+
+    client.post("/api/reset", params={"scope": "city"})
+    assert api_module.saves.load().submissions == {
+        "f0_first_prim": "# the version that cleared it\n"
+    }
+
+    client.post("/api/reset", params={"scope": "all"})
+    assert api_module.saves.load().submissions == {}
 
 
 def test_every_validated_room_states_what_the_terminal_checks() -> None:

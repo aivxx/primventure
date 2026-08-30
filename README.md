@@ -75,11 +75,11 @@ uv run primventure --port 8000 --web-port 5173
 
 API docs live at http://127.0.0.1:8000/docs while the server is up.
 
-Progress is `game/save.json`. The composed city is `world/root.usda` plus whatever you published into `world/workstreams/`.
+Progress is `game/save.json`, including the source that last cleared each room, so reopening a cleared room puts your own code back in the terminal instead of the starter. The composed city is `world/root.usda` plus whatever you published into `world/workstreams/`.
 
 The Saferoom tab ends in a **CONDEMNED** panel with the two ways to start over. Both need a second click to confirm, and neither can be undone:
 
-- **Demolish the City** deletes `world/workstreams/`, empties `world/root.usda`, and drops the preview cache. Your save is untouched, so every cleared room stays cleared and any episode can be rerun to rebuild its block.
+- **Demolish the City** deletes `world/workstreams/`, empties `world/root.usda`, and drops the preview cache. Your save is untouched, so every cleared room stays cleared, your authored code stays in its terminal, and any episode can be rerun to rebuild its block.
 - **Wipe the Whole Crawl** does all of that and resets `game/save.json` too: floor 00, level 1, nothing banked.
 
 Same thing from a terminal, if you would rather not click:

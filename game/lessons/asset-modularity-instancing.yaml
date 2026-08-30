@@ -81,7 +81,7 @@ lessons:
           - "Performance measurements vary by hardware and renderer, so compare stage statistics and repeated timings across several runs."
           - "Use UsdUtils.ComputeUsdStageStats(stage) to inspect totalPrimCount, totalInstanceCount, and prototypeCount."
       - kind: recap
-        heading: What you now owe the city
+        heading: What you now know
         body: |
           Repeated component prims can reference one asset and set instanceable to true so OpenUSD
           shares their composed descendants through prototypes. Correctly placed composition arcs
@@ -183,7 +183,7 @@ lessons:
           - "Instance proxy traversal is convenient for readers, though it spends the traversal savings and leaves the proxies read-only."
           - "A root-level displayName is legal on a prim that remains instanceable."
       - kind: recap
-        heading: What you now owe the city
+        heading: What you now know
         body: |
           Authors create explicit instance roots and OpenUSD derives implicit prototypes from
           compatible composition arcs. Instance roots remain mutable for placement and metadata,
@@ -273,7 +273,7 @@ lessons:
           - "Repeated identical deinstances duplicate work that a second shared prototype could represent once."
           - "Root-only changes such as displayName or transform work while the prim remains an instance."
       - kind: recap
-        heading: What you now owe the city
+        heading: What you now know
         body: |
           Deinstancing one prim restores full descendant editability while leaving its referenced
           asset composition intact. Compatible siblings remain instances and continue sharing, so
@@ -370,7 +370,7 @@ lessons:
           - "Prototype prims take effect once the prototypes relationship targets them."
           - "Forgetting to save leaves the authored arrays only in memory."
       - kind: recap
-        heading: What you now owe the city
+        heading: What you now know
         body: |
           A PointInstancer represents many copies through explicit prototype targets and aligned
           per-instance arrays. prototypes supplies the choices, protoIndices selects a choice for
@@ -498,7 +498,7 @@ lessons:
           - "orientations, scales, and ids are optional, but any authored per-instance array must align with the instance population."
           - "Use scenegraph instances when individual copies need frequent path-based edits."
       - kind: recap
-        heading: What you now owe the city
+        heading: What you now know
         body: |
           Point instancing combines explicit prototype targets with aligned, vectorized arrays.
           protoIndices selects among multiple prototypes, transform order determines final
@@ -609,7 +609,7 @@ lessons:
           - "Keep assemblies composed, since flattening trades reusable composition structure for a shorter hierarchy."
           - "Reserve scenegraph prims for copies whose paths a workflow actually uses; arrays scale better at hundreds of thousands."
       - kind: recap
-        heading: What you now owe the city
+        heading: What you now know
         body: |
           Components compose into assemblies, assemblies scale through references, and instancing
           optimizes the resulting repetition. Scenegraph instances preserve named roots and
@@ -707,7 +707,7 @@ lessons:
           - "Profile stage statistics and memory to confirm that each additional nesting level earns its place."
           - "Maintain the referenced assets and explicit instance roots, which are the authorable surfaces."
       - kind: recap
-        heading: What you now owe the city
+        heading: What you now know
         body: |
           Nested instancing lets instanceable assemblies share outer structure while their
           components, point populations, or material networks share inner structure. It is most

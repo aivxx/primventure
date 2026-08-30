@@ -11,7 +11,14 @@ from typing import Any
 from pxr import Sdf, Usd, UsdGeom
 
 from .models import PlayerState, Quest, RunRequest, RunResponse, ValidationResult
-from .store import ROOT, WORLD_DIR, SaveStore, level_for_xp, opinion_points_for
+from .store import (
+    ROOT,
+    WORLD_DIR,
+    SaveStore,
+    level_for_xp,
+    opinion_points_for,
+    xp_holding_level,
+)
 
 
 TAUNTS = [
@@ -74,15 +81,22 @@ class QuestRunner:
         if success:
             if artifact is not None:
                 self._publish(quest, artifact, before_usda, after_usda)
+            if request.code.strip():
+                state.submissions[quest.id] = request.code
             state = self._award(quest, state)
             message = VICTORIES[sum(map(ord, quest.id)) % len(VICTORIES)]
         else:
             message = TAUNTS[sum(map(ord, quest.id)) % len(TAUNTS)]
-            if quest.kind.endswith("boss") and state.xp:
-                state.xp = max(0, state.xp - min(25, state.xp))
+            # Rooms gate on level and every room pays its XP only once, so a fee
+            # that demoted the player would lock the door it just charged them at
+            # with no way left to earn the level back. Bill only what the current
+            # level can spare.
+            fee = min(25, xp_holding_level(state.xp))
+            if quest.kind.endswith("boss") and fee > 0:
+                state.xp -= fee
                 state.level = level_for_xp(state.xp)
                 self.saves.save(state)
-                message += " Boss fee: 25 XP."
+                message += f" Boss fee: {fee} XP."
         return self._response(
             quest,
             state,

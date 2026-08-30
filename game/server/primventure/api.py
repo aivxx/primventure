@@ -85,7 +85,9 @@ def health() -> dict[str, Any]:
 def get_state() -> dict[str, Any]:
     state = saves.load()
     return {
-        **state.model_dump(),
+        # Saved source reaches the client per room through quest_view, so it stays
+        # out of the state payload every poll refetches.
+        **state.model_dump(exclude={"submissions"}),
         "next_level_xp": state.level * 100,
         "shop": UPGRADES,
     }

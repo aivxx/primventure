@@ -109,4 +109,7 @@ class PlayerState(BaseModel):
     recipes: list[str] = Field(default_factory=list)
     achievements: list[str] = Field(default_factory=list)
     specialization: str | None = None
+    # The source that last cleared each room, so revisiting it shows the player
+    # their own accepted work instead of the starter. Keyed by quest id.
+    submissions: dict[str, str] = Field(default_factory=dict)
 
