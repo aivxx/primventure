@@ -12,12 +12,14 @@ from primventure.runner import QuestRunner
 from primventure.scene import world_scene
 from primventure.store import (
     WORLD_DIR,
+    WORLD_TEMPLATE,
     LessonStore,
     QuestStore,
     SaveStore,
     level_for_xp,
     newest_world_mtime,
     quest_view,
+    seed_world,
     space_out_steps,
     with_save_line,
     xp_holding_level,
@@ -379,6 +381,49 @@ def _reset_client(tmp_path: Path, monkeypatch):
     return TestClient(api_module.app), world
 
 
+def test_play_state_lives_outside_the_tracked_world_template() -> None:
+    """A published city in world/ is a player's progress committed to the repo."""
+    assert WORLD_DIR != WORLD_TEMPLATE
+    assert WORLD_TEMPLATE not in WORLD_DIR.parents
+    assert WORLD_TEMPLATE.is_dir(), "the template ships with the repository"
+
+
+def test_the_world_template_carries_no_published_progress() -> None:
+    """The template is what a fresh clone starts from, so it starts unplayed."""
+    assert not (WORLD_TEMPLATE / "workstreams").exists()
+    assert "subLayers" not in (WORLD_TEMPLATE / "root.usda").read_text()
+
+
+def test_seeding_copies_the_template_then_never_touches_the_city_again(
+    tmp_path: Path,
+) -> None:
+    """Re-seeding an existing city would demolish the run it is holding."""
+    target = tmp_path / "state" / "world"
+
+    seed_world(target)
+
+    assert (target / "root.usda").exists()
+    assert (target / "assets" / "bench.usda").exists()
+
+    published = target / "workstreams" / "f0_first_prim" / "submission.usd"
+    published.parent.mkdir(parents=True)
+    published.write_text("#usda 1.0\n")
+    (target / "root.usda").write_text("#usda 1.0\n(\n    subLayers = []\n)\n")
+
+    seed_world(target)
+
+    assert published.exists()
+    assert "subLayers" in (target / "root.usda").read_text()
+
+
+def test_seeding_without_a_template_still_yields_a_writable_city(tmp_path: Path) -> None:
+    target = tmp_path / "state" / "world"
+
+    seed_world(target, template=tmp_path / "no-template-here")
+
+    assert target.is_dir()
+
+
 def test_city_reset_clears_the_skyline_but_keeps_the_record(tmp_path: Path, monkeypatch) -> None:
     client, world = _reset_client(tmp_path, monkeypatch)
 
@@ -432,7 +477,7 @@ def _cleared_opener(tmp_path: Path, monkeypatch) -> tuple[SaveStore, Quest, str]
     """Clear the opening room for real and hand back the source that cleared it."""
     world = tmp_path / "world"
     world.mkdir()
-    shutil.copy(WORLD_DIR / "root.usda", world / "root.usda")
+    shutil.copy(WORLD_TEMPLATE / "root.usda", world / "root.usda")
     monkeypatch.setattr(runner_module, "WORLD_DIR", world)
     quest = next(item for item in QuestStore().all() if item.id == "f0_first_prim")
     source = f'{quest.starter}stage.DefinePrim("/City", "Xform")\nstage.GetRootLayer().Save()\n'
@@ -569,7 +614,7 @@ def test_nameplate_room_is_solvable_from_what_the_ui_states(
     """The checklist is the only place the exact strings appear, so it has to be enough."""
     world = tmp_path / "world"
     world.mkdir()
-    shutil.copy(WORLD_DIR / "root.usda", world / "root.usda")
+    shutil.copy(WORLD_TEMPLATE / "root.usda", world / "root.usda")
     monkeypatch.setattr(runner_module, "WORLD_DIR", world)
     catalog = QuestStore().all()
     saves = SaveStore(tmp_path / "save.json")

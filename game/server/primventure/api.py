@@ -21,7 +21,15 @@ from .models import RunRequest
 from .runner import QuestRunner
 from .scene import world_scene
 from .trophies import desk, stamp, unstamped
-from .store import ROOT, WORLD_DIR, QuestStore, SaveStore, newest_world_mtime, quest_view
+from .store import (
+    ROOT,
+    WORLD_DIR,
+    QuestStore,
+    SaveStore,
+    newest_world_mtime,
+    quest_view,
+    seed_world,
+)
 
 
 # A city with nothing published yet. Every cleared room sublayers itself in.
@@ -29,6 +37,9 @@ EMPTY_CITY = (
     '#usda 1.0\n(\n    documentation = "Primventure\'s persistent city. '
     'Successful quest layers are added here."\n)\n'
 )
+
+# Starting the server is the moment a player needs a city of their own.
+seed_world(WORLD_DIR)
 
 UPGRADES: dict[str, dict[str, Any]] = {
     "hint_refill": {
@@ -324,6 +335,7 @@ def reset_progress(scope: Literal["city", "all"] = "all") -> dict[str, Any]:
     unpublished, which is the state a player wants when they would rather rebuild
     the skyline from reruns than start the crawl over.
     """
+    seed_world(WORLD_DIR)
     shutil.rmtree(WORLD_DIR / "workstreams", ignore_errors=True)
     shutil.rmtree(WORLD_DIR / ".preview", ignore_errors=True)
     (WORLD_DIR / "root.usda").write_text(EMPTY_CITY)

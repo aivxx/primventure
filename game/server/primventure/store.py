@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import json
+import os
 import re
+import shutil
 import threading
 from pathlib import Path
 from typing import Any
@@ -23,7 +25,12 @@ GAME_DIR = ROOT / "game"
 QUEST_DIR = GAME_DIR / "quests"
 LESSON_DIR = GAME_DIR / "lessons"
 SAVE_PATH = GAME_DIR / "save.json"
-WORLD_DIR = ROOT / "world"
+# The tracked world/ is a template: quest assets, the reference gallery, and an
+# unplayed root layer. Publishing into it would put a player's city in git, so
+# play happens inside a copy that git ignores.
+WORLD_TEMPLATE = ROOT / "world"
+STATE_DIR = Path(os.environ.get("PRIMVENTURE_STATE_DIR") or ROOT / ".primventure")
+WORLD_DIR = STATE_DIR / "world"
 
 
 SAVE_LINE = "stage.GetRootLayer().Save()"
@@ -81,6 +88,22 @@ def opinion_points_for(quest: Quest, state: PlayerState | None = None) -> int:
     if state is None:
         return base
     return base + home_boss_bonus(state.specialization, quest)
+
+
+def seed_world(target: Path, template: Path = WORLD_TEMPLATE) -> Path:
+    """Give play a writable city, copied out of the tracked template.
+
+    Only a missing target is seeded. A player's published city and the layers it
+    sublayers in live here, so re-copying the template would demolish the run.
+    """
+    if target.exists():
+        return target
+    target.parent.mkdir(parents=True, exist_ok=True)
+    if template.exists():
+        shutil.copytree(template, target, ignore=shutil.ignore_patterns(".*"))
+    else:
+        target.mkdir(parents=True)
+    return target
 
 
 def newest_world_mtime(world_dir: Path = WORLD_DIR) -> float:
