@@ -1,10 +1,10 @@
 floor: 6
-floor_name: Asset Foundry
+floor_name: Hierarchy Foundry
 quests:
   - id: f6_entry_point
-    title: Cut the Asset Front Door
+    title: Give the Asset a World Entry Point
     floor: 6
-    floor_name: Asset Foundry
+    floor_name: Hierarchy Foundry
     neighborhood: Principles Ward
     kind: room
     prerequisites: [f5_liverps_labyrinth]
@@ -33,9 +33,9 @@ quests:
     recipes: [Default Prim, Asset]
 
   - id: f6_hierarchy_sort
-    title: File Looks With the Building
+    title: "Filing Clerk: Organize Geometry and Looks"
     floor: 6
-    floor_name: Asset Foundry
+    floor_name: Hierarchy Foundry
     neighborhood: Principles Ward
     kind: neighborhood_boss
     prerequisites: [f6_entry_point]
@@ -74,9 +74,9 @@ quests:
         explanation: Encapsulation keeps bindings inside the referenced target.
 
   - id: f6_workstream_split
-    title: Split Geometry From Shading
+    title: Split Geometry and Shading Into Sublayers
     floor: 6
-    floor_name: Asset Foundry
+    floor_name: Hierarchy Foundry
     neighborhood: Workstream Forges
     kind: room
     prerequisites: [f6_hierarchy_sort]
@@ -111,9 +111,9 @@ quests:
     recipes: [Sublayer, Layer Stack]
 
   - id: f6_asset_interface
-    title: Forge the Thin Asset Shell
+    title: "Thin Asset Shell: The Reference-Payload Pattern"
     floor: 6
-    floor_name: Asset Foundry
+    floor_name: Hierarchy Foundry
     neighborhood: Workstream Forges
     kind: city_boss
     prerequisites: [f6_workstream_split]
@@ -160,9 +160,9 @@ quests:
         explanation: The reference/payload pattern keeps a thin interface over deferred contents.
 
   - id: f6_accent_parameter
-    title: Loft the Accent Color
+    title: Parameterize the Accent Color on the Interface
     floor: 6
-    floor_name: Asset Foundry
+    floor_name: Hierarchy Foundry
     neighborhood: Parameter Loft
     kind: room
     prerequisites: [f6_asset_interface]
@@ -190,9 +190,9 @@ quests:
     recipes: [Primvar, Asset]
 
   - id: f6_loft_variant
-    title: Hoist the Shade Variant
+    title: "Art Director: Loft the Variant Set"
     floor: 6
-    floor_name: Asset Foundry
+    floor_name: Hierarchy Foundry
     neighborhood: Parameter Loft
     kind: neighborhood_boss
     prerequisites: [f6_accent_parameter]
@@ -243,9 +243,9 @@ quests:
         explanation: The asset interface is the supported place to parameterize an asset.
 
   - id: f6_component_house
-    title: Zone the Component House
+    title: Register the House as a Component Model
     floor: 6
-    floor_name: Asset Foundry
+    floor_name: Hierarchy Foundry
     neighborhood: Model Heights
     kind: room
     prerequisites: [f6_loft_variant]
@@ -273,9 +273,9 @@ quests:
     recipes: [Kind, Component, Asset Info]
 
   - id: f6_assembly_block
-    title: Assemble the Skyline Block
+    title: "Skyline Assembly: Aggregate the Components"
     floor: 6
-    floor_name: Asset Foundry
+    floor_name: Hierarchy Foundry
     neighborhood: Model Heights
     kind: neighborhood_boss
     prerequisites: [f6_component_house]
@@ -314,9 +314,9 @@ quests:
         explanation: Assemblies aggregate models through composition and preserve shared geometry.
 
   - id: f6_street_groups
-    title: Group the North and South Lots
+    title: Group the Lots in the Model Hierarchy
     floor: 6
-    floor_name: Asset Foundry
+    floor_name: Hierarchy Foundry
     neighborhood: Model Heights
     kind: room
     prerequisites: [f6_assembly_block]
@@ -346,9 +346,9 @@ quests:
     recipes: [Group, Model Hierarchy]
 
   - id: f6_zoning_golem
-    title: Reorder the Zoning Golem
+    title: "Zoning Golem: Enforce the Model Hierarchy"
     floor: 6
-    floor_name: Asset Foundry
+    floor_name: Hierarchy Foundry
     neighborhood: Hierarchy Hall
     kind: floor_boss
     prerequisites: [f6_street_groups]
@@ -382,7 +382,7 @@ quests:
     reward:
       opinion_points: 3
       achievement: "Floor clear! The Zoning Golem now recites group, assembly, component in the approved order."
-      inventory: {system_peeks: 1}
+      inventory: {prim_censuses: 1}
     world_target: /City/AssetFoundry
     recipes: [Model Hierarchy, Kind]
     questions:

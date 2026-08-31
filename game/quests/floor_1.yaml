@@ -1,10 +1,10 @@
 floor: 1
-floor_name: Property Ward
+floor_name: Property Clocktower
 quests:
   - id: f1_lamp_post
-    title: Relight Attribute Alley
+    title: Set the Lamp's Intensity Attribute
     floor: 1
-    floor_name: Property Ward
+    floor_name: Property Clocktower
     neighborhood: Attribute Alley
     kind: room
     prerequisites: [f0_gatekeeper]
@@ -29,9 +29,9 @@ quests:
     recipes: [UsdLux.SphereLight.Define, UsdLux.LightAPI.GetIntensityAttr]
 
   - id: f1_civic_record
-    title: Repair the Civic Record
+    title: "The Registrar: Stage and Prim Metadata"
     floor: 1
-    floor_name: Property Ward
+    floor_name: Property Clocktower
     neighborhood: Metadata Market
     kind: neighborhood_boss
     prerequisites: [f1_lamp_post]
@@ -57,9 +57,9 @@ quests:
     recipes: [Usd.Object.SetMetadata, Usd.ModelAPI.SetKind]
 
   - id: f1_clockwork_crossing
-    title: Synchronize Clockwork Crossing
+    title: "Clockwork Crossing: Timecodes and Time Samples"
     floor: 1
-    floor_name: Property Ward
+    floor_name: Property Clocktower
     neighborhood: Clockwork Crossing
     kind: floor_boss
     prerequisites: [f1_civic_record]

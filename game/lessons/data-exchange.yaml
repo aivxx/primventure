@@ -3,7 +3,7 @@ lessons:
     title: Data Exchange
     objective: Distinguish data exchange implementations and preserve source provenance while translating foreign data into OpenUSD.
     intro: >-
-      Welcome to the Exchange Terminal, where every crate is foreign, every manifest is incomplete,
+      Welcome to the Customs Terminal, where every crate is foreign, every manifest is incomplete,
       and customs has misplaced the definition of "complete." Data exchange gets data into and out
       of OpenUSD without pretending incompatible formats are secretly identical. I will be checking
       the paperwork.
@@ -160,7 +160,7 @@ lessons:
         heading: Parse vertices and define the mesh
         system: >-
           Eight vertices enter. One typed prim leaves. This is the cleanest transaction the
-          Exchange Terminal has processed in years.
+          Customs Terminal has processed in years.
         body: |
           Read foreign text with normal Python I/O, convert numeric values to Gf.Vec3f objects, then
           define a UsdGeom.Mesh and author its schema attributes. CreatePointsAttr accepts a default

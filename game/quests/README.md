@@ -1,8 +1,8 @@
 # Primventure Quest Catalog
 
 The catalog currently contains 73 quests across Floors 0–9. Floors 3–9
-are expanded. Floor 4 is Beyond the Walls (primvars, custom properties,
-active/inactive, traversal, units, kinds, Hydra concept). Floor 9 is the Recap
+are expanded. Floor 4 is Beyond-Basics Gardens (primvars, custom properties,
+active/inactive, traversal, units, kinds, Hydra concept). Floor 9 is the Certification
 Colosseum: live debug (edit targets, stacks, layer offsets, flatten,
 ChangeBlock) plus honest Customizing USD / Hydra concept raids. Original MCQs
 are mapped to study-guide task IDs 1.1–8.x. Files are ordered by floor, and `prerequisites` form a playable path from

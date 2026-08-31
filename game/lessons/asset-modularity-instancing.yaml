@@ -3,7 +3,7 @@ lessons:
     title: Authoring Scenegraph Instances
     objective: Author repeated instanceable prims that reference one shared component asset and verify the resulting optimization.
     intro: >-
-      Welcome to the Instance Wilds, where the scenery repeats and the memory bill does not have
+      Welcome to the Prototype Wilds, where the scenery repeats and the memory bill does not have
       to. Give several prims the same referenced asset, mark them instanceable, and OpenUSD can
       make their shared structure somebody else's problem. The Mirror Forge calls this imitation.
       Engineering calls it surviving the floor.

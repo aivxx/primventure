@@ -82,6 +82,9 @@ main { display:grid; grid-template-columns: 250px minmax(420px, 1fr) 450px; gap:
 .confirm-actions .no:hover{border-color:var(--red);color:var(--red)}
 .item-icon { width:31px; height:31px; display:grid; place-items:center; color:var(--green); background:#163126; border:1px solid #276848; }
 .item-icon.epic { color:#ba79ff; background:#29183b; border-color:#613593; }.item-icon.legendary{color:var(--yellow);background:#352d17;border-color:#736022}
+/* A stamped trophy still counts as a cleared room, so it stays legible rather
+   than reading as spent stock. */
+.key-items .inventory-item.stamped{border-style:dashed;opacity:.66}
 .inventory-item strong,.inventory-item small{display:block}.inventory-item strong{font-size:9px}.inventory-item small{font-size:7px;color:#77717d;text-transform:uppercase;margin-top:3px}.inventory-item>b{font-size:8px;color:#aca4b1;white-space:nowrap}.inventory-item.usable>b{color:#c798ff}
 .restock-link{border:1px solid #7a6320;background:#2b2413;color:var(--yellow);padding:3px 7px;font-size:7px;font-weight:700;letter-spacing:.8px;cursor:pointer}.restock-link:hover{border-color:var(--yellow);background:#3a3016}
 .shop-heading{padding:18px 25px 0;color:var(--yellow);font-size:8px;font-weight:700;letter-spacing:1.6px}
@@ -141,7 +144,11 @@ main { display:grid; grid-template-columns: 250px minmax(420px, 1fr) 450px; gap:
 .class-grid article { min-height:210px; padding:20px; background:#19171c; border:1px solid #39343d; }
 .class-grid article.owned { border-color:#6f4b99; }
 .class-grid h3 { font:800 20px "Barlow Condensed"; margin:14px 0 5px; }
-.class-grid p { font-size:8px; line-height:1.6; color:#8e8792; min-height:48px; }
+.class-grid p { font-size:8px; line-height:1.6; color:#8e8792; }
+.class-kit { display:block; margin:8px 0 6px; color:var(--yellow); font-size:8px; line-height:1.5; letter-spacing:.3px; }
+.class-perks { margin:0 0 12px; padding:0; list-style:none; }
+.class-perks li { position:relative; margin-top:5px; padding-left:12px; color:#c3bcc9; font-size:8px; line-height:1.5; }
+.class-perks li::before { content:""; position:absolute; left:2px; top:5px; width:5px; height:5px; transform:rotate(45deg); background:var(--purple); }
 .class-grid button { border:0; background:var(--yellow); color:#111; padding:9px 12px; font-size:9px; font-weight:700; cursor:pointer; }
 .class-grid button:disabled { background:#302c33; color:#716b76; cursor:not-allowed; }
 .skill-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(145px,1fr)); gap:12px; padding:25px; }
@@ -150,6 +157,11 @@ main { display:grid; grid-template-columns: 250px minmax(420px, 1fr) 450px; gap:
 .skill-node.unlocked { opacity:1; border-color:#6f4b99; background:linear-gradient(145deg,#2a1939,#17151a 65%); }
 .skill-gem { width:45px;height:45px;display:grid;place-items:center;background:#242027;border:1px solid #49414f;transform:rotate(45deg);margin:4px 0 22px 5px;color:#746c78}.skill-gem svg{transform:rotate(-45deg)}.unlocked .skill-gem{color:var(--yellow);border-color:var(--yellow);box-shadow:0 0 25px rgba(159,84,255,.35)}
 .skill-node small{color:var(--purple);font-size:7px;letter-spacing:1px}.skill-node h3{font:800 17px "Barlow Condensed";margin:3px 0}.skill-node p{font-size:8px;line-height:1.5;color:#817a86}.skill-node footer{position:absolute;bottom:12px;color:var(--yellow);font-size:7px;font-weight:700}
+.skill-node.affinity { border-color:var(--yellow); box-shadow:0 0 18px rgba(255,203,46,.18); }
+.inventory-item.class-free { border-color:var(--green); }
+.lesson-class-lens { margin:12px 0 6px; padding:12px 15px; border:1px solid #4a3e4e; border-left:3px solid var(--purple); background:#151319; }
+.lesson-class-lens span { display:block; color:var(--purple); font-size:8px; font-weight:700; letter-spacing:1.6px; }
+.lesson-class-lens p { max-width:62ch; margin:6px 0 0; color:#d5cde0; font-size:12px; line-height:1.65; }
 .shop-grid article { min-height:230px;padding:20px;background:#19171c;border:1px solid #39343d;position:relative}.shop-grid article.owned{border-color:#2f865d}.shop-number{position:absolute;right:12px;top:8px;font:800 31px "Barlow Condensed";color:#2e2a32}.shop-grid svg{color:var(--yellow)}.shop-grid h3{font:800 20px "Barlow Condensed";margin:14px 0 5px}.shop-grid p{font-size:8px;line-height:1.6;color:#8e8792;min-height:48px}.shop-grid button{border:0;background:var(--yellow);color:#111;padding:9px 12px;font-size:9px;font-weight:700;display:flex;gap:5px;align-items:center;cursor:pointer}.shop-grid button:disabled{background:#302c33;color:#716b76;cursor:not-allowed}.fine-print{display:block;padding:10px 25px;color:#5d5761;font-size:7px}
 .danger-zone .shop-heading{color:var(--red)}
 .danger-zone article{border-color:#5c2630;background:linear-gradient(150deg,#2a161b,#19171c 62%)}
@@ -175,12 +187,26 @@ main { display:grid; grid-template-columns: 250px minmax(420px, 1fr) 450px; gap:
 .cookbook-link:hover{background:#3a3016;border-color:var(--yellow);animation:none}
 @keyframes lesson-breathe{0%,100%{border-color:#7a6320;box-shadow:0 0 0 rgba(255,203,46,0)}50%{border-color:var(--yellow);box-shadow:0 0 13px rgba(255,203,46,.32)}}
 .assist-result{position:relative;margin:7px;padding:10px 28px 10px 11px;border:1px solid #634887;border-left:3px solid var(--purple);background:#1b1521}
-.assist-result.peek{border-color:#4b745f;border-left-color:var(--green);background:#142019}
-.assist-result>span{color:#c798ff;font-size:7px;font-weight:700;letter-spacing:1.5px}.assist-result.peek>span{color:var(--green)}
-.assist-result p{margin:5px 0 0;color:#d7cedd;font-size:8px;line-height:1.55}
+.assist-result.census{border-color:#4b745f;border-left-color:var(--green);background:#142019}
+.assist-result>span{color:#c798ff;font-size:7px;font-weight:700;letter-spacing:1.5px}.assist-result.census>span{color:var(--green)}
+.assist-result p{margin:5px 0 0;color:#d7cedd;font-size:8px;line-height:1.55;white-space:pre-wrap;word-break:break-word}
+/* The census is a stage readout, so it scrolls inside the rail rather than
+   pushing the rest of the backpack off screen. */
+.census{margin-top:6px;max-height:280px;overflow:auto}
+.census-findings{margin:0 0 7px;padding:0;list-style:none;display:grid;gap:6px}
+.census-findings li{display:grid;gap:2px;padding:6px 7px;border-left:2px solid var(--red);background:#1d1418}
+.census-findings em{color:#ff8d9c;font-style:normal;font-size:7.5px;font-weight:700;letter-spacing:.6px;word-break:break-all}
+.census-findings span{color:#e4dae0;font-size:8px;line-height:1.5}
+.census-stage{padding:5px 7px;border:1px dashed #3d5c4c;color:#9fc4ae;font-size:7.5px;line-height:1.5;word-break:break-word}
+.census-tree{margin:6px 0 0;padding:0;list-style:none;display:grid;gap:5px}
+.census-tree li{display:grid;gap:1px;padding:4px 6px;border-left:1px solid #3d5c4c;background:#111a15}
+.census-tree b{color:var(--green);font-size:7.5px;letter-spacing:.5px}
+.census-tree span{color:#d7cedd;font-size:8px;word-break:break-all}
+.census-tree small{color:#8fae9c;font-size:7px;letter-spacing:.4px}
+.census-tree i{color:#7f9a8b;font-size:7px;font-style:normal;word-break:break-all}
 .assist-result button{position:absolute;right:5px;top:5px;padding:2px;border:0;background:transparent;color:#8e8393;cursor:pointer}.assist-result button svg{width:12px;height:12px}
 .lesson-overlay{position:fixed;inset:0;z-index:80;display:flex;justify-content:flex-end}
-.lesson-backdrop{position:absolute;inset:0;border:0;background:rgba(7,6,9,.72);backdrop-filter:blur(3px);cursor:pointer}
+.lesson-backdrop{position:absolute;inset:0;border:0;background:rgba(7,6,9,.42);backdrop-filter:blur(2px);cursor:pointer}
 .lesson-drawer{position:relative;width:min(780px,80vw);height:100%;display:flex;flex-direction:column;background:#111015;border-left:2px solid var(--yellow);box-shadow:-18px 0 60px rgba(0,0,0,.55);animation:lesson-in .25s ease-out}
 .lesson-drawer>header{min-height:72px;display:flex;align-items:center;justify-content:space-between;gap:18px;padding:13px 18px;border-bottom:1px solid #3c3541;background:linear-gradient(100deg,#2c1d37,#17141b)}
 .lesson-drawer>header span{display:block;color:var(--purple);font-size:8px;font-weight:700;letter-spacing:2px}

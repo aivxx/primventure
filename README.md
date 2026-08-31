@@ -28,7 +28,7 @@ Learn OpenUSD teaches prims, attributes, composition arcs, asset structure, inst
 4. **Read the USDA.** Before and after sit on the right. A clear parks you there until you have looked at what you wrote.
 5. **Watch the city compose.** City Feed draws `world/root.usda`. Each published room is another opinion on the skyline.
 
-Boss rooms pay **Opinion Points**. Spend them in the Saferoom on Hint Tokens and Opinion X-Rays. The Recipe Tree is your Cookbook index: terms unlock when you have actually authored them.
+Boss rooms pay **Opinion Points**. Spend them in the Saferoom on Hint Tokens and Prim Censuses. A Hint Token points at the room's lesson before you run; a **Prim Census** works after a failed run, listing the prims USD actually composed — paths, specifiers, types, kinds — alongside the real value behind each failing check. The room card already tells you the target, so the census tells you your stage instead. Ordinary rooms leave a named **Key Item**, and the Saferoom's Curio Desk trades three of them for Hint Tokens or four for censuses — it stamps each trophy and hands it back, so the backpack stays a record of the rooms you cleared. The Recipe Tree is your Cookbook index: terms unlock when you have actually authored them.
 
 Submissions use real USD and execute on your machine. The arena binds to localhost on purpose.
 
@@ -117,16 +117,16 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) and [STYLEGUIDE.md](STYLEGUIDE.md) if you
 
 | Floor | District | What you author |
 | --- | --- | --- |
-| 0 | Threshold Station | Stages, prims, attributes |
-| 1 | Property Ward | Schemas, metadata, time |
-| 2 | Blueprint Borough | Scene description blueprints |
-| 3 | Composition Quarter | Layers, specifiers, LIVRPS |
-| 4 | Beyond the Walls | Primvars, kinds, traversal, Hydra |
-| 5 | Arc Foundry | References, payloads, variants, inherits, specializes |
-| 6 | Asset Foundry | Model hierarchy and parameterization |
-| 7 | Instance Wilds | Scenegraph instances and PointInstancers |
-| 8 | Exchange Terminal | Import, extract, transform, validate |
-| 9 | Crown District | Certification recap |
+| 0 | Prim Threshold | Stages, prims, attributes |
+| 1 | Property Clocktower | Attributes, metadata, time |
+| 2 | Schema Borough | Scene description blueprints |
+| 3 | Opinion Quarter | Layers, specifiers, LIVRPS |
+| 4 | Beyond-Basics Gardens | Primvars, kinds, traversal, Hydra |
+| 5 | Composition Highlands | References, payloads, variants, inherits, specializes |
+| 6 | Hierarchy Foundry | Model hierarchy and parameterization |
+| 7 | Prototype Wilds | Scenegraph instances and PointInstancers |
+| 8 | Customs Terminal | Import, extract, transform, validate |
+| 9 | Certification Colosseum | Certification recap |
 
 Rooms are YAML under [`game/quests/`](game/quests/). Lesson cards live in [`game/lessons/`](game/lessons/), keyed to the Markdown in [`docs/`](docs/). usd-core validates the stage directly.
 

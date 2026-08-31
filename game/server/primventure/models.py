@@ -74,6 +74,39 @@ class ValidationResult(BaseModel):
     message: str
 
 
+class CensusNode(BaseModel):
+    """One prim as the composed stage resolved it."""
+    path: str
+    specifier: str = ""
+    type_name: str = ""
+    kind: str = ""
+    properties: list[str] = Field(default_factory=list)
+    extra_properties: int = 0
+    flags: list[str] = Field(default_factory=list)
+
+
+class CheckObservation(BaseModel):
+    """What a failing check actually found, rather than what it wanted."""
+    rule: str
+    target: str
+    observed: str
+
+
+class LastFail(BaseModel):
+    """The stage a failed run left behind, so a Prim Census can report it."""
+    quest_id: str
+    # A stage that composed zero prims is still a readable census, and the most
+    # useful one a beginner gets, so arming tracks the stage and not the prims.
+    has_stage: bool = False
+    stage: dict[str, Any] = Field(default_factory=dict)
+    prims: list[CensusNode] = Field(default_factory=list)
+    observations: list[CheckObservation] = Field(default_factory=list)
+    truncated: bool = False
+    # A census is bought once per failed run and stays readable after that, so
+    # re-reading your own stage never costs a second charge.
+    paid: bool = False
+
+
 class RunResponse(BaseModel):
     success: bool
     quest_id: str
@@ -103,13 +136,19 @@ class PlayerState(BaseModel):
         }
     )
     inventory: dict[str, int] = Field(
-        default_factory=lambda: {"hint_tokens": 2, "system_peeks": 1}
+        default_factory=lambda: {"hint_tokens": 2, "prim_censuses": 1}
     )
+    # Trophy units already traded at the Curio Desk. Held separately from
+    # `inventory` so a trade never erases the record of a cleared room.
+    stamped_items: dict[str, int] = Field(default_factory=dict)
     upgrades: list[str] = Field(default_factory=list)
     recipes: list[str] = Field(default_factory=list)
     achievements: list[str] = Field(default_factory=list)
     specialization: str | None = None
+    benefit_claims: dict[str, bool] = Field(default_factory=dict)
+    recipe_drip_op: int = 0
     # The source that last cleared each room, so revisiting it shows the player
     # their own accepted work instead of the starter. Keyed by quest id.
     submissions: dict[str, str] = Field(default_factory=dict)
+    last_fail: LastFail | None = None
 

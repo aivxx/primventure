@@ -9,6 +9,12 @@ from typing import Any
 import yaml
 
 from .expectations import describe_assertions
+from .benefits import (
+    free_assist_available,
+    home_boss_bonus,
+    is_home_floor,
+    preview_boss_fee,
+)
 from .models import LessonCard, PlayerState, Quest
 
 
@@ -68,10 +74,13 @@ def normalize_starter(starter: str, language: str) -> str:
     return space_out_steps(with_save_line(starter, language), language)
 
 
-def opinion_points_for(quest: Quest) -> int:
+def opinion_points_for(quest: Quest, state: PlayerState | None = None) -> int:
     """Boss rooms pay by default, and any room can override it in its reward."""
     reward = quest.reward if isinstance(quest.reward, dict) else {}
-    return int(reward.get("opinion_points", 1 if quest.kind.endswith("boss") else 0))
+    base = int(reward.get("opinion_points", 1 if quest.kind.endswith("boss") else 0))
+    if state is None:
+        return base
+    return base + home_boss_bonus(state.specialization, quest)
 
 
 def newest_world_mtime(world_dir: Path = WORLD_DIR) -> float:
@@ -199,6 +208,32 @@ class QuestStore:
         return self.lessons.resolve(quest.cookbook, quest.id)
 
 
+def migrate(raw: dict[str, Any]) -> dict[str, Any]:
+    """Carry older saves onto the current consumable.
+
+    Opinion X-Rays became Inspector's Slips and then the Prim Census. Stock,
+    home-floor claims, and the repeatable shop entry all move across so a save
+    in flight neither loses supplies nor earns a second free use.
+    """
+    inventory = raw.setdefault("inventory", {})
+    for retired in ("system_peeks", "inspectors_slips"):
+        if retired in inventory:
+            inventory["prim_censuses"] = inventory.get("prim_censuses", 0) + inventory.pop(retired)
+    claims = raw.get("benefit_claims") or {}
+    for key in [key for key in claims if key.startswith("free_peek:")]:
+        claims[f"free_census:{key.split(':', 1)[1]}"] = claims.pop(key)
+    raw["upgrades"] = [
+        "prim_census" if entry == "system_peek" else entry for entry in raw.get("upgrades") or []
+    ]
+    # A fail recorded by the retired diagnosis carried no census. Only that
+    # shape is dropped; discarding a current one would erase the stage reading
+    # on every load and leave the census permanently unarmed.
+    fail = raw.get("last_fail")
+    if isinstance(fail, dict) and "has_stage" not in fail:
+        raw.pop("last_fail")
+    return raw
+
+
 class SaveStore:
     def __init__(self, path: Path = SAVE_PATH):
         self.path = path
@@ -211,7 +246,7 @@ class SaveStore:
                 state = PlayerState()
                 self._write(state)
                 return state
-            return PlayerState.model_validate_json(self.path.read_text())
+            return PlayerState.model_validate(migrate(json.loads(self.path.read_text())))
 
     def save(self, state: PlayerState) -> PlayerState:
         with self._lock:
@@ -250,7 +285,23 @@ def quest_view(
     prereqs_met = all(item in state.completed_quests for item in quest.prerequisites)
     data["unlocked"] = prereqs_met and state.level >= quest.level_required
     data["completed"] = quest.id in state.completed_quests
-    data["opinion_points"] = opinion_points_for(quest)
+    data["opinion_points"] = opinion_points_for(quest, state)
+    data["home_floor"] = is_home_floor(state.specialization, quest.floor)
+    fee, fee_kind = preview_boss_fee(state, quest)
+    data["boss_fee"] = fee
+    data["boss_fee_kind"] = fee_kind
+    data["free_hint"] = free_assist_available(state, quest, "hint")
+    data["free_census"] = free_assist_available(state, quest, "census")
+    fail = state.last_fail
+    # A census reads a stage, so a run that never produced one cannot be sold.
+    armed = (
+        fail is not None
+        and fail.quest_id == quest.id
+        and quest.id not in state.completed_quests
+        and fail.has_stage
+    )
+    data["census_armed"] = armed
+    data["census_paid"] = bool(armed and fail and fail.paid)
     data["expects"] = describe_assertions(quest.validator)
     data["lesson"] = lesson
     data["submission"] = state.submissions.get(quest.id, "")

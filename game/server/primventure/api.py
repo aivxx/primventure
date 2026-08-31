@@ -8,9 +8,19 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
+from .benefits import (
+    CLASSES,
+    class_payload,
+    compose_title,
+    consume_free_assist,
+    grant_starter_kit,
+    priced_shop,
+    recipe_is_affinity,
+)
 from .models import RunRequest
 from .runner import QuestRunner
 from .scene import world_scene
+from .trophies import desk, stamp, unstamped
 from .store import ROOT, WORLD_DIR, QuestStore, SaveStore, newest_world_mtime, quest_view
 
 
@@ -29,11 +39,15 @@ UPGRADES: dict[str, dict[str, Any]] = {
         "repeatable": True,
         "kind": "consumable",
     },
-    "system_peek": {
-        "name": "Opinion X-Ray",
-        "description": "Restocks two Opinion X-Rays in Consumables. Inspects a cleared room's published layer.",
+    "prim_census": {
+        "name": "Prim Census",
+        "description": (
+            "Restocks two Prim Censuses. After a failed run, a census lists the prims "
+            "USD actually composed with their specifiers, types, and kinds, plus the "
+            "real value behind every failing check. Your stage, never the answer."
+        ),
         "cost": 2,
-        "inventory": {"system_peeks": 2},
+        "inventory": {"prim_censuses": 2},
         "repeatable": True,
         "kind": "consumable",
     },
@@ -84,12 +98,18 @@ def health() -> dict[str, Any]:
 @app.get("/api/state")
 def get_state() -> dict[str, Any]:
     state = saves.load()
+    if state.specialization and not state.benefit_claims.get("starter_kit"):
+        grant_starter_kit(state)
+        saves.save(state)
+    shop = priced_shop(UPGRADES, state)
     return {
         # Saved source reaches the client per room through quest_view, so it stays
         # out of the state payload every poll refetches.
-        **state.model_dump(exclude={"submissions"}),
+        **state.model_dump(exclude={"submissions", "last_fail"}),
         "next_level_xp": state.level * 100,
-        "shop": UPGRADES,
+        "shop": shop,
+        "class_benefits": class_payload(state),
+        "curio": desk(shop, state),
     }
 
 
@@ -131,9 +151,17 @@ def get_recipes() -> list[dict[str, Any]]:
         r"\{\s*id:\s*'([^']+)',\s*label:\s*'([^']+)',\s*category:\s*'([^']+)'\s*\}",
         text,
     )
-    unlocked = set(saves.load().recipes)
+    state = saves.load()
+    unlocked = set(state.recipes)
     return [
-        {"id": identifier, "label": label, "category": category, "unlocked": identifier in unlocked}
+        {
+            "id": identifier,
+            "label": label,
+            "category": category,
+            "unlocked": identifier in unlocked,
+            "affinity": recipe_is_affinity(state.specialization, identifier)
+            or recipe_is_affinity(state.specialization, label),
+        }
         for identifier, label, category in nodes
     ]
 
@@ -160,10 +188,13 @@ def buy_hint(quest_id: str) -> dict[str, Any]:
     except KeyError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     state = saves.load()
-    if state.inventory.get("hint_tokens", 0) < 1:
-        raise HTTPException(status_code=409, detail="No hint tokens remain.")
-    state.inventory["hint_tokens"] -= 1
-    saves.save(state)
+    if consume_free_assist(state, quest, "hint"):
+        saves.save(state)
+    else:
+        if state.inventory.get("hint_tokens", 0) < 1:
+            raise HTTPException(status_code=409, detail="No hint tokens remain.")
+        state.inventory["hint_tokens"] -= 1
+        saves.save(state)
     concepts = sorted(
         {
             str(rule.get("rule") or rule.get("type") or next(iter(rule), "stage"))
@@ -181,41 +212,47 @@ def buy_hint(quest_id: str) -> dict[str, Any]:
     }
 
 
-@app.post("/api/quests/{quest_id}/peek")
-def use_system_peek(quest_id: str) -> dict[str, Any]:
+@app.post("/api/quests/{quest_id}/census")
+def read_prim_census(quest_id: str) -> dict[str, Any]:
     quests.refresh()
     try:
         quest = quests.get(quest_id)
     except KeyError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     state = saves.load()
-    if quest.id not in state.completed_quests:
+    fail = state.last_fail
+    if quest.id in state.completed_quests:
         raise HTTPException(
             status_code=409,
-            detail="Clear this room before inspecting its published layer.",
+            detail="Cleared rooms do not consume a Prim Census.",
         )
-    if state.inventory.get("system_peeks", 0) < 1:
-        raise HTTPException(status_code=409, detail="No System peeks remain.")
-    if quest.world_target and not quest.world_target.startswith("/"):
-        target = WORLD_DIR / quest.world_target
-    else:
-        bundle = WORLD_DIR / "workstreams" / quest.id
-        target = next(
-            (path for path in sorted(bundle.glob("submission.*")) if path.suffix in {".usd", ".usda", ".usdc"}),
-            bundle / "submission.usd",
+    if fail is None or fail.quest_id != quest.id:
+        raise HTTPException(
+            status_code=409,
+            detail="Fail this room once before reading a Prim Census.",
         )
-    from pxr import Sdf
-
-    layer = Sdf.Layer.FindOrOpen(str(target)) if target.exists() else None
-    if layer is None:
-        raise HTTPException(status_code=409, detail="The published layer could not be inspected.")
-    state.inventory["system_peeks"] -= 1
-    saves.save(state)
+    if not fail.has_stage:
+        raise HTTPException(
+            status_code=409,
+            detail=(
+                "That run never authored a stage USD could open, so there is nothing to "
+                "census. The error in the run output is the finding."
+            ),
+        )
+    if not fail.paid:
+        if not consume_free_assist(state, quest, "census"):
+            if state.inventory.get("prim_censuses", 0) < 1:
+                raise HTTPException(status_code=409, detail="No Prim Censuses remain.")
+            state.inventory["prim_censuses"] -= 1
+        fail.paid = True
+        state.last_fail = fail
+        saves.save(state)
     return {
-        "peek": {
-            "layer": str(target.relative_to(ROOT)),
-            "sublayers": list(layer.subLayerPaths),
-            "message": "Authored layer inspected.",
+        "census": {
+            "stage": fail.stage,
+            "prims": [node.model_dump() for node in fail.prims],
+            "observations": [reading.model_dump() for reading in fail.observations],
+            "truncated": fail.truncated,
         },
         "state": get_state(),
     }
@@ -227,32 +264,54 @@ def buy_upgrade(upgrade_id: str) -> dict[str, Any]:
     if upgrade is None:
         raise HTTPException(status_code=404, detail="The kiosk denies stocking that upgrade.")
     state = saves.load()
-    if upgrade_id in state.upgrades and not upgrade.get("repeatable"):
+    offer = priced_shop(UPGRADES, state)[upgrade_id]
+    if upgrade_id in state.upgrades and not offer.get("repeatable"):
         raise HTTPException(status_code=409, detail="Upgrade already installed.")
-    if state.opinion_points < upgrade["cost"]:
+    if state.opinion_points < offer["cost"]:
         raise HTTPException(status_code=409, detail="Insufficient Opinion Points.")
-    state.opinion_points -= upgrade["cost"]
+    state.opinion_points -= offer["cost"]
     if upgrade_id not in state.upgrades:
         state.upgrades.append(upgrade_id)
-    for item, count in upgrade.get("inventory", {}).items():
+    for item, count in offer.get("inventory", {}).items():
         state.inventory[item] = state.inventory.get(item, 0) + int(count)
-    if "title" in upgrade:
-        state.title = upgrade["title"]
+    if "title" in offer:
+        compose_title(state)
     saves.save(state)
     return get_state()
 
 
+@app.post("/api/curio/{offer_id}")
+def trade_trophies(offer_id: str) -> dict[str, Any]:
+    """Pay for a consumable bundle in Key Items instead of Opinion Points."""
+    state = saves.load()
+    offer = desk(priced_shop(UPGRADES, state), state)["offers"].get(offer_id)
+    if offer is None:
+        raise HTTPException(status_code=404, detail="The Curio Desk does not appraise that.")
+    cost = offer["trophy_cost"]
+    available = unstamped(state)
+    if available < cost:
+        raise HTTPException(
+            status_code=409,
+            detail=f"The desk wants {cost} unstamped Key Items and counts {available}.",
+        )
+    stamped = stamp(state, cost)
+    for item, count in offer["inventory"].items():
+        state.inventory[item] = state.inventory.get(item, 0) + int(count)
+    saves.save(state)
+    return {"stamped": stamped, "granted": offer["inventory"], "state": get_state()}
+
+
 @app.post("/api/specialization/{specialization}")
 def choose_specialization(specialization: str) -> dict[str, Any]:
-    choices = {"Compositor", "Aggregator", "Exchanger"}
     state = saves.load()
     if state.level < 2:
         raise HTTPException(status_code=409, detail="Crawler level 2 required.")
-    if specialization not in choices:
-        raise HTTPException(status_code=422, detail=f"Choose one of {sorted(choices)}.")
+    if specialization not in CLASSES:
+        raise HTTPException(status_code=422, detail=f"Choose one of {sorted(CLASSES)}.")
     if state.specialization and state.specialization != specialization:
         raise HTTPException(status_code=409, detail="Class path already chosen.")
     state.specialization = specialization
+    grant_starter_kit(state)
     saves.save(state)
     return get_state()
 

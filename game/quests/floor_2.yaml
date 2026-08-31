@@ -1,17 +1,17 @@
 floor: 2
-floor_name: Blueprint Borough
+floor_name: Schema Borough
 quests:
   - id: f2_market_stall
-    title: Raise a Market Stall
+    title: Build the Market Stall From a Typed Schema
     floor: 2
-    floor_name: Blueprint Borough
+    floor_name: Schema Borough
     neighborhood: Schema Square
     kind: room
     prerequisites: [f1_clockwork_crossing]
     level_required: 4
     exam_tasks: [use_usdgeom_schema, author_extent]
     stats: {craft: 2, insight: 2}
-    brief: "SYSTEM: Blueprint Borough trades only in typed goods. Build to schema."
+    brief: "SYSTEM: Schema Borough trades only in typed goods. Build to schema."
     starter: |
       from pxr import Usd, UsdGeom
       stage = Usd.Stage.Open(STAGE_PATH)
@@ -29,9 +29,9 @@ quests:
     recipes: [UsdGeom.Cube.Define, UsdGeom.Cube.CreateSizeAttr]
 
   - id: f2_relationship_bridge
-    title: Reconnect Relationship Bridge
+    title: "Bridge Warden: Relationships and Targets"
     floor: 2
-    floor_name: Blueprint Borough
+    floor_name: Schema Borough
     neighborhood: Binding Canal
     kind: neighborhood_boss
     prerequisites: [f2_market_stall]
@@ -58,9 +58,9 @@ quests:
     recipes: [Usd.Prim.CreateRelationship, Usd.Relationship.SetTargets]
 
   - id: f2_schema_warden
-    title: Defeat the Schema Warden
+    title: "Schema Warden: USDA Text and API Schemas"
     floor: 2
-    floor_name: Blueprint Borough
+    floor_name: Schema Borough
     neighborhood: Warden Foundry
     kind: floor_boss
     prerequisites: [f2_relationship_bridge]

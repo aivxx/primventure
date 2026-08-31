@@ -1,10 +1,10 @@
 floor: 9
-floor_name: Recap Colosseum
+floor_name: Certification Colosseum
 quests:
   - id: f9_portfolio_gate
-    title: Open the Portfolio Gate
+    title: Compose the Portfolio Asset at the Gate
     floor: 9
-    floor_name: Recap Colosseum
+    floor_name: Certification Colosseum
     neighborhood: Portfolio Promenade
     kind: room
     prerequisites: [f7_mirror_forge, f8_customs_engine]
@@ -35,7 +35,7 @@ quests:
   - id: f9_edit_target_duel
     title: Duel on the Weaker Edit Target
     floor: 9
-    floor_name: Recap Colosseum
+    floor_name: Certification Colosseum
     neighborhood: Debug Gauntlet
     kind: room
     prerequisites: [f9_portfolio_gate]
@@ -67,9 +67,9 @@ quests:
     recipes: [Layer Stack, Opinions]
 
   - id: f9_stack_inspector
-    title: Read the Property Stack Aloud
+    title: "Stack Inspector: Read the Property Stack"
     floor: 9
-    floor_name: Recap Colosseum
+    floor_name: Certification Colosseum
     neighborhood: Debug Gauntlet
     kind: neighborhood_boss
     prerequisites: [f9_edit_target_duel]
@@ -113,9 +113,9 @@ quests:
         explanation: The property stack is a debug view of competing opinions.
 
   - id: f9_layer_offset_raid
-    title: Shift Time Without Rewriting Samples
+    title: Shift the Clip With a Layer Offset
     floor: 9
-    floor_name: Recap Colosseum
+    floor_name: Certification Colosseum
     neighborhood: Debug Gauntlet
     kind: room
     prerequisites: [f9_stack_inspector]
@@ -152,9 +152,9 @@ quests:
     recipes: [Layer Offset, Animated Value]
 
   - id: f9_flatten_delivery
-    title: Flatten for Delivery, Keep the Receipt
+    title: Flatten the Stage for Delivery
     floor: 9
-    floor_name: Recap Colosseum
+    floor_name: Certification Colosseum
     neighborhood: Debug Gauntlet
     kind: room
     prerequisites: [f9_layer_offset_raid]
@@ -187,9 +187,9 @@ quests:
     recipes: [Flatten, Layer]
 
   - id: f9_changeblock_sprint
-    title: Batch the Edits, Spare the Notices
+    title: "Notice Marshal: Batch Edits in a ChangeBlock"
     floor: 9
-    floor_name: Recap Colosseum
+    floor_name: Certification Colosseum
     neighborhood: Debug Gauntlet
     kind: neighborhood_boss
     prerequisites: [f9_flatten_delivery]
@@ -225,9 +225,9 @@ quests:
         explanation: ChangeBlock coalesces notices while many specs are authored.
 
   - id: f9_customizing_raid
-    title: The Plugin That Wasn't Here
+    title: Answer the Customizing USD Raid
     floor: 9
-    floor_name: Recap Colosseum
+    floor_name: Certification Colosseum
     neighborhood: Customizing Colosseum
     kind: room
     prerequisites: [f9_changeblock_sprint]
@@ -275,9 +275,9 @@ quests:
         explanation: Value clips stream time samples from clip layers and keep the local layer compact.
 
   - id: f9_hydra_brief
-    title: Name the Three Heads of Hydra
+    title: "Hydra Herald: Name the Hydra Architecture"
     floor: 9
-    floor_name: Recap Colosseum
+    floor_name: Certification Colosseum
     neighborhood: Customizing Colosseum
     kind: neighborhood_boss
     prerequisites: [f9_customizing_raid]
@@ -311,9 +311,9 @@ quests:
         explanation: HdStorm is the shipped GL/Metal/Vulkan delegate.
 
   - id: f9_archivist_prime
-    title: Answer Archivist Prime
+    title: "Archivist Prime: Certification Recap"
     floor: 9
-    floor_name: Recap Colosseum
+    floor_name: Certification Colosseum
     neighborhood: Certification Archive
     kind: city_boss
     prerequisites: [f9_hydra_brief]
@@ -369,9 +369,9 @@ quests:
         explanation: Extending Kind is a customization workflow beyond usd-core defaults.
 
   - id: f9_null_monarch
-    title: Reauthor the Null Monarch
+    title: "Null Monarch: Capstone Stage Authoring"
     floor: 9
-    floor_name: Recap Colosseum
+    floor_name: Certification Colosseum
     neighborhood: Root Throne
     kind: floor_boss
     prerequisites: [f9_archivist_prime]
@@ -407,7 +407,7 @@ quests:
     reward:
       opinion_points: 5
       achievement: "Colosseum clear. Contestant USD-01 remains underqualified and employed."
-      inventory: {system_peeks: 2}
+      inventory: {prim_censuses: 2}
     world_target: /City
     recipes: [Default Prim, Instancing, Kind]
     questions:

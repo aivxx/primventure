@@ -1,10 +1,10 @@
 floor: 4
-floor_name: Beyond the Walls
+floor_name: Beyond-Basics Gardens
 quests:
   - id: f4_season_gate
-    title: Paint the Season Into a Primvar
+    title: Paint the Hedge With a Primvar
     floor: 4
-    floor_name: Beyond the Walls
+    floor_name: Beyond-Basics Gardens
     neighborhood: Primvar Hedge
     kind: room
     prerequisites: [f3_opinion_colossus]
@@ -31,9 +31,9 @@ quests:
     recipes: [Primvar, Interpolation]
 
   - id: f4_custom_tag
-    title: Invent a Custom Property Without a Schema
+    title: Author a Custom Namespaced Property
     floor: 4
-    floor_name: Beyond the Walls
+    floor_name: Beyond-Basics Gardens
     neighborhood: Primvar Hedge
     kind: room
     prerequisites: [f4_season_gate]
@@ -59,9 +59,9 @@ quests:
     recipes: [Property, Attribute]
 
   - id: f4_two_faced_topiary
-    title: Deactivate the Wrong Face
+    title: "Two-Faced Topiary: Active and Inactive Prims"
     floor: 4
-    floor_name: Beyond the Walls
+    floor_name: Beyond-Basics Gardens
     neighborhood: Quiet Garden
     kind: neighborhood_boss
     prerequisites: [f4_custom_tag]
@@ -100,9 +100,9 @@ quests:
         explanation: Default Traverse() skips inactive prims.
 
   - id: f4_traversal_census
-    title: Census Only the Concrete
+    title: Traverse the Stage and Count the Meshes
     floor: 4
-    floor_name: Beyond the Walls
+    floor_name: Beyond-Basics Gardens
     neighborhood: Quiet Garden
     kind: room
     prerequisites: [f4_two_faced_topiary]
@@ -132,9 +132,9 @@ quests:
     recipes: [Stage Traversal]
 
   - id: f4_unit_contract
-    title: Sign the Units Contract
+    title: Declare the City's Units and Up Axis
     floor: 4
-    floor_name: Beyond the Walls
+    floor_name: Beyond-Basics Gardens
     neighborhood: Measure Yard
     kind: room
     prerequisites: [f4_traversal_census]
@@ -161,9 +161,9 @@ quests:
     recipes: [Stage]
 
   - id: f4_kind_post
-    title: Post a Component Kind
+    title: "Kind Inspector: Set a Component Model Kind"
     floor: 4
-    floor_name: Beyond the Walls
+    floor_name: Beyond-Basics Gardens
     neighborhood: Measure Yard
     kind: neighborhood_boss
     prerequisites: [f4_unit_contract]
@@ -194,9 +194,9 @@ quests:
         explanation: Components are the reusable leaf models in the hierarchy.
 
   - id: f4_hydra_lecture
-    title: Admit Hydra Is a Bridge
+    title: Explain Hydra From the Overlook
     floor: 4
-    floor_name: Beyond the Walls
+    floor_name: Beyond-Basics Gardens
     neighborhood: Hydra Overlook
     kind: room
     prerequisites: [f4_kind_post]
@@ -223,9 +223,9 @@ quests:
         explanation: Hydra is the rendering architecture between USD scene data and backends.
 
   - id: f4_hydra_of_choices
-    title: Bind the Hydra of Choices
+    title: "Hydra of Choices: Primvars, Activation, and Units"
     floor: 4
-    floor_name: Beyond the Walls
+    floor_name: Beyond-Basics Gardens
     neighborhood: Hydra Overlook
     kind: floor_boss
     prerequisites: [f4_hydra_lecture]
@@ -257,7 +257,7 @@ quests:
     xp: 380
     reward:
       opinion_points: 2
-      achievement: "Floor clear! Beyond the Walls recaptured. Hydra sends its regards from another process."
+      achievement: "Floor clear! Beyond-Basics Gardens recaptured. Hydra sends its regards from another process."
     world_target: /City/BeyondTheWalls
     recipes: [Primvar, Active and Inactive, Value Resolution]
     questions:

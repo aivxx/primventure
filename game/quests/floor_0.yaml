@@ -1,10 +1,10 @@
 floor: 0
-floor_name: Threshold Station
+floor_name: Prim Threshold
 quests:
   - id: f0_first_prim
-    title: Knock on the Scenegraph
+    title: Define the City's First Prim
     floor: 0
-    floor_name: Threshold Station
+    floor_name: Prim Threshold
     neighborhood: Arrival Hall
     kind: room
     prerequisites: []
@@ -28,9 +28,9 @@ quests:
     recipes: [Usd.Stage.CreateNew, Usd.Stage.DefinePrim, Sdf.Layer.Save]
 
   - id: f0_nameplate
-    title: Etch the City Nameplate
+    title: Author the City Name Attribute
     floor: 0
-    floor_name: Threshold Station
+    floor_name: Prim Threshold
     neighborhood: Arrival Hall
     kind: room
     prerequisites: [f0_first_prim]
@@ -57,9 +57,9 @@ quests:
     recipes: [Usd.Prim.CreateAttribute, Usd.Attribute.Set]
 
   - id: f0_gatekeeper
-    title: Gatekeeper of the Root
+    title: "Gatekeeper of the Root: Default Prim and Up Axis"
     floor: 0
-    floor_name: Threshold Station
+    floor_name: Prim Threshold
     neighborhood: Departure Gate
     kind: floor_boss
     prerequisites: [f0_nameplate]

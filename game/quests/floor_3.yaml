@@ -1,10 +1,10 @@
 floor: 3
-floor_name: Composition Quarter
+floor_name: Opinion Quarter
 quests:
   - id: f3_layer_registry
-    title: Register the District Layer
+    title: Register the District Sublayer
     floor: 3
-    floor_name: Composition Quarter
+    floor_name: Opinion Quarter
     neighborhood: Layer Lane
     kind: room
     prerequisites: [f2_schema_warden]
@@ -38,9 +38,9 @@ quests:
     recipes: [Layer, Layer Stack, Sublayer]
 
   - id: f3_layer_stack_boss
-    title: Audit the Two-Faced Permit Desk
+    title: "Two-Faced Permit Desk: Sublayer Strength Order"
     floor: 3
-    floor_name: Composition Quarter
+    floor_name: Opinion Quarter
     neighborhood: Layer Lane
     kind: neighborhood_boss
     prerequisites: [f3_layer_registry]
@@ -86,9 +86,9 @@ quests:
         explanation: The root layer changes composition without rewriting either source.
 
   - id: f3_def_docket
-    title: Issue a Concrete Definition
+    title: Issue the Kiosk a Def Specifier
     floor: 3
-    floor_name: Composition Quarter
+    floor_name: Opinion Quarter
     neighborhood: Specifier Court
     kind: room
     prerequisites: [f3_layer_stack_boss]
@@ -115,9 +115,9 @@ quests:
     recipes: [Def, Specifier]
 
   - id: f3_over_case
-    title: Appeal Without Vandalism
+    title: Override the Billboard With an Over
     floor: 3
-    floor_name: Composition Quarter
+    floor_name: Opinion Quarter
     neighborhood: Specifier Court
     kind: room
     prerequisites: [f3_def_docket]
@@ -153,9 +153,9 @@ quests:
     recipes: [Over, Prim Stack]
 
   - id: f3_specifier_boss
-    title: The Specifier That Wouldn't Def
+    title: "The Abstract Blueprint: Def, Over, and Class"
     floor: 3
-    floor_name: Composition Quarter
+    floor_name: Opinion Quarter
     neighborhood: Specifier Court
     kind: neighborhood_boss
     prerequisites: [f3_over_case]
@@ -203,9 +203,9 @@ quests:
         explanation: The over contributes opinions while the weaker def establishes existence.
 
   - id: f3_reference_license
-    title: License an External Sign
+    title: Reference the Sign Instead of Copying It
     floor: 3
-    floor_name: Composition Quarter
+    floor_name: Opinion Quarter
     neighborhood: Reference Arcade
     kind: room
     prerequisites: [f3_specifier_boss]
@@ -239,9 +239,9 @@ quests:
     recipes: [Reference, Composition Arcs]
 
   - id: f3_default_gate
-    title: Name the Asset Entrance
+    title: Give the Asset a Default Prim
     floor: 3
-    floor_name: Composition Quarter
+    floor_name: Opinion Quarter
     neighborhood: Reference Arcade
     kind: room
     prerequisites: [f3_reference_license]
@@ -276,9 +276,9 @@ quests:
     recipes: [Default Prim]
 
   - id: f3_reference_arcade
-    title: Defeat the Duplicate Baron
+    title: "Duplicate Baron: Override a Referenced Asset"
     floor: 3
-    floor_name: Composition Quarter
+    floor_name: Opinion Quarter
     neighborhood: Reference Arcade
     kind: neighborhood_boss
     prerequisites: [f3_default_gate]
@@ -324,9 +324,9 @@ quests:
         explanation: A local override preserves the reusable source asset.
 
   - id: f3_variant_switch
-    title: Install the Arcade Marquee Switch
+    title: Wire a Day and Night Variant Set
     floor: 3
-    floor_name: Composition Quarter
+    floor_name: Opinion Quarter
     neighborhood: Variant Gallery
     kind: room
     prerequisites: [f3_reference_arcade]
@@ -360,9 +360,9 @@ quests:
     recipes: [Variant Set]
 
   - id: f3_variant_boss
-    title: The Curator of False Choices
+    title: "Curator of False Choices: Variant Selection"
     floor: 3
-    floor_name: Composition Quarter
+    floor_name: Opinion Quarter
     neighborhood: Variant Gallery
     kind: neighborhood_boss
     prerequisites: [f3_variant_switch]
@@ -409,9 +409,9 @@ quests:
         explanation: Variant selections can be authored on each referencing prim.
 
   - id: f3_city_block
-    title: Recapture Modular Market
+    title: "Modular Market: Compose a Block From One Asset"
     floor: 3
-    floor_name: Composition Quarter
+    floor_name: Opinion Quarter
     neighborhood: Modular Market
     kind: city_boss
     prerequisites: [f3_variant_boss]
@@ -461,9 +461,9 @@ quests:
         explanation: Destination-local opinions specialize each use without changing the source.
 
   - id: f3_opinion_colossus
-    title: Survive the LIVRPS Labyrinth
+    title: "Opinion Colossus: Resolve the Strongest Opinion"
     floor: 3
-    floor_name: Composition Quarter
+    floor_name: Opinion Quarter
     neighborhood: LIVRPS Plaza
     kind: floor_boss
     prerequisites: [f3_city_block]
@@ -531,7 +531,7 @@ quests:
     reward:
       opinion_points: 3
       achievement: "Floor clear! You survived LIVRPS. The weaker opinions request a recount."
-      inventory: {system_peeks: 1}
+      inventory: {prim_censuses: 1}
     world_target: /City/CompositionQuarter/OpinionColossus
     recipes: [LIVERPS Strength Ordering, Composition, Index]
     questions:

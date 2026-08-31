@@ -10,6 +10,8 @@ from typing import Any
 
 from pxr import Sdf, Usd, UsdGeom
 
+from .benefits import boss_fee_for, recipe_bonus
+from .census import snapshot
 from .models import PlayerState, Quest, RunRequest, RunResponse, ValidationResult
 from .store import (
     ROOT,
@@ -17,7 +19,6 @@ from .store import (
     SaveStore,
     level_for_xp,
     opinion_points_for,
-    xp_holding_level,
 )
 
 
@@ -79,6 +80,8 @@ class QuestRunner:
 
         success = bool(results) and all(result.passed for result in results)
         if success:
+            if state.last_fail and state.last_fail.quest_id == quest.id:
+                state.last_fail = None
             if artifact is not None:
                 self._publish(quest, artifact, before_usda, after_usda)
             if request.code.strip():
@@ -87,16 +90,21 @@ class QuestRunner:
             message = VICTORIES[sum(map(ord, quest.id)) % len(VICTORIES)]
         else:
             message = TAUNTS[sum(map(ord, quest.id)) % len(TAUNTS)]
+            # The submission lives in a temp directory that outlives this call by
+            # accident, not contract, so the stage is read into the save now.
+            state.last_fail = snapshot(quest, artifact, results)
             # Rooms gate on level and every room pays its XP only once, so a fee
             # that demoted the player would lock the door it just charged them at
             # with no way left to earn the level back. Bill only what the current
             # level can spare.
-            fee = min(25, xp_holding_level(state.xp))
-            if quest.kind.endswith("boss") and fee > 0:
+            fee, kind = boss_fee_for(state, quest)
+            if fee > 0:
                 state.xp -= fee
                 state.level = level_for_xp(state.xp)
-                self.saves.save(state)
                 message += f" Boss fee: {fee} XP."
+            elif kind == "waiver":
+                message += " Boss fee waived (Exchanger)."
+            self.saves.save(state)
         return self._response(
             quest,
             state,
@@ -530,13 +538,15 @@ class QuestRunner:
             for stat, amount in quest.stats.items():
                 domain = stat_domains.get(stat, stat)
                 state.stats[domain] = state.stats.get(domain, 0) + amount
+            drip = recipe_bonus(state, quest.recipes)
             for recipe in quest.recipes:
                 if recipe not in state.recipes:
                     state.recipes.append(recipe)
+            state.recipe_drip_op += drip
             reward = quest.reward if isinstance(quest.reward, dict) else {}
             if isinstance(quest.reward, str) and quest.reward:
                 state.inventory[quest.reward] = state.inventory.get(quest.reward, 0) + 1
-            state.opinion_points += opinion_points_for(quest)
+            state.opinion_points += opinion_points_for(quest, state) + drip
             achievement = reward.get("achievement")
             if achievement and achievement not in state.achievements:
                 state.achievements.append(achievement)

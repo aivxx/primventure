@@ -31,7 +31,7 @@ def _join_files(items: list[Any]) -> str:
     return ", ".join(Path(str(item)).name for item in items)
 
 
-def _payload(rule: dict[str, Any], name: str) -> dict[str, Any]:
+def payload_for(rule: dict[str, Any], name: str) -> dict[str, Any]:
     """Assertions are written either as `name: value` or `name: {...}`."""
     payload = rule.get(name)
     if isinstance(payload, dict):
@@ -43,7 +43,7 @@ def _payload(rule: dict[str, Any], name: str) -> dict[str, Any]:
 
 def describe_assertion(rule: dict[str, Any]) -> str:
     name = str(rule.get("rule") or rule.get("type") or next(iter(rule), "unknown"))
-    data = _payload(rule, name)
+    data = payload_for(rule, name)
     if data.get("message"):
         return str(data["message"])
     path = data.get("path", "")

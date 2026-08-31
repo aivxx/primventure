@@ -1,10 +1,10 @@
 floor: 8
-floor_name: Instance Wilds
+floor_name: Prototype Wilds
 quests:
   - id: f7_repeat_benches
-    title: Cast the Repeat Benches
+    title: Make the Benches Scenegraph Instances
     floor: 8
-    floor_name: Instance Wilds
+    floor_name: Prototype Wilds
     neighborhood: Scenegraph Thickets
     kind: room
     prerequisites: [f6_zoning_golem]
@@ -39,9 +39,9 @@ quests:
     recipes: [Instancing, Instanceable]
 
   - id: f7_prototype_sentinel
-    title: Pass the Prototype Sentinel
+    title: "Prototype Sentinel: Keep the Instance Shared"
     floor: 8
-    floor_name: Instance Wilds
+    floor_name: Prototype Wilds
     neighborhood: Scenegraph Thickets
     kind: neighborhood_boss
     prerequisites: [f7_repeat_benches]
@@ -81,9 +81,9 @@ quests:
         explanation: Scenegraph instancing shares an implicit prototype.
 
   - id: f7_deinstance_sticker
-    title: Peel One Bench Off the Prototype
+    title: Deinstance One Bench, Share the Rest
     floor: 8
-    floor_name: Instance Wilds
+    floor_name: Prototype Wilds
     neighborhood: Scenegraph Thickets
     kind: room
     prerequisites: [f7_prototype_sentinel]
@@ -117,9 +117,9 @@ quests:
     recipes: [Instancing]
 
   - id: f7_point_scatter
-    title: Scatter Cargo on the Point Grid
+    title: Scatter Crates With a PointInstancer
     floor: 8
-    floor_name: Instance Wilds
+    floor_name: Prototype Wilds
     neighborhood: Point Wastes
     kind: room
     prerequisites: [f7_deinstance_sticker]
@@ -151,9 +151,9 @@ quests:
     recipes: [Point Instancer]
 
   - id: f7_point_wastes_boss
-    title: Mix Two Prototypes Without Copying
+    title: "Cargo Foreman: Two Prototypes, One Instancer"
     floor: 8
-    floor_name: Instance Wilds
+    floor_name: Prototype Wilds
     neighborhood: Point Wastes
     kind: neighborhood_boss
     prerequisites: [f7_point_scatter]
@@ -196,9 +196,9 @@ quests:
         explanation: Point instancing is array-based; scenegraph instancing uses instanceable prims.
 
   - id: f7_warehouse_district
-    title: Recapture the Warehouse District
+    title: "Warehouse District: Mix Both Instancing Types"
     floor: 8
-    floor_name: Instance Wilds
+    floor_name: Prototype Wilds
     neighborhood: Warehouse Recapture
     kind: city_boss
     prerequisites: [f7_point_wastes_boss]
@@ -239,9 +239,9 @@ quests:
         explanation: Point instancers scale when copies share prototypes and vary by arrays.
 
   - id: f7_mirror_forge
-    title: Break the Mirror Forge
+    title: "Mirror Forge: Nested Instancing"
     floor: 8
-    floor_name: Instance Wilds
+    floor_name: Prototype Wilds
     neighborhood: Mirror Furnace
     kind: floor_boss
     prerequisites: [f7_warehouse_district]
@@ -269,7 +269,7 @@ quests:
     reward:
       opinion_points: 3
       achievement: "Floor clear! Nested instancing survived the Mirror Forge."
-      inventory: {system_peeks: 1}
+      inventory: {prim_censuses: 1}
     world_target: /City/InstanceWilds/BenchRow
     recipes: [Instancing]
     questions:

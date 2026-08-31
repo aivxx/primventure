@@ -3,7 +3,7 @@ lessons:
     title: Schema-Backed Prims
     objective: Define typed prims with schema classes and use their declared properties through schema-specific accessors.
     intro: >-
-      Blueprint Borough has survived for years on boxes labeled "probably geometry." Today we
+      Schema Borough has survived for years on boxes labeled "probably geometry." Today we
       introduce schemas, which give prims meaning, capabilities, and considerably better paperwork.
       The live audience has been asked not to wager on your first type mismatch.
     beats:

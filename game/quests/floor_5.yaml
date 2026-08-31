@@ -1,10 +1,10 @@
 floor: 5
-floor_name: Arc Highlands
+floor_name: Composition Highlands
 quests:
   - id: f5_sublayer_workstreams
-    title: Split the Skyscraper Workstreams
+    title: Sublayer the Geometry and Shading Workstreams
     floor: 5
-    floor_name: Arc Highlands
+    floor_name: Composition Highlands
     neighborhood: Sublayer Yards
     kind: room
     prerequisites: [f4_hydra_of_choices]
@@ -44,9 +44,9 @@ quests:
     recipes: [Sublayer, Layer Stack]
 
   - id: f5_workstream_clerk
-    title: Reorder the Workstream Clerk
+    title: "Workstream Clerk: Reorder the Sublayer Stack"
     floor: 5
-    floor_name: Arc Highlands
+    floor_name: Composition Highlands
     neighborhood: Sublayer Yards
     kind: neighborhood_boss
     prerequisites: [f5_sublayer_workstreams]
@@ -87,9 +87,9 @@ quests:
         explanation: Sublayers are ordered strongest to weakest.
 
   - id: f5_skyline_references
-    title: Raise Two Towers, One Asset
+    title: Reference One Tower Asset Twice
     floor: 5
-    floor_name: Arc Highlands
+    floor_name: Composition Highlands
     neighborhood: Reference Docks
     kind: room
     prerequisites: [f5_workstream_clerk]
@@ -124,9 +124,9 @@ quests:
     recipes: [Reference, Asset]
 
   - id: f5_encapsulation_raid
-    title: Seal the Unencapsulated Looks
+    title: "Stranded Looks: Encapsulate the Bindings"
     floor: 5
-    floor_name: Arc Highlands
+    floor_name: Composition Highlands
     neighborhood: Reference Docks
     kind: neighborhood_boss
     prerequisites: [f5_skyline_references]
@@ -166,9 +166,9 @@ quests:
         explanation: Only descendants of the referenced target are composed.
 
   - id: f5_sealed_crate
-    title: Manifest the Payload Block
+    title: Payload the Building Pack as Cargo
     floor: 5
-    floor_name: Arc Highlands
+    floor_name: Composition Highlands
     neighborhood: Payload Berth
     kind: room
     prerequisites: [f5_encapsulation_raid]
@@ -198,9 +198,9 @@ quests:
     recipes: [Payload, Load and Unload]
 
   - id: f5_harbor_master
-    title: Outsmart the Harbor Master
+    title: "Harbor Master: Keep the Payload Deferred"
     floor: 5
-    floor_name: Arc Highlands
+    floor_name: Composition Highlands
     neighborhood: Payload Berth
     kind: neighborhood_boss
     prerequisites: [f5_sealed_crate]
@@ -237,7 +237,7 @@ quests:
   - id: f5_inherit_lamps
     title: Inherit the Street-Lamp Class
     floor: 5
-    floor_name: Arc Highlands
+    floor_name: Composition Highlands
     neighborhood: Inherit Street
     kind: room
     prerequisites: [f5_harbor_master]
@@ -269,9 +269,9 @@ quests:
     recipes: [Inherit, Class]
 
   - id: f5_specializes_fallback
-    title: Specialize the Weakest Road
+    title: "Traffic Cop: Specializes as the Weakest Arc"
     floor: 5
-    floor_name: Arc Highlands
+    floor_name: Composition Highlands
     neighborhood: Inherit Street
     kind: neighborhood_boss
     prerequisites: [f5_inherit_lamps]
@@ -307,9 +307,9 @@ quests:
         explanation: Specializes is the weakest LIVRPS arc.
 
   - id: f5_city_block
-    title: Recapture Highland Block
+    title: "Highland Block: Mix References and Payloads"
     floor: 5
-    floor_name: Arc Highlands
+    floor_name: Composition Highlands
     neighborhood: Recaptured Skyline
     kind: city_boss
     prerequisites: [f5_specializes_fallback]
@@ -354,9 +354,9 @@ quests:
         explanation: Payloads defer bulk while references keep the towers in the composed interface.
 
   - id: f5_liverps_labyrinth
-    title: Trace the Highland Labyrinth
+    title: "Highland Labyrinth: Trace LIVERPS Strength Order"
     floor: 5
-    floor_name: Arc Highlands
+    floor_name: Composition Highlands
     neighborhood: LIVERPS Labyrinth
     kind: floor_boss
     prerequisites: [f5_city_block]
@@ -422,7 +422,7 @@ quests:
     reward:
       opinion_points: 3
       achievement: "Floor clear! You traced LIVERPS on a live city sign. Weaker arcs request a mediator."
-      inventory: {system_peeks: 1}
+      inventory: {prim_censuses: 1}
     world_target: /City/ArcHighlands/LabyrinthSign
     recipes: [LIVERPS Strength Ordering, Composition]
     questions:

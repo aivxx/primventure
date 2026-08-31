@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import Editor from "@monaco-editor/react";
 import {
   ArrowRight, Backpack, Boxes, BookOpen, Building2, CheckCircle2, ChevronLeft,
-  ChevronRight, Circle, CircleDollarSign, Clapperboard, Code2, Eye, FlaskConical,
+  ChevronRight, Circle, CircleDollarSign, Clapperboard, Code2, FlaskConical, ListTree,
   Gem, HelpCircle, Lightbulb, ListChecks, LockKeyhole, Play, RefreshCw, Shield,
   ShoppingCart, Skull, Sparkles, Swords, TerminalSquare, Trash2, Trophy, Tv, X,
   XCircle, Zap,
@@ -26,18 +26,36 @@ type Quest = {
   cookbook: string; unlocked: boolean; completed: boolean; exam_tasks: string[];
   stats: Record<string, number>; questions?: Question[]; lesson?: Lesson | null;
   opinion_points: number; expects: string[]; submission: string;
+  home_floor?: boolean; boss_fee?: number; boss_fee_kind?: string;
+  free_hint?: boolean; free_census?: boolean;
+  census_armed?: boolean; census_paid?: boolean;
 };
 type ShopItem = {
   name: string; description: string; cost: number; repeatable?: boolean;
   kind?: "consumable" | "upgrade";
 };
+type ClassPath = {
+  id: string; title: string; blurb: string; kit: string; perks: string[];
+};
+type ClassBenefits = {
+  catalog: ClassPath[];
+  home_floors: number[];
+  home_names: string[];
+  recipe_drip_op: number;
+  recipe_drip_cap: number;
+  claims: Record<string, boolean>;
+};
+type CurioOffer = { name: string; trophy_cost: number; inventory: Record<string, number> };
+type CurioDesk = { unstamped: number; held: number; offers: Record<string, CurioOffer> };
 type PlayerState = {
   contestant: string; title: string; level: number; xp: number; next_level_xp: number;
   opinion_points: number; completed_quests: string[]; stats: Record<string, number>;
   inventory: Record<string, number>; upgrades: string[]; recipes: string[];
   achievements: string[]; specialization?: string; shop: Record<string, ShopItem>;
+  class_benefits?: ClassBenefits; stamped_items?: Record<string, number>; curio?: CurioDesk;
 };
-type Recipe = { id: string; label: string; category: string; unlocked: boolean };
+type CurioResponse = { stamped: Record<string, number>; granted: Record<string, number>; state: PlayerState };
+type Recipe = { id: string; label: string; category: string; unlocked: boolean; affinity?: boolean };
 type RunResult = {
   success: boolean; output: string; system_message: string;
   results: Array<{ rule: string; passed: boolean; message: string }>; state: PlayerState;
@@ -45,30 +63,73 @@ type RunResult = {
 };
 type USDAView = { before_usda: string; after_usda: string };
 type Toast = { kind: "success" | "error" | "info"; title: string; message: string };
-type AssistResult = { kind: "hint" | "peek"; title: string; message: string };
-type HintResponse = { hint: string; state: PlayerState };
-type PeekResponse = {
-  peek: { layer: string; sublayers: string[]; message: string };
-  state: PlayerState;
+type CensusNode = {
+  path: string; specifier: string; type_name: string; kind: string;
+  properties: string[]; extra_properties: number; flags: string[];
 };
+type CheckObservation = { rule: string; target: string; observed: string };
+type Census = {
+  stage: {
+    default_prim?: string; up_axis?: string; meters_per_unit?: number;
+    sublayers?: string[]; time_range?: number[];
+  };
+  prims: CensusNode[];
+  observations: CheckObservation[];
+  truncated: boolean;
+};
+type AssistResult = {
+  kind: "hint" | "census";
+  title: string;
+  message?: string;
+  census?: Census;
+};
+type HintResponse = { hint: string; state: PlayerState };
+type CensusResponse = { census: Census; state: PlayerState };
 
-const CLASS_PATHS = [
+const CLASS_PATHS: ClassPath[] = [
   {
     id: "Compositor",
     title: "Compositor",
-    blurb: "Your focus is how layers, composition arcs, and competing opinions resolve into a stage.",
+    blurb: "Layers, composition arcs, and competing opinions resolving into one stage.",
+    kit: "Declare and receive 1 Prim Census.",
+    perks: [
+      "Home: Opinion Quarter and Composition Highlands.",
+      "Census restocks cost 1 OP.",
+      "City bosses +1 OP, floor bosses +2 OP on home floors.",
+      "Home-floor boss misses charge half XP.",
+      "One free census after a fail per home floor, even at zero stock.",
+      "Affinity recipes pay +1 OP, up to 5 for the crawl.",
+    ],
   },
   {
     id: "Aggregator",
     title: "Aggregator",
-    blurb: "Your focus is assembling scalable assets with payloads, kinds, instancing, and inspectable workstreams.",
+    blurb: "Scalable assets: payloads, kinds, instancing, and inspectable workstreams.",
+    kit: "Declare and receive 1 Hint Token.",
+    perks: [
+      "Home: Hierarchy Foundry and Prototype Wilds.",
+      "Hint restocks grant 3 tokens instead of 2.",
+      "City bosses +1 OP, floor bosses +2 OP on home floors.",
+      "Home-floor boss misses charge half XP.",
+      "One free Hint per home floor, even at zero stock.",
+      "Affinity recipes pay +1 OP, up to 5 for the crawl.",
+    ],
   },
   {
     id: "Exchanger",
     title: "Exchanger",
-    blurb: "Your focus is moving data between OpenUSD and other tools with honest units, validation, and provenance.",
+    blurb: "Moving data between OpenUSD and other tools with honest units and validation.",
+    kit: "Declare and receive 1 Hint Token and 1 Prim Census.",
+    perks: [
+      "Home: Customs Terminal.",
+      "Hint and census restocks both cost 1 OP.",
+      "Neighborhood bosses +1 OP, city bosses +2 OP on Customs Terminal.",
+      "Home-floor boss misses charge half XP.",
+      "The first Customs Terminal boss miss costs 0 XP.",
+      "Affinity recipes pay +1 OP, up to 5 for the crawl.",
+    ],
   },
-] as const;
+];
 
 const RESET_OPTIONS = [
   {
@@ -97,7 +158,7 @@ type Tab = "map" | "skills" | "kiosk";
 // "city" tears down what was published and leaves the record standing; "all"
 // takes the save with it.
 type ResetScope = "city" | "all";
-type GuideTarget = "lesson" | "editor" | "run" | "usda" | "map" | "level" | "payout" | "consumables" | "class" | "saferoom" | "recipes" | "feed";
+type GuideTarget = "lesson" | "editor" | "run" | "usda" | "map" | "level" | "payout" | "consumables" | "keyitems" | "class" | "saferoom" | "recipes" | "feed";
 // Panels on the left edge have no room for an arrow beside them, and the
 // tutorial card owns the bottom left, so those targets get pointed at from the
 // right instead of being covered by their own callout. Targets in the header
@@ -112,6 +173,7 @@ const POINTER_SIDE: Record<GuideTarget, PointerSide> = {
   level: "up",
   payout: "left",
   consumables: "left",
+  keyitems: "left",
   class: "right",
   saferoom: "right",
   recipes: "right",
@@ -121,7 +183,7 @@ const GUIDE_STEPS: Array<{ target: GuideTarget; title: string; body: string }> =
   {
     target: "lesson",
     title: "Learn this room",
-    body: "The System introduces the official lesson, then hands you the concepts, API calls, and traps this room needs. Read the beats, then acknowledge the briefing.",
+    body: "The System introduces the official lesson, then hands you the concepts, API calls, and traps this room needs. Open it whenever you want — you can run the room without reading it first.",
   },
   {
     target: "editor",
@@ -156,17 +218,22 @@ const GUIDE_STEPS: Array<{ target: GuideTarget; title: string; body: string }> =
   {
     target: "consumables",
     title: "Spend it on consumables",
-    body: "Hint Tokens buy you a clue for the room you are stuck on. Opinion X-Rays show the composed layer stack after you clear a room. Click one here to use it, and hit SAFEROOM to buy more once a boss has paid you.",
+    body: "Hint Tokens buy you a clue for the room you are stuck on, even before a run. A Prim Census works only after a failed run: it lists the prims USD actually composed — paths, specifiers, types, kinds — and the real value behind each failing check, so you can see that you authored /City/NamePlate or that cityName is still unset. The checklist tells you the target; the census tells you your stage. Click one here to use it, and hit SAFEROOM to buy more once a boss has paid you.",
+  },
+  {
+    target: "keyitems",
+    title: "Key Items are your transcript",
+    body: "Clearing an ordinary room leaves a souvenir here: a Copper Scene Key for your first prim, an Offset Wrench for layer offsets. Each one names an OpenUSD concept you authored. The Saferoom's Curio Desk trades three of them for Hint Tokens or four for Prim Censuses, and it stamps a trophy rather than taking it, so cashing one in never erases the record.",
   },
   {
     target: "class",
     title: "Declare a class at level 2",
-    body: "At level 2, choose one permanent class in the Saferoom: Compositor for layers and composition arcs, Aggregator for scalable asset assembly, or Exchanger for moving data between tools. A class records the OpenUSD discipline you identify with; it grants no bonuses and locks no lessons, so choose by interest. Only a full crawl reset lets you choose again.",
+    body: "At level 2, declare a class in the Saferoom. Each path grants a starter kit, cheaper restocks, extra Opinion Points on its home floors, and a softer boss fee. Classes never skip rooms or hand you the answer. A full crawl reset is the only way to choose again.",
   },
   {
     target: "saferoom",
     title: "Restock in the Saferoom",
-    body: "This is where Opinion Points turn into supplies: more Hint Tokens and X-Rays, plus permanent upgrades. Nothing sold here clears a room for you.",
+    body: "This is where Opinion Points turn into supplies: more Hint Tokens and Prim Censuses, plus permanent upgrades. Further down, the Curio Desk sells the same consumables for Key Items instead of points. Nothing sold here clears a room for you.",
   },
   {
     target: "recipes",
@@ -784,6 +851,36 @@ function ScenePreview({ revision, panelRef, spotlit }: {
   </section>;
 }
 
+function CensusReadout({ census }: { census: Census }) {
+  const { stage, prims, observations, truncated } = census;
+  const facts = [
+    stage.default_prim ? `defaultPrim ${stage.default_prim}` : "no defaultPrim",
+    stage.up_axis ? `upAxis ${stage.up_axis}` : "",
+    stage.meters_per_unit ? `metersPerUnit ${stage.meters_per_unit}` : "",
+    stage.sublayers?.length ? `sublayers: ${stage.sublayers.join(", ")}` : "no sublayers",
+    stage.time_range ? `timeCode ${stage.time_range[0]}–${stage.time_range[1]}` : "",
+  ].filter(Boolean);
+  return <div className="census">
+    {observations.length > 0 && <ul className="census-findings">{observations.map((item) => <li key={`${item.rule}:${item.target}:${item.observed}`}>
+      <em>{item.target}</em>
+      <span>{item.observed}</span>
+    </li>)}</ul>}
+    <div className="census-stage">{facts.join(" · ")}</div>
+    {prims.length === 0 && <div className="census-stage">Your stage composed no prims at all.</div>}
+    <ul className="census-tree">{prims.map((prim) => {
+      // Depth is the path itself, so the tree reads without a nested walk.
+      const depth = Math.max(prim.path.split("/").length - 2, 0);
+      return <li key={prim.path} style={{ paddingLeft: `${depth * 9}px` }}>
+        <b>{prim.specifier || "?"} {prim.type_name || "(untyped)"}</b>
+        <span>{prim.path}</span>
+        {(prim.kind || prim.flags.length > 0) && <small>{[prim.kind && `kind ${prim.kind}`, ...prim.flags].filter(Boolean).join(" · ")}</small>}
+        {prim.properties.length > 0 && <i>{prim.properties.join(", ")}{prim.extra_properties > 0 ? ` +${prim.extra_properties} more` : ""}</i>}
+      </li>;
+    })}</ul>
+    {truncated && <div className="census-stage">Stage larger than this readout; first {prims.length} prims shown.</div>}
+  </div>;
+}
+
 export default function App() {
   const [state, setState] = useState<PlayerState>(emptyState);
   const [quests, setQuests] = useState<Quest[]>([]);
@@ -796,9 +893,9 @@ export default function App() {
     return tab === "skills" || tab === "kiosk" ? tab : "map";
   });
   const [running, setRunning] = useState(false);
-  const [assistBusy, setAssistBusy] = useState<"hint" | "peek" | null>(null);
+  const [assistBusy, setAssistBusy] = useState<"hint" | "census" | null>(null);
   const [assistResult, setAssistResult] = useState<AssistResult | null>(null);
-  const [pendingSpend, setPendingSpend] = useState<"hint_tokens" | "system_peeks" | null>(null);
+  const [pendingSpend, setPendingSpend] = useState<"hint_tokens" | "prim_censuses" | null>(null);
   const [pendingReset, setPendingReset] = useState<ResetScope | null>(null);
   const [pendingBossRun, setPendingBossRun] = useState(false);
   const [resetting, setResetting] = useState(false);
@@ -836,6 +933,7 @@ export default function App() {
   const levelRef = useRef<HTMLSpanElement>(null);
   const payoutRef = useRef<HTMLElement>(null);
   const consumablesRef = useRef<HTMLElement>(null);
+  const keyItemsRef = useRef<HTMLElement>(null);
   const feedRef = useRef<HTMLElement>(null);
   const recipesRef = useRef<HTMLDivElement>(null);
   const classRef = useRef<HTMLDivElement>(null);
@@ -1022,6 +1120,7 @@ export default function App() {
       level: levelRef.current,
       payout: payoutRef.current,
       consumables: consumablesRef.current,
+      keyitems: keyItemsRef.current,
       class: classRef.current,
       saferoom: saferoomRef.current,
       recipes: recipesRef.current,
@@ -1115,7 +1214,8 @@ export default function App() {
   const liveBossFight = Boolean(
     activeQuest?.kind.endsWith("boss") && !activeQuest.completed && !playbackScene && !reviewPending,
   );
-  const bossFee = Math.min(25, Math.max(0, state.xp - xpFloor));
+  const bossFee = activeQuest?.boss_fee ?? Math.min(25, Math.max(0, state.xp - xpFloor));
+  const classPaths = state.class_benefits?.catalog?.length ? state.class_benefits.catalog : CLASS_PATHS;
 
   const runQuest = async () => {
     if (!activeQuest) return;
@@ -1148,7 +1248,7 @@ export default function App() {
         setToast({
           kind: "error",
           title: "VALIDATION FAILED",
-          message: `${!lessonRead ? "SYSTEM: You skipped the briefing. The lesson remains available. " : ""}${result.system_message} ${result.results.filter((item) => !item.passed).map((item) => item.message).join(" ")}`,
+          message: `${result.system_message} ${result.results.filter((item) => !item.passed).map((item) => item.message).join(" ")}`,
         });
       }
       await refresh(result.success && !needsUsdaReview);
@@ -1193,25 +1293,19 @@ export default function App() {
     }
   };
 
-  const useSystemPeek = async () => {
+  const readCensus = async () => {
     if (!activeQuest || assistBusy) return;
-    setAssistBusy("peek");
+    setAssistBusy("census");
     try {
-      const result = await api<PeekResponse>(`/quests/${activeQuest.id}/peek`, { method: "POST" });
+      const result = await api<CensusResponse>(`/quests/${activeQuest.id}/census`, { method: "POST" });
       setState(result.state);
-      const sublayers = result.peek.sublayers.length
-        ? ` Sublayers, strongest first: ${result.peek.sublayers.join(", ")}.`
-        : " No sublayers are authored.";
-      setAssistResult({
-        kind: "peek",
-        title: "OPINION X-RAY",
-        message: `${result.peek.message} Layer: ${result.peek.layer}.${sublayers}`,
-      });
+      setAssistResult({ kind: "census", title: "PRIM CENSUS", census: result.census });
+      await refresh();
     } catch (error) {
       setToast({
         kind: "error",
-        title: "PEEK DENIED",
-        message: error instanceof Error ? error.message : "The layer stack remained opaque.",
+        title: "CENSUS DENIED",
+        message: error instanceof Error ? error.message : "The registrar kept the ledger shut.",
       });
     } finally {
       setAssistBusy(null);
@@ -1234,7 +1328,7 @@ export default function App() {
       setToast({
         kind: "success",
         title: "CLASS PATH LOCKED",
-        message: `SYSTEM: ${id} recorded as your discipline. It grants no bonus and closes no rooms; skill still clears the tower.`,
+        message: `SYSTEM: ${id} recorded. Starter kit delivered. Home-floor perks are live. Still no skipped rooms and still no answers.`,
       });
     } catch (error) {
       setToast({ kind: "error", title: "PATH DENIED", message: error instanceof Error ? error.message : "The kiosk refused." });
@@ -1302,14 +1396,40 @@ export default function App() {
     }
   };
 
+  const tradeTrophies = async (id: string) => {
+    try {
+      const result = await api<CurioResponse>(`/curio/${id}`, { method: "POST" });
+      setState(result.state);
+      const stampedNames = Object.entries(result.stamped)
+        .map(([name, count]) => `${name.replaceAll("_", " ")}${count > 1 ? ` ×${count}` : ""}`)
+        .join(", ");
+      setToast({
+        kind: "success",
+        title: "TROPHIES STAMPED",
+        message: `The desk stamped ${stampedNames} and restocked Consumables. You keep the trophies; only their trade value is gone.`,
+      });
+    } catch (error) {
+      setToast({
+        kind: "error",
+        title: "DESK DECLINED",
+        message: error instanceof Error ? error.message : "The appraiser went to lunch.",
+      });
+    }
+  };
+
   const inventory = Object.entries(state.inventory);
   const hintTokens = state.inventory.hint_tokens || 0;
-  const systemPeeks = state.inventory.system_peeks || 0;
+  const primCensuses = state.inventory.prim_censuses || 0;
   const consumables = [
     { id: "hint_tokens" as const, quantity: hintTokens, cost: state.shop?.hint_refill?.cost },
-    { id: "system_peeks" as const, quantity: systemPeeks, cost: state.shop?.system_peek?.cost },
+    { id: "prim_censuses" as const, quantity: primCensuses, cost: state.shop?.prim_census?.cost },
   ];
-  const keyItems = inventory.filter(([name]) => name !== "hint_tokens" && name !== "system_peeks");
+  const keyItems = inventory.filter(([name]) => name !== "hint_tokens" && name !== "prim_censuses");
+  const stampedItems = state.stamped_items || {};
+  const trophiesHeld = keyItems.reduce((total, [, quantity]) => total + quantity, 0);
+  const trophiesUnstamped = state.curio?.unstamped
+    ?? keyItems.reduce((total, [name, quantity]) => total + Math.max(quantity - (stampedItems[name] || 0), 0), 0);
+  const curioOffers = Object.entries(state.curio?.offers || {});
   const shopSections = [
     { id: "consumable" as const, heading: "CONSUMABLES // RESTOCK HERE", items: Object.entries(state.shop || {}).filter(([, item]) => item.kind === "consumable") },
     { id: "upgrade" as const, heading: "UPGRADES // PERMANENT AND COSMETIC", items: Object.entries(state.shop || {}).filter(([, item]) => item.kind !== "consumable") },
@@ -1366,34 +1486,64 @@ export default function App() {
               : "Every paying room on this route is cleared."}
           </p>
           {(state.specialization || state.level >= 2) && <div className="stat-line"><span><Shield size={15} /> CLASS PATH</span><b>{state.specialization || "UNDECLARED"}</b></div>}
+          {state.specialization && state.class_benefits?.home_names?.length ? <p className="currency-note">Home floors: {state.class_benefits.home_names.join(", ")}. Perks never skip a room or reveal an answer.</p> : null}
         </section>
         <section className={`inventory panel ${spotlight === "consumables" ? "spotlight" : ""}`} ref={consumablesRef}>
           <div className="panel-heading"><span><FlaskConical size={15} /> CONSUMABLES</span><button className="restock-link" onClick={() => setActiveTab("kiosk")}>SAFEROOM</button></div>
           {consumables.map(({ id, quantity, cost }) => {
             const isHint = id === "hint_tokens";
-            const unavailable = quantity < 1 || assistBusy !== null || (!isHint && !activeQuest?.completed);
-            const label = isHint ? "Hint Token" : "Opinion X-Ray";
-            const detail = quantity < 1
+            const censusArmed = Boolean(activeQuest?.census_armed);
+            // A census already paid for on this fail stays readable for free.
+            const censusPaid = Boolean(activeQuest?.census_paid);
+            const classFree = Boolean(isHint ? activeQuest?.free_hint : activeQuest?.free_census && censusArmed);
+            const settled = !isHint && censusPaid;
+            const unavailable = (!classFree && !settled && quantity < 1) || assistBusy !== null || (!isHint && !censusArmed);
+            const label = isHint ? "Hint Token" : "Prim Census";
+            const short = isHint ? "Hint" : "Census";
+            const detail = settled
+              ? "PAID FOR THIS RUN · tap to re-read"
+              : classFree
+              ? "CLASS PERK · this use is free"
+              : quantity < 1
               ? `Out of stock · ${cost ?? "?"} OP in Saferoom`
               : isHint
-                ? "Tap to use · room-level clue"
-                : activeQuest?.completed ? "Tap to use · reads the published layer" : "Clear this room to use";
-            const icon = (isHint && assistBusy === "hint") || (!isHint && assistBusy === "peek")
+                ? "Tap to use · clue for this room"
+                : censusArmed
+                  ? "Tap to use · lists the prims your stage actually composed"
+                  : activeQuest?.completed
+                    ? "Cleared rooms do not consume a census"
+                    : "Fail this room first · then it reports your real stage";
+            const icon = (isHint && assistBusy === "hint") || (!isHint && assistBusy === "census")
               ? <RefreshCw className="spin" />
-              : isHint ? <Lightbulb size={17} /> : <Eye size={17} />;
+              : isHint ? <Lightbulb size={17} /> : <ListTree size={17} />;
+            // Re-reading a census already paid for costs nothing, so it skips
+            // the confirm step that exists to guard an irreversible spend.
+            if (settled) {
+              return <button
+                className="inventory-item usable"
+                key={id}
+                disabled={assistBusy !== null}
+                onClick={() => void readCensus()}
+                title={detail}
+              >
+                <span className="item-icon epic">{icon}</span>
+                <div><strong>{label}</strong><small>{detail}</small></div>
+                <b>{quantity} LEFT</b>
+              </button>;
+            }
             // Spending is irreversible, so the first click only arms the item.
             if (pendingSpend === id) {
-              return <div className="inventory-item confirming" key={id}>
+              return <div className={`inventory-item confirming ${classFree ? "class-free" : ""}`} key={id}>
                 <span className={`item-icon ${isHint ? "rare" : "epic"}`}>{icon}</span>
-                <div><strong>Spend 1 {isHint ? "Hint" : "X-Ray"}?</strong><small>{quantity - 1} would be left</small></div>
+                <div><strong>{classFree ? `Use free ${short}?` : `Spend 1 ${short}?`}</strong><small>{classFree ? "Class perk. Inventory stays put." : `${quantity - 1} would be left`}</small></div>
                 <div className="confirm-actions">
-                  <button className="yes" onClick={() => { setPendingSpend(null); (isHint ? useHint : useSystemPeek)(); }}>SPEND</button>
+                  <button className="yes" onClick={() => { setPendingSpend(null); (isHint ? useHint : readCensus)(); }}>{classFree ? "USE FREE" : "SPEND"}</button>
                   <button className="no" onClick={() => setPendingSpend(null)} aria-label={`Keep the ${label}`}><X size={13} /></button>
                 </div>
               </div>;
             }
             return <button
-              className="inventory-item usable"
+              className={`inventory-item usable ${classFree ? "class-free" : ""}`}
               key={id}
               disabled={unavailable}
               onClick={() => setPendingSpend(id)}
@@ -1410,17 +1560,30 @@ export default function App() {
           {assistResult && <div className={`assist-result ${assistResult.kind}`}>
             <button onClick={() => setAssistResult(null)} aria-label="Dismiss assistance"><X /></button>
             <span>{assistResult.title}</span>
-            <p>{assistResult.message}</p>
+            {assistResult.census
+              ? <CensusReadout census={assistResult.census} />
+              : <p>{assistResult.message}</p>}
           </div>}
         </section>
-        {keyItems.length > 0 && <section className="inventory panel key-items">
-          <div className="panel-heading"><span><Backpack size={15} /> KEY ITEMS</span><em>{keyItems.length}</em></div>
-          {keyItems.map(([name, quantity]) => <div className="inventory-item passive" key={name}>
-            <span className="item-icon legendary"><Backpack size={17} /></span>
-            <div><strong>{name.replaceAll("_", " ")}</strong><small>Room-clear trophy</small></div>
-            <b>× {quantity}</b>
-          </div>)}
-        </section>}
+        <section className={`inventory panel key-items ${spotlight === "keyitems" ? "spotlight" : ""}`} ref={keyItemsRef}>
+          <div className="panel-heading">
+            <span><Backpack size={15} /> KEY ITEMS</span>
+            {trophiesUnstamped > 0
+              ? <button className="restock-link" onClick={() => setActiveTab("kiosk")}>CURIO DESK</button>
+              : <em>{keyItems.length}</em>}
+          </div>
+          {keyItems.map(([name, quantity]) => {
+            const used = stampedItems[name] || 0;
+            return <div className={`inventory-item passive ${used >= quantity ? "stamped" : ""}`} key={name}>
+              <span className="item-icon legendary"><Backpack size={17} /></span>
+              <div><strong>{name.replaceAll("_", " ")}</strong><small>{used
+                ? `Room-clear trophy · ${used} of ${quantity} stamped`
+                : "Room-clear trophy · trade value unspent"}</small></div>
+              <b>× {quantity}</b>
+            </div>;
+          })}
+          <p className="currency-note"><b>{trophiesUnstamped}</b> available to trade</p>
+        </section>
         <ScenePreview revision={revision} panelRef={feedRef} spotlit={spotlight === "feed"} />
       </aside>
       <section className="command-center">
@@ -1501,8 +1664,8 @@ export default function App() {
           <div className="section-hero"><span>THE COOKBOOK INDEX</span><h1>RECIPES OF POWER</h1><p>Glossary nodes from the Cookbook graph. Clear rooms that name them. SYSTEM: collecting terms fills the shelf; composing them builds the city.</p><small className="recipe-count">{masteredRecipes}/{recipes.length} MASTERED</small></div>
           {recipeGroups.map(([category, nodes]) => <section className="recipe-cluster" key={category}>
             <header><span>{category.replaceAll("-", " ")}</span><b>{nodes.filter((node) => node.unlocked).length}/{nodes.length}</b></header>
-            <div className="skill-grid">{nodes.map((recipe, index) => <article className={`skill-node ${recipe.unlocked ? "unlocked" : ""}`} key={recipe.id} style={{ "--i": index } as React.CSSProperties}>
-              <span className="skill-gem">{recipe.unlocked ? <Gem /> : <LockKeyhole />}</span><small>{recipe.category.replaceAll("-", " ")}</small><h3>{recipe.label}</h3><p>{recipe.unlocked ? "Authored in a cleared room. Keep the composed result inspectable." : "Undiscovered. Win a room that names this term."}</p><footer>{recipe.unlocked ? "MASTERED" : "UNDISCOVERED"}</footer>
+            <div className="skill-grid">{nodes.map((recipe, index) => <article className={`skill-node ${recipe.unlocked ? "unlocked" : ""} ${recipe.affinity ? "affinity" : ""}`} key={recipe.id} style={{ "--i": index } as React.CSSProperties}>
+              <span className="skill-gem">{recipe.unlocked ? <Gem /> : <LockKeyhole />}</span><small>{recipe.category.replaceAll("-", " ")}</small><h3>{recipe.label}</h3><p>{recipe.unlocked ? "Authored in a cleared room. Keep the composed result inspectable." : "Undiscovered. Win a room that names this term."}</p><footer>{recipe.affinity ? "CLASS AFFINITY" : recipe.unlocked ? "MASTERED" : "UNDISCOVERED"}</footer>
             </article>)}</div>
           </section>)}
         </div>}
@@ -1511,14 +1674,20 @@ export default function App() {
           <div className={`class-choice ${spotlight === "class" ? "spotlight" : ""}`} ref={classRef}>
             <div className="class-explainer">
               <span>CLASS PATH // AVAILABLE AT LEVEL 2</span>
-              <p>Choose the OpenUSD discipline that fits your interests. This is a permanent identity choice, not a power upgrade: classes grant no bonus and close no rooms. A full crawl reset is the only way to choose again.</p>
+              <p>
+                Declare a discipline. You get a starter kit, cheaper restocks, extra Opinion Points
+                on that path's home floors, and a softer boss fee there. Classes never skip rooms
+                or reveal answers. A full crawl reset is the only way to choose again.
+              </p>
             </div>
-            <div className="class-grid">{CLASS_PATHS.map((path) => {
+            <div className="class-grid">{classPaths.map((path) => {
             const selected = state.specialization === path.id;
             const lockedOut = Boolean(state.specialization) && !selected;
             const tooSoon = state.level < 2;
             return <article className={selected ? "owned" : ""} key={path.id}>
               <Shield size={34} /><h3>{path.title}</h3><p>{path.blurb}</p>
+              <small className="class-kit">{path.kit}</small>
+              <ul className="class-perks">{path.perks.map((perk) => <li key={perk}>{perk}</li>)}</ul>
               <button disabled={selected || lockedOut || tooSoon} onClick={() => chooseClass(path.id)}>
                 {selected ? "DECLARED" : tooSoon ? "LEVEL 2 REQUIRED" : lockedOut ? "PATH CLOSED" : "DECLARE PATH"}
               </button>
@@ -1534,6 +1703,30 @@ export default function App() {
               </article>;
             })}</div>
           </div>)}
+          {curioOffers.length > 0 && <div className="shop-section curio-desk">
+            <div className="shop-heading">CURIO DESK // PAY IN KEY ITEMS, NOT OP</div>
+            <div className="shop-grid">{curioOffers.map(([id, offer], index) => {
+              const short = offer.trophy_cost - trophiesUnstamped;
+              const grant = Object.entries(offer.inventory)
+                .map(([item, count]) => item === "hint_tokens" ? `${count} Hint Token${count === 1 ? "" : "s"}` : `${count} Prim Census${count === 1 ? "" : "es"}`)
+                .join(" and ");
+              return <article key={id}>
+                <div className="shop-number">0{index + 1}</div><Backpack size={34} />
+                <h3>{offer.name}</h3>
+                <p>Hand over {offer.trophy_cost} unstamped Key Items for {grant}. The appraiser stamps each trophy and gives it back, so your record of cleared rooms stays whole.</p>
+                <button disabled={short > 0} onClick={() => tradeTrophies(id)}>
+                  {short > 0
+                    ? `NEED ${short} MORE UNSTAMPED`
+                    : <><Backpack size={15} /> {offer.trophy_cost} TROPHIES · TRADE</>}
+                </button>
+              </article>;
+            })}</div>
+            <small className="fine-print">
+              {trophiesUnstamped} of your {trophiesHeld} trophies are unstamped. Clearing an
+              ordinary room earns one; bosses pay Opinion Points instead. The desk trades for
+              supplies only, so it can never buy an upgrade or skip a room.
+            </small>
+          </div>}
           <div className="shop-section danger-zone">
             <div className="shop-heading">CONDEMNED // NO REFUNDS, NO UNDO</div>
             <div className="shop-grid">
@@ -1579,8 +1772,10 @@ export default function App() {
                   <span>READY TO CHALLENGE?</span>
                   <p>
                     {bossFee > 0
-                      ? <>A wrong answer costs <b>{bossFee} XP</b>. Your level stays {state.level}. </>
-                      : <>You're on the floor of this level, so a miss costs no XP this time. </>}
+                      ? <>A wrong answer costs <b>{bossFee} XP</b>{activeQuest?.boss_fee_kind === "home" ? " (class rate: half)" : ""}. Your level stays {state.level}. </>
+                      : activeQuest?.boss_fee_kind === "waiver"
+                        ? <>Exchanger waiver: this first Customs miss costs no XP. Your level stays {state.level}. </>
+                        : <>You're on the floor of this level, so a miss costs no XP this time. </>}
                     A clear is the only way onto the next room. Are you sure you're ready?
                   </p>
                   <div className="confirm-actions">
@@ -1603,8 +1798,8 @@ export default function App() {
           {playbackScene && activeQuest && <p className="playback-note">Originally aired as {episodeCode(activeQuest.floor)}. The audience is watching the recap. Your live assignment has not moved.</p>}
           <div className="objective"><ChevronRight size={16} /><span><small>NEIGHBORHOOD</small>{activeQuest?.neighborhood}</span></div>
           {activeQuest && <div className="learning-route">
-            <span className={lessonRead ? "done" : "current"}><b>1</b> LEARN</span><i />
-            <span className={reviewPending ? "done" : lessonRead ? "current" : ""}><b>2</b> AUTHOR</span><i />
+            <span className={lessonRead ? "done" : ""}><b>1</b> LEARN</span><i />
+            <span className={reviewPending ? "done" : "current"}><b>2</b> AUTHOR</span><i />
             <span className={reviewPending ? "done" : checks.length ? "current" : ""}><b>3</b> VALIDATE</span><i />
             <span className={reviewPending ? "current" : ""}><b>4</b> REVIEW</span>
           </div>}
@@ -1679,7 +1874,7 @@ export default function App() {
       onNext={() => setGuideStep((current) => Math.min(GUIDE_STEPS.length - 1, (current ?? 0) + 1))}
       onClose={closeGuide}
     />}
-    {lessonOpen && activeQuest && <div className="lesson-overlay" role="dialog" aria-modal="true" aria-label={`Lesson for ${activeQuest.title}`}>
+    {lessonOpen && activeQuest && <div className="lesson-overlay" role="dialog" aria-label={`Lesson for ${activeQuest.title}`}>
       <button className="lesson-backdrop" onClick={() => setLessonOpen(false)} aria-label="Close lesson" />
       <section className={`lesson-drawer ${spotlight === "lesson" ? "spotlight" : ""}`} ref={lessonRef}>
         <header>
@@ -1696,6 +1891,14 @@ export default function App() {
               <BookOpen size={15} />
               <div><span>OBJECTIVE</span><p>{activeQuest.lesson.objective}</p></div>
             </div>
+            {activeQuest.home_floor && state.specialization && <div className="lesson-class-lens">
+              <span>{state.specialization.toUpperCase()} LENS</span>
+              <p>{state.specialization === "Compositor"
+                ? "Watch which layer authors each opinion, and which arc makes it win."
+                : state.specialization === "Aggregator"
+                  ? "Watch the asset interface: what is shared, payloaded, instanced, or kinded."
+                  : "Watch units, axes, provenance, and whether the result would pass a validator."}</p>
+            </div>}
             {activeQuest.lesson.beats.map((beat, index) => <article className={`lesson-beat ${beat.kind}`} key={`${beat.kind}-${index}`}>
               <header>
                 <span className="beat-index">{String(index + 1).padStart(2, "0")}</span>
@@ -1713,7 +1916,7 @@ export default function App() {
               <SystemLine text={activeQuest.lesson.apply} tone="apply" />
             </section>
             <button className="lesson-ack" onClick={acknowledgeLesson}>
-              {lessonRead ? "BACK TO THE TERMINAL" : "I GOT IT · LET ME AUTHOR"} <ArrowRight size={16} />
+              BACK TO THE TERMINAL <ArrowRight size={16} />
             </button>
             <div className="lesson-source">Compressed from the official Learn OpenUSD lesson · {activeQuest.lesson.source}</div>
           </> : <div className="lesson-missing">

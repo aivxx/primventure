@@ -1,10 +1,10 @@
 floor: 7
-floor_name: Exchange Terminal
+floor_name: Customs Terminal
 quests:
   - id: f8_import_depot
-    title: Stamp the Import Depot
+    title: Stamp Provenance on the Imported Asset
     floor: 7
-    floor_name: Exchange Terminal
+    floor_name: Customs Terminal
     neighborhood: Intake Platform
     kind: room
     prerequisites: [f6_zoning_golem]
@@ -32,9 +32,9 @@ quests:
     recipes: [Metadata, Asset Info]
 
   - id: f8_extract_mesh
-    title: Extract the Cube From Steerage
+    title: Extract the OBJ Cube Into a Mesh
     floor: 7
-    floor_name: Exchange Terminal
+    floor_name: Customs Terminal
     neighborhood: Intake Platform
     kind: room
     prerequisites: [f8_import_depot]
@@ -70,9 +70,9 @@ quests:
     recipes: [Gprim, Mesh]
 
   - id: f8_extract_overseer
-    title: Count What You Actually Extracted
+    title: "Dock Overseer: Points and Extent Must Agree"
     floor: 7
-    floor_name: Exchange Terminal
+    floor_name: Customs Terminal
     neighborhood: Intake Platform
     kind: neighborhood_boss
     prerequisites: [f8_extract_mesh]
@@ -109,9 +109,9 @@ quests:
         explanation: Data exchange often happens outside usd-core via explicit extract-and-author.
 
   - id: f8_axis_switchyard
-    title: Align the Axis Switchyard
+    title: Convert the Z-Up Shipment to Y-Up
     floor: 7
-    floor_name: Exchange Terminal
+    floor_name: Customs Terminal
     neighborhood: Transform Junction
     kind: room
     prerequisites: [f8_extract_overseer]
@@ -139,9 +139,9 @@ quests:
     recipes: [Up Axis, Xform]
 
   - id: f8_unit_gauge
-    title: Recalibrate the Meter Gauge
+    title: "Meter Gauge: Convert Units on Import"
     floor: 7
-    floor_name: Exchange Terminal
+    floor_name: Customs Terminal
     neighborhood: Transform Junction
     kind: neighborhood_boss
     prerequisites: [f8_axis_switchyard]
@@ -176,9 +176,9 @@ quests:
         explanation: metersPerUnit scales scene units into meters.
 
   - id: f8_validate_warden
-    title: Satisfy the Validation Warden
+    title: Pass the Asset Validation Contract
     floor: 7
-    floor_name: Exchange Terminal
+    floor_name: Customs Terminal
     neighborhood: Validation Concourse
     kind: room
     prerequisites: [f8_unit_gauge]
@@ -206,9 +206,9 @@ quests:
     recipes: [Kind, Default Prim]
 
   - id: f8_customs_engine
-    title: Audit the Customs Engine
+    title: "Customs Engine: Extract, Stamp, and Validate"
     floor: 7
-    floor_name: Exchange Terminal
+    floor_name: Customs Terminal
     neighborhood: Validation Concourse
     kind: city_boss
     prerequisites: [f8_validate_warden]
