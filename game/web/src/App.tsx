@@ -343,7 +343,7 @@ const TICKER = [
   "A NEW CONTESTANT HAS ENTERED THE COMPOSITION",
   "THE BROADCAST IS LIVE IN EVERY REMAINING TIMEZONE",
   "NO EXPERIENCE REQUIRED · NONE DETECTED EITHER",
-  "TEN FLOORS REMAIN SEALED · TODAY'S PROBLEM IS FLOOR ZERO",
+  "TEN FLOORS · ONE OPENS AT A TIME · THE REST STAY SEALED",
   "THE PREVIOUS CONTESTANT DECLINED TO READ THE BRIEF",
   "SPONSORS RECOMMEND A STRATEGY · PANIC FAILED FOCUS TESTING",
   "NOTHING HERE IS PERMANENT EXCEPT THE CITY YOU BUILD",
@@ -403,6 +403,10 @@ function Landing({ onStart, hasProgress, nextQuest, quests, floors }: {
   quests: Quest[]; floors: Array<[number, Quest[]]>;
 }) {
   const bossCount = quests.filter((quest) => quest.kind.endsWith("boss")).length;
+  // The tower and the billing reflect the run in progress, so a returning
+  // contestant is not told they are still waiting on the opening floor.
+  const liveFloor = nextQuest?.floor ?? 0;
+  const floorLabel = String(liveFloor).padStart(2, "0");
   return <div className="landing">
     <BroadcastChrome />
     <div className="landing-ticker">
@@ -412,7 +416,7 @@ function Landing({ onStart, hasProgress, nextQuest, quests, floors }: {
           {[...TICKER, ...TICKER].map((line, index) => <em key={index}>SYSTEM // {line}</em>)}
         </div>
       </div>
-      <span className="ticker-clock">SEASON 01 · EP 00</span>
+      <span className="ticker-clock">SEASON 01 · EP {floorLabel}</span>
     </div>
     <div className="landing-inner">
       <header className="landing-hero">
@@ -435,7 +439,7 @@ function Landing({ onStart, hasProgress, nextQuest, quests, floors }: {
         <span className="lt-accent" />
         <div className="lt-body">
           <strong>CONTESTANT #USD-01</strong>
-          <span>PRIMWRIGHT · UNDERQUALIFIED · AWAITING FLOOR 00</span>
+          <span>PRIMWRIGHT · UNDERQUALIFIED · {hasProgress ? `LIVE ON FLOOR ${floorLabel}` : "AWAITING FLOOR 00"}</span>
         </div>
         <span className="lt-live"><i className="live-dot" /> ON AIR</span>
       </div>
@@ -508,13 +512,24 @@ function Landing({ onStart, hasProgress, nextQuest, quests, floors }: {
         <div className="tower-grid">
           {floors.map(([floor, rooms]) => {
             const bosses = rooms.filter((room) => room.kind.endsWith("boss")).length;
-            return <div className={`tower-floor ${floor === 0 ? "open" : ""}`} key={floor}>
+            const cleared = floorStatus(rooms) === "cleared";
+            const live = !cleared && floor === liveFloor;
+            const done = rooms.filter((room) => room.completed).length;
+            return <div className={`tower-floor ${live ? "open" : ""} ${cleared ? "cleared" : ""}`} key={floor}>
               <span className="tower-index">{String(floor).padStart(2, "0")}</span>
               <div>
                 <strong>{rooms[0]?.floor_name}</strong>
-                <small>{rooms.length} rooms · {bosses} guarded</small>
+                <small>
+                  {live && done > 0
+                    ? `${done} of ${rooms.length} rooms · ${bosses} guarded`
+                    : `${rooms.length} rooms · ${bosses} guarded`}
+                </small>
               </div>
-              {floor === 0 ? <em className="tower-open">OPEN</em> : <LockKeyhole size={13} />}
+              {cleared
+                ? <em className="tower-open cleared">CLEARED</em>
+                : live
+                  ? <em className="tower-open">OPEN</em>
+                  : <LockKeyhole size={13} />}
             </div>;
           })}
         </div>
@@ -525,9 +540,11 @@ function Landing({ onStart, hasProgress, nextQuest, quests, floors }: {
           {hasProgress ? "CONTINUE RUN" : "ENTER THE COMPOSITION"} <ArrowRight size={18} />
         </button>
         <p className="landing-next">
-          {nextQuest
-            ? <>Floor 00 · your first assignment: <b>{nextQuest.title}</b></>
-            : "Connecting to the local arena…"}
+          {quests.length === 0
+            ? "Connecting to the local arena…"
+            : nextQuest
+              ? <>Floor {floorLabel} · {hasProgress ? "next assignment" : "your first assignment"}: <b>{nextQuest.title}</b></>
+              : "Every room cleared. The season is in the can."}
         </p>
         <small className="landing-fine">
           No OpenUSD experience required. This RPG-style game is based on NVIDIA's open-source{" "}
