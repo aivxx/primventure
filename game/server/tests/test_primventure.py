@@ -752,6 +752,13 @@ SPECIFIER_CALLS = {
 }
 # These read the composed result instead of asking for another call.
 INSPECTION_ONLY = {"attribute_source", "prim_stack"}
+# Calls that author a namespaced attribute without the player typing the prefix,
+# which is the other way a namespaced demand can be fair. Names under inputs are
+# not listed, because a light's accessor is named for the attribute it writes.
+NAMESPACE_WRITERS: dict[str, tuple[str, ...]] = {
+    "xformOp": ("AddTranslateOp", "AddRotateOp", "AddScaleOp", "AddXformOp", "XformCommonAPI"),
+    "primvars": ("CreatePrimvar", "PrimvarsAPI"),
+}
 
 
 def _lesson_body(lesson) -> str:
@@ -795,6 +802,41 @@ def test_no_room_grades_an_api_the_lessons_have_not_taught_yet() -> None:
                         f"{quest.id} grades {kind} before any lesson teaches "
                         f"{' or '.join(calls)}"
                     )
+    assert not unfair, unfair
+
+
+def test_no_room_grades_a_namespaced_attribute_the_lessons_have_not_named() -> None:
+    """Knowing CreateAttribute is not knowing the name ends up as inputs:intensity.
+
+    A namespace dropped from an attribute name fails silently: the layer gains a
+    custom attribute and the schema one keeps its fallback. So the player has to
+    be able to learn the full name, either by reading it or by being handed an
+    accessor that writes the prefix for them.
+    """
+    store = QuestStore()
+    lessons = store.lessons.all()
+    taught = ""
+    unfair: list[str] = []
+    for quest in store.all():
+        lesson = lessons.get(quest.cookbook)
+        if lesson is not None:
+            taught += "\n" + _lesson_body(lesson)
+        known = taught + "\n" + quest.starter
+        for rule in quest.validator.get("assertions", []):
+            path = str(rule.get("attribute_equals", {}).get("path", ""))
+            name = path.rsplit(".", 1)[-1]
+            if ":" not in name:
+                continue
+            prefix, base = name.split(":", 1)
+            writers = NAMESPACE_WRITERS.get(prefix, ())
+            if prefix == "inputs":
+                writers = (f"{base[:1].upper()}{base[1:]}Attr",)
+            if name in known or any(writer in known for writer in writers):
+                continue
+            unfair.append(
+                f"{quest.id} grades {name}, which no lesson spells out and no taught "
+                f"call ({' or '.join(writers) or 'none known'}) writes for the player"
+            )
     assert not unfair, unfair
 
 

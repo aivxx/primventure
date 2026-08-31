@@ -256,8 +256,9 @@ lessons:
         because the Registrar reads it aloud. No schema owns a city's name, so this is the generic
         CreateAttribute case. A city that cannot state its own name gets struck from the ledger.
       f1_lamp_post: >-
-        Define the SphereLight, then use its schema-provided intensity input and set it to 750.
-        The alley has been dark since the last contestant, who is also still in there.
+        A Sphere is a typed prim, so its radius arrives already declared and the schema accessor
+        is right there. Define the globe, then set radius to 0.4. The alley has been dark since
+        the last contestant, who is also still in there, and glass is as far as you get today.
 
   - source: docs/stage-setting/stage.md
     title: Stages

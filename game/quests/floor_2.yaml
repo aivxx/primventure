@@ -28,13 +28,41 @@ quests:
     world_target: /City/BlueprintBorough/Stall
     recipes: [UsdGeom.Cube.Define, UsdGeom.Cube.CreateSizeAttr]
 
+  - id: f2_street_lamp
+    title: Light Lumen Row With a UsdLux Sphere Light
+    floor: 2
+    floor_name: Schema Borough
+    neighborhood: Lumen Row
+    kind: room
+    prerequisites: [f2_market_stall]
+    level_required: 4
+    exam_tasks: [define_typed_prim, author_namespaced_input]
+    stats: {craft: 2, insight: 2}
+    brief: "SYSTEM: Lumen Row is dark and the Borough trades only in typed goods. Author a light that says so."
+    starter: |
+      from pxr import Usd, UsdLux
+      stage = Usd.Stage.Open(STAGE_PATH)
+      # Define a SphereLight at /City/BlueprintBorough/StreetLamp,
+      # then set its intensity to 750 through the schema accessor.
+      stage.GetRootLayer().Save()
+    language: python
+    validator:
+      assertions:
+        - prim_type: {path: /City/BlueprintBorough/StreetLamp, value: SphereLight}
+        - attribute_equals: {path: "/City/BlueprintBorough/StreetLamp.inputs:intensity", value: 750.0}
+    cookbook: docs/scene-description-blueprints/lights.md
+    xp: 130
+    reward: Lumen Vial
+    world_target: /City/BlueprintBorough/StreetLamp
+    recipes: [UsdLux.SphereLight.Define, UsdLux.LightAPI.GetIntensityAttr]
+
   - id: f2_relationship_bridge
     title: "Bridge Warden: Relationships and Targets"
     floor: 2
     floor_name: Schema Borough
     neighborhood: Binding Canal
     kind: neighborhood_boss
-    prerequisites: [f2_market_stall]
+    prerequisites: [f2_street_lamp]
     level_required: 5
     exam_tasks: [create_relationship, target_prim]
     stats: {insight: 2, resolve: 2}

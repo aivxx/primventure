@@ -92,6 +92,165 @@ lessons:
         Define the Stall with UsdGeom.Cube and author size 2. The market accepts typed goods only;
         the untyped inventory was seized by a boss with a clipboard.
 
+  - source: docs/scene-description-blueprints/lights.md
+    title: Lights
+    objective: Author lights as typed UsdLux prims and configure them through their namespaced inputs and schema accessors.
+    intro: >-
+      Schema Square taught you that a type name is a credential. Lumen Row is where you learn that
+      some credentials arrive with wiring. Lights are typed prims like any other, with one wrinkle
+      in their property names that has ended more runs than the boss on this floor.
+    beats:
+      - kind: concept
+        heading: UsdLux is the schema domain for lights
+        system: >-
+          A light is scene description, not a button in somebody's renderer. I will be repeating
+          that, because half of you have already reached for the button.
+        body: |
+          UsdLux is the schema domain that standardizes lights. Because a light is described by a
+          type rather than by an application's private settings, any USD-aware renderer reads the
+          same scene description and lights the scene the same way.
+
+          The domain covers the fixtures a lighting artist expects. A DistantLight emits along a
+          single direction and stands in for a sun. The area lights carry a shape, and those are
+          SphereLight, RectLight, DiskLight, and CylinderLight. A DomeLight surrounds the scene
+          and is how environment lighting arrives. Each one is a typed prim you author into a
+          layer, so lights live in the scenegraph beside the geometry they illuminate.
+        points:
+          - "A light prim's type name is its credential, so a SphereLight is a light because its type says so."
+          - "LightAPI is the shared interface behind the light types, which is why all of them answer to the same intensity and color accessors."
+          - Lights are transformable, so where a light sits is a question of its transform rather than of any value on the light.
+      - kind: api
+        heading: A light defines like any other typed prim
+        system: >-
+          You already know this call. I am mostly here to watch you discover that you know it.
+        body: |
+          Prefer the schema class when you know the type you want. Define takes the stage and a
+          path, authors the type name, creates any missing ancestors, and hands back the typed
+          object. It is the same shape as the UsdGeom.Cube.Define you used in Schema Square, and
+          nothing about lights makes it special.
+        code: |
+          from pxr import Usd, UsdLux
+
+          stage = Usd.Stage.Open(STAGE_PATH)
+          lamp = UsdLux.SphereLight.Define(
+              stage, "/City/BlueprintBorough/StreetLamp"
+          )
+          lamp.GetIntensityAttr().Set(750)
+
+          prim = lamp.GetPrim()
+          assert prim.GetTypeName() == "SphereLight"
+          assert prim.HasAPI(UsdLux.LightAPI)
+
+          stage.GetRootLayer().Save()
+
+          # def SphereLight "StreetLamp"
+          # {
+          #     float inputs:intensity = 750
+          # }
+        points:
+          - "Define authors the type name, so the prim reports SphereLight from GetTypeName."
+          - "Every UsdLux light carries LightAPI already, so HasAPI holds without you applying anything."
+          - Handing the type name to stage.DefinePrim reaches the same prim when you would rather not import the class.
+      - kind: concept
+        heading: A light's controls live under the inputs namespace
+        system: >-
+          Here it is. The wrinkle. Read it twice and you will be spared the indignity waiting two
+          beats from now.
+        body: |
+          A light's emissive controls are grouped under a namespace. A namespace is a prefix and a
+          colon on the front of a property name, and for lights that prefix is inputs. So the
+          attribute carrying a light's brightness is not named intensity. Its full name is
+          inputs:intensity, colon included, and that is a single name rather than a path into some
+          child prim.
+
+          The schema accessors already know this, which is the practical reason to use them.
+          GetIntensityAttr returns the attribute named inputs:intensity, GetColorAttr returns
+          inputs:color, and on a sphere light GetRadiusAttr returns inputs:radius. Ask an
+          attribute for its name and it will tell you exactly what will land in the layer.
+
+          In every other respect these are ordinary schema attributes. Intensity is declared
+          float, and a light nobody has touched still answers Get, because the schema supplies a
+          fallback of 1.0 while the layer stays completely empty.
+        code: |
+          lamp.GetIntensityAttr().GetName()           # 'inputs:intensity'
+          lamp.GetColorAttr().GetName()               # 'inputs:color'
+          lamp.GetRadiusAttr().GetName()              # 'inputs:radius'
+
+          lamp.GetIntensityAttr().Get()               # 1.0, straight from the schema
+          lamp.GetIntensityAttr().HasAuthoredValue()  # False, the layer says nothing
+
+          lamp.GetIntensityAttr().Set(750)            # now there is an opinion
+        points:
+          - "The prefix and the colon are part of the name, so inputs:intensity is what appears in the layer and in a room's checklist."
+          - "An accessor spells the namespace for you, which is the strongest argument yet for reaching for one instead of typing a string."
+          - "An unconfigured light reports intensity 1.0 from its fallback, so Get returning a number proves nothing about what you authored."
+      - kind: concept
+        heading: LightAPI also applies to prims that already have a type
+        system: >-
+          Yes, a mesh can emit. No, this does not mean you should light your city with signage.
+        body: |
+          The light types are not the only way to emit. LightAPI is an API schema, so it can be
+          applied to a prim that already has a concrete type, letting a mesh or a volume take on
+          light behavior without becoming a light type. Applying it records the schema in the
+          prim's apiSchemas metadata and leaves the type name exactly where it was.
+        code: |
+          from pxr import UsdGeom, UsdLux
+
+          sign = UsdGeom.Mesh.Define(stage, "/City/BlueprintBorough/Sign")
+          UsdLux.LightAPI.Apply(sign.GetPrim())
+
+          sign.GetPrim().GetTypeName()            # 'Mesh', unchanged
+          sign.GetPrim().HasAPI(UsdLux.LightAPI)  # True
+
+          # def Mesh "Sign" (
+          #     prepend apiSchemas = ["LightAPI"]
+          # )
+        points:
+          - An applied API schema adds capability without replacing the prim's concrete type.
+          - "The same namespace applies, so an emissive mesh is configured through the same inputs and the same accessors."
+      - kind: pitfall
+        heading: Where contestants lose the room
+        system: >-
+          The light stays dark, the file looks finished, and nothing anywhere raises an error.
+          This is my favorite failure on the floor.
+        body: |
+          The namespace is where runs are lost, because dropping it fails quietly. Authoring
+          intensity on a light raises nothing at all. It declares a brand new custom attribute
+          that no schema owns and no renderer reads, while the real inputs:intensity keeps its
+          fallback. The layer looks configured and the lamp stays off.
+        code: |
+          from pxr import Sdf
+
+          # Wrong, and silent.
+          lamp.GetPrim().CreateAttribute(
+              "intensity", Sdf.ValueTypeNames.Float
+          ).Set(750)
+
+          # def SphereLight "StreetLamp"
+          # {
+          #     custom float intensity = 750
+          # }
+
+          lamp.GetIntensityAttr().Get()   # still 1.0
+        points:
+          - "A property no schema owns appears in USDA behind the custom keyword, which is the tell that you invented a name."
+          - Intensity is declared float, so handing Set a value of some other type is a separate way to lose the room.
+          - Placing a light is a transform on the prim, not a value on any of these inputs.
+      - kind: recap
+        heading: What you now know
+        body: |
+          UsdLux standardizes lights as typed prims, so a light is authored scene description that
+          any renderer can read rather than a setting hidden in an application. Define one through
+          its schema class exactly as you would any other type. Its emissive controls sit under the
+          inputs namespace, so those attribute names carry a prefix and a colon, and the schema
+          accessors are the dependable way to reach them. LightAPI extends the same behavior to
+          prims that already have a concrete type.
+    apply:
+      f2_street_lamp: >-
+        Define the StreetLamp as a SphereLight, then set its intensity to 750 through the schema
+        accessor. The attribute being graded is inputs:intensity, namespace and all. Lumen Row has
+        been dark for two seasons and the audience has stopped pretending to be surprised.
+
   - source: docs/composition-basics/layers.md
     title: Layers and Sublayers
     objective: Compose modular scene description with sublayers and control conflicting local opinions through layer ordering.

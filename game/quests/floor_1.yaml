@@ -2,7 +2,7 @@ floor: 1
 floor_name: Property Clocktower
 quests:
   - id: f1_lamp_post
-    title: Set the Lamp's Intensity Attribute
+    title: Set the Lamp Globe's Radius Attribute
     floor: 1
     floor_name: Property Clocktower
     neighborhood: Attribute Alley
@@ -11,22 +11,22 @@ quests:
     level_required: 2
     exam_tasks: [define_typed_prim, set_attribute]
     stats: {craft: 2, insight: 1}
-    brief: "SYSTEM: One lamp remains dark. Give its light a measurable intensity."
+    brief: "SYSTEM: The alley's lamp post stands without its glass. Blow the globe to size. Current arrives in a later borough."
     starter: |
-      from pxr import Usd, UsdLux
+      from pxr import Usd, UsdGeom
       stage = Usd.Stage.Open(STAGE_PATH)
-      # Define a SphereLight at /City/PropertyWard/Lamp and set intensity to 750.
+      # Define a Sphere at /City/PropertyWard/LampGlobe and set its radius to 0.4.
       stage.GetRootLayer().Save()
     language: python
     validator:
       assertions:
-        - prim_type: {path: /City/PropertyWard/Lamp, value: SphereLight}
-        - attribute_equals: {path: "/City/PropertyWard/Lamp.inputs:intensity", value: 750.0}
+        - prim_type: {path: /City/PropertyWard/LampGlobe, value: Sphere}
+        - attribute_equals: {path: /City/PropertyWard/LampGlobe.radius, value: 0.4}
     cookbook: docs/stage-setting/properties/attributes.md
     xp: 80
-    reward: Lumen Vial
-    world_target: /City/PropertyWard/Lamp
-    recipes: [UsdLux.SphereLight.Define, UsdLux.LightAPI.GetIntensityAttr]
+    reward: Glazier's Caliper
+    world_target: /City/PropertyWard/LampGlobe
+    recipes: [UsdGeom.Sphere.Define, UsdGeom.Sphere.GetRadiusAttr]
 
   - id: f1_civic_record
     title: "The Registrar: Stage and Prim Metadata"
