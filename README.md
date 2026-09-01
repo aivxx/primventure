@@ -53,7 +53,7 @@ This is not a hosted service. Do not expose the API to the public internet. Subm
 ## Enter the Composition
 
 ```bash
-git clone https://github.com/NVIDIA-Omniverse/LearnOpenUSD.git primventure
+git clone https://github.com/aivxx/primventure.git primventure
 cd primventure
 
 git lfs install
