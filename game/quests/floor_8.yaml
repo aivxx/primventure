@@ -81,19 +81,34 @@ quests:
     stats: {insight: 4, craft: 3}
     brief: "SYSTEM: A Mesh with no points is a rumor. Author eight points and an extent or the overseer files a discrepancy."
     starter: |
-      from pxr import Gf, Usd, UsdGeom
+      from pathlib import Path
+      from pxr import Gf, Kind, Sdf, Usd, UsdGeom, UsdLux, UsdShade
 
-      stage = Usd.Stage.CreateNew(STAGE_PATH)
-      mesh = UsdGeom.Mesh.Define(stage, "/World/Cube")
-      # TODO: Set points to eight unit-cube corners and extent to ((-1,-1,-1), (1,1,1)).
+      stage = Usd.Stage.Open(STAGE_PATH)
+      # This boss opens your accumulated city. Author every graded opinion below.
+      # 1. Define /World/Cube with type Mesh.
+      # 2. Define /World/Cube with type Mesh.
+      # 3. Set /World/Cube.points to [[1.0, 1.0, 1.0], [1.0, 1.0, -1.0], [1.0, -1.0, 1.0], [1.0, -1.0, -1.0], [-1.0, 1.0, 1.0], [-1.0, 1.0, -1.0], [-1.0, -1.0, 1.0], [-1.0, -1.0, -1.0]].
+      # 4. Set /World/Cube metadata documentation to 'Dock Overseer: Points and Extent Must Agree cleared.'.
       stage.GetRootLayer().Save()
     language: python
     validator:
       assertions:
-        - prim_type: {path: /World/Cube, value: Mesh}
-        - attribute_equals:
-            path: /World/Cube.points
-            value: [[1.0, 1.0, 1.0], [1.0, 1.0, -1.0], [1.0, -1.0, 1.0], [1.0, -1.0, -1.0], [-1.0, 1.0, 1.0], [-1.0, 1.0, -1.0], [-1.0, -1.0, 1.0], [-1.0, -1.0, -1.0]]
+      - prim_type: {path: /World/Cube, value: Mesh}
+      - prim_type: {path: /World/Cube, value: Mesh}
+      - attribute_equals:
+          path: /World/Cube.points
+          value:
+          - [1.0, 1.0, 1.0]
+          - [1.0, 1.0, -1.0]
+          - [1.0, -1.0, 1.0]
+          - [1.0, -1.0, -1.0]
+          - [-1.0, 1.0, 1.0]
+          - [-1.0, 1.0, -1.0]
+          - [-1.0, -1.0, 1.0]
+          - [-1.0, -1.0, -1.0]
+      - metadata_equals: {path: /World/Cube, key: documentation, value: 'Dock Overseer: Points and Extent
+            Must Agree cleared.'}
     cookbook: docs/data-exchange/data-extraction/what-is-data-extraction.md
     xp: 260
     reward: {opinion_points: 1, achievement: "New achievement! You extracted geometry without pretending OBJ is USD."}
@@ -150,17 +165,24 @@ quests:
     stats: {lore: 4, insight: 3}
     brief: "SYSTEM: The crate claims to be in inches. The city is centimeters. Write the contract or every lamp becomes a monument."
     starter: |
-      from pxr import Usd, UsdGeom
+      from pathlib import Path
+      from pxr import Gf, Kind, Sdf, Usd, UsdGeom, UsdLux, UsdShade
 
-      stage = Usd.Stage.CreateNew(STAGE_PATH)
-      UsdGeom.SetStageUpAxis(stage, UsdGeom.Tokens.y)
-      # TODO: Set metersPerUnit to centimeters (0.01).
+      stage = Usd.Stage.Open(STAGE_PATH)
+      # This boss opens your accumulated city. Author every graded opinion below.
+      # 1. Define /City/ExchangeTerminal/UnitMarker with type Xform.
+      # 2. Set stage up axis to Y.
+      # 3. Set stage metersPerUnit to 0.01.
+      # 4. Set /City/ExchangeTerminal/UnitMarker metadata documentation to 'Meter Gauge: Convert Units on Import cleared.'.
       stage.GetRootLayer().Save()
     language: python
     validator:
       assertions:
-        - up_axis: Y
-        - meters_per_unit: 0.01
+      - prim_type: {path: /City/ExchangeTerminal/UnitMarker, value: Xform}
+      - {up_axis: Y}
+      - {meters_per_unit: 0.01}
+      - metadata_equals: {path: /City/ExchangeTerminal/UnitMarker, key: documentation, value: 'Meter Gauge: Convert Units on Import
+            cleared.'}
     cookbook: docs/data-exchange/data-transformation/what-is-data-transformation.md
     xp: 240
     reward: {opinion_points: 1, achievement: "New achievement! You admitted the scene was 1% of a meter."}
@@ -217,30 +239,34 @@ quests:
     stats: {insight: 5, resolve: 5, craft: 4}
     brief: "SYSTEM: City boss. Extract the OBJ cube, stamp provenance, pass the contract. The Engine processes data; your feelings remain an unsupported format."
     starter: |
-      from pxr import Gf, Kind, Sdf, Usd, UsdGeom
+      from pathlib import Path
+      from pxr import Gf, Kind, Sdf, Usd, UsdGeom, UsdLux, UsdShade
 
-      stage = Usd.Stage.CreateNew(STAGE_PATH)
-      world = UsdGeom.Xform.Define(stage, "/World").GetPrim()
-      points = []
-      for line in Path(EXCHANGE_OBJ).read_text().splitlines():
-          if line.startswith("v "):
-              _, x, y, z = line.split()[:4]
-              points.append(Gf.Vec3f(float(x), float(y), float(z)))
-          if len(points) >= 8:
-              break
-      # TODO: Set default prim, Y-up, centimeters, component kind.
-      # TODO: Define /World/Cube mesh points from the first eight OBJ vertices.
-      # TODO: Stamp customData sourceFormat="OBJ" on /World.
+      stage = Usd.Stage.Open(STAGE_PATH)
+      # This boss opens your accumulated city. Author every graded opinion below.
+      # 1. Define /World/Cube with type Mesh.
+      # 2. Set the stage default prim to /World.
+      # 3. Set stage up axis to Y.
+      # 4. Set stage metersPerUnit to 0.01.
+      # 5. Set /World model kind to component.
+      # 6. Set /World metadata customData['sourceFormat'] to 'OBJ'.
+      # 7. Set /World/Cube.points to the eight unit-cube vertices listed in the checklist.
+      # 8. Set /World/Cube metadata documentation to 'Customs Engine: Extract, Stamp, and Validate cleared.'.
       stage.GetRootLayer().Save()
     language: python
     validator:
       assertions:
-        - default_prim: /World
-        - up_axis: Y
-        - meters_per_unit: 0.01
-        - kind_equals: {path: /World, value: component}
-        - prim_type: {path: /World/Cube, value: Mesh}
-        - metadata_equals: {path: /World, key: customData, field: sourceFormat, value: OBJ}
+      - prim_type: {path: /World/Cube, value: Mesh}
+      - {default_prim: /World}
+      - {up_axis: Y}
+      - {meters_per_unit: 0.01}
+      - kind_equals: {path: /World, value: component}
+      - metadata_equals: {path: /World, key: customData, field: sourceFormat, value: OBJ}
+      - attribute_equals:
+          path: /World/Cube.points
+          value: [[1.0, 1.0, 1.0], [1.0, 1.0, -1.0], [1.0, -1.0, 1.0], [1.0, -1.0, -1.0], [-1.0, 1.0, 1.0], [-1.0, 1.0, -1.0], [-1.0, -1.0, 1.0], [-1.0, -1.0, -1.0]]
+      - metadata_equals: {path: /World/Cube, key: documentation, value: 'Customs Engine: Extract, Stamp,
+            and Validate cleared.'}
     cookbook: docs/data-exchange/asset-validation/exercise-asset-validation-testing.md
     xp: 420
     reward: {opinion_points: 2, achievement: "Pipeline green. OBJ entered the Composition with papers."}

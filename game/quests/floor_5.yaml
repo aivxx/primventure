@@ -56,25 +56,33 @@ quests:
     brief: "SYSTEM: Layout currently shouts over lighting. Invert the stack without rewriting either file. The Clerk is taking notes."
     starter: |
       from pathlib import Path
-      from pxr import Sdf, Usd
+      from pxr import Gf, Kind, Sdf, Usd, UsdGeom, UsdLux, UsdShade
 
       stage = Usd.Stage.Open(STAGE_PATH)
       folder = Path(STAGE_PATH).parent
-      for name, label in [("layout.usda", "DRAFT"), ("lighting.usda", "FINAL")]:
-          layer = Usd.Stage.CreateNew(str(folder / name))
-          prim = layer.DefinePrim("/World/Marquee", "Xform")
-          prim.CreateAttribute("signOff", Sdf.ValueTypeNames.String).Set(label)
-          layer.GetRootLayer().Save()
+      for filename, sign_off in (("layout.usda", "DRAFT"), ("lighting.usda", "FINAL")):
+          fixture = Usd.Stage.CreateNew(str(folder / filename))
+          marquee = fixture.DefinePrim("/World/Marquee", "Xform")
+          marquee.CreateAttribute("signOff", Sdf.ValueTypeNames.String).Set(sign_off)
+          fixture.GetRootLayer().Save()
 
-      stage.GetRootLayer().subLayerPaths = ["layout.usda", "lighting.usda"]
-      # TODO: Make lighting.usda strongest so signOff composes as FINAL.
+      # This boss opens your accumulated city. Author every graded opinion below.
+      # 1. Define /World/Marquee with type Xform.
+      # 2. Set /World/Marquee.signOff to 'FINAL'.
+      # 3. Make lighting.usda the strongest source for /World/Marquee.signOff.
+      # 4. Set root sublayers strongest-first to ['lighting.usda', 'layout.usda'].
+      # 5. Set /World/Marquee metadata documentation to 'Workstream Clerk: Reorder the Sublayer Stack cleared.'.
       stage.GetRootLayer().Save()
     language: python
     validator:
       assertions:
-        - attribute_equals: {path: /World/Marquee.signOff, value: FINAL}
-        - attribute_source: {path: /World/Marquee.signOff, layer: lighting.usda}
-        - sublayer_order: {layers: [lighting.usda, layout.usda]}
+      - prim_type: {path: /World/Marquee, value: Xform}
+      - attribute_equals: {path: /World/Marquee.signOff, value: FINAL}
+      - attribute_source: {path: /World/Marquee.signOff, layer: lighting.usda}
+      - sublayer_order:
+          layers: [lighting.usda, layout.usda]
+      - metadata_equals: {path: /World/Marquee, key: documentation, value: 'Workstream Clerk: Reorder the Sublayer Stack
+            cleared.'}
     cookbook: docs/creating-composition-arcs/sublayers/what-are-sublayers.md
     xp: 260
     reward: {opinion_points: 1, achievement: "New achievement! You promoted lighting without touching a vertex."}
@@ -135,22 +143,30 @@ quests:
     stats: {insight: 4, resolve: 3}
     brief: "SYSTEM: The material lives outside World. Referencing the asset will strand the binding. Move Looks under the default prim before the crowd notices."
     starter: |
-      from pxr import Sdf, Usd, UsdGeom, UsdShade
+      from pathlib import Path
+      from pxr import Gf, Kind, Sdf, Usd, UsdGeom, UsdLux, UsdShade
 
-      stage = Usd.Stage.CreateNew(STAGE_PATH)
-      world = UsdGeom.Xform.Define(stage, "/World")
-      UsdGeom.Cube.Define(stage, "/World/Cube")
-      # Broken: Looks currently lives beside World. Encapsulate it instead.
-      # TODO: Set /World as default prim.
-      # TODO: Define /World/Looks as a Scope and /World/Looks/Red as a Material.
+      stage = Usd.Stage.Open(STAGE_PATH)
+      # This boss opens your accumulated city. Author every graded opinion below.
+      # 1. Define /World with type Xform.
+      # 2. Set the stage default prim to /World.
+      # 3. Define or override /World/Looks/Red.
+      # 4. Define or override /World/Cube.
+      # 5. Traversal must include ['/World/Looks/Red'] and exclude ['/Looks'].
+      # 6. Set /World metadata documentation to 'Stranded Looks: Encapsulate the Bindings cleared.'.
       stage.GetRootLayer().Save()
     language: python
     validator:
       assertions:
-        - default_prim: /World
-        - prim_exists: /World/Looks/Red
-        - prim_exists: /World/Cube
-        - traversal_contains: {paths: [/World/Looks/Red], excluded: [/Looks]}
+      - prim_type: {path: /World, value: Xform}
+      - {default_prim: /World}
+      - {prim_exists: /World/Looks/Red}
+      - {prim_exists: /World/Cube}
+      - traversal_contains:
+          paths: [/World/Looks/Red]
+          excluded: [/Looks]
+      - metadata_equals: {path: /World, key: documentation, value: 'Stranded Looks: Encapsulate the
+            Bindings cleared.'}
     cookbook: docs/creating-composition-arcs/encapsulation/what-is-encapsulation.md
     xp: 280
     reward: {opinion_points: 1, achievement: "New achievement! You put Looks where a reference can actually find them."}
@@ -210,19 +226,23 @@ quests:
     brief: "SYSTEM: The Harbor Master wants every crate unpacked. Keep the payload and stamp the crate as deferred cargo."
     starter: |
       from pathlib import Path
-      from pxr import Usd, UsdGeom
+      from pxr import Gf, Kind, Sdf, Usd, UsdGeom, UsdLux, UsdShade
 
-      building = (Path(ASSET_LIBRARY) / "envir" / "city" / "sm_bldgF" / "sm_bldgF.usd").as_posix()
-      stage = Usd.Stage.CreateNew(STAGE_PATH)
-      crate = UsdGeom.Xform.Define(stage, "/World/CargoCrate").GetPrim()
-      crate.GetPayloads().AddPayload(building)
-      # TODO: Set documentation metadata to "Loaded on demand."
+      stage = Usd.Stage.Open(STAGE_PATH)
+      # This boss opens your accumulated city. Author every graded opinion below.
+      # 1. Define /World/CargoCrate with type Xform.
+      # 2. Author a payload on /World/CargoCrate to asset sm_bldgF.usd.
+      # 3. Set /World/CargoCrate metadata documentation to 'Loaded on demand.'.
+      # 4. Set /World/CargoCrate metadata documentation to 'Harbor Master: Keep the Payload Deferred cleared.'.
       stage.GetRootLayer().Save()
     language: python
     validator:
       assertions:
-        - has_payload: {path: /World/CargoCrate, asset: sm_bldgF.usd}
-        - metadata_equals: {path: /World/CargoCrate, key: documentation, value: "Loaded on demand."}
+      - prim_type: {path: /World/CargoCrate, value: Xform}
+      - has_payload: {path: /World/CargoCrate, asset: sm_bldgF.usd}
+      - metadata_equals: {path: /World/CargoCrate, key: documentation, value: Loaded on demand.}
+      - metadata_equals: {path: /World/CargoCrate, key: documentation, value: 'Harbor Master: Keep the Payload Deferred
+            cleared.'}
     cookbook: docs/creating-composition-arcs/references-payloads/what-are-payloads.md
     xp: 300
     reward: {opinion_points: 1, achievement: "New achievement! You declined to load the entire harbor at once."}
@@ -280,21 +300,26 @@ quests:
     stats: {insight: 4, resolve: 4}
     brief: "SYSTEM: Specializes speaks softly from the fallback position. Local maxspeed must still win. Prove it before the traffic cop composes a ticket."
     starter: |
-      from pxr import Sdf, Usd
+      from pathlib import Path
+      from pxr import Gf, Kind, Sdf, Usd, UsdGeom, UsdLux, UsdShade
 
-      stage = Usd.Stage.CreateNew(STAGE_PATH)
-      fallback = stage.CreateClassPrim("/_osm_street_data")
-      fallback.CreateAttribute("osm:street:maxspeed", Sdf.ValueTypeNames.Int).Set(30)
-      road = stage.DefinePrim("/World/MainStreet", "Mesh")
-      # TODO: Specialize MainStreet from /_osm_street_data.
-      # TODO: Author a stronger local maxspeed of 20 on MainStreet.
+      stage = Usd.Stage.Open(STAGE_PATH)
+      # This boss opens your accumulated city. Author every graded opinion below.
+      # 1. Define /World/MainStreet with type Mesh.
+      # 2. Author an specializes arc on /World/MainStreet.
+      # 3. Set /World/MainStreet.osm:street:maxspeed to 20.
+      # 4. Make submission.usd the strongest source for /World/MainStreet.osm:street:maxspeed.
+      # 5. Set /World/MainStreet metadata documentation to 'Traffic Cop: Specializes as the Weakest Arc cleared.'.
       stage.GetRootLayer().Save()
     language: python
     validator:
       assertions:
-        - has_specializes: {path: /World/MainStreet}
-        - attribute_equals: {path: "/World/MainStreet.osm:street:maxspeed", value: 20}
-        - attribute_source: {path: "/World/MainStreet.osm:street:maxspeed", layer: submission.usd}
+      - prim_type: {path: /World/MainStreet, value: Mesh}
+      - has_specializes: {path: /World/MainStreet}
+      - attribute_equals: {path: '/World/MainStreet.osm:street:maxspeed', value: 20}
+      - attribute_source: {path: '/World/MainStreet.osm:street:maxspeed', layer: submission.usd}
+      - metadata_equals: {path: /World/MainStreet, key: documentation, value: 'Traffic Cop: Specializes as the Weakest
+            Arc cleared.'}
     cookbook: docs/creating-composition-arcs/inherits-specializes/what-is-specializes.md
     xp: 310
     reward: {opinion_points: 1, achievement: "New achievement! You used the weakest arc on purpose."}
@@ -319,26 +344,25 @@ quests:
     brief: "SYSTEM: Recapture a city block from the existing city pack. Two towers by reference, one warehouse by payload. Local stall IDs only."
     starter: |
       from pathlib import Path
-      from pxr import Usd, UsdGeom
+      from pxr import Gf, Kind, Sdf, Usd, UsdGeom, UsdLux, UsdShade
 
-      city = Path(ASSET_LIBRARY) / "envir" / "city"
-      tower_a = (city / "skyscraperA" / "skyscraperA.usd").as_posix()
-      tower_e = (city / "skyscraperE" / "skyscraperE.usd").as_posix()
-      warehouse = (city / "sm_bldgF" / "sm_bldgF.usd").as_posix()
-
-      stage = Usd.Stage.CreateNew(STAGE_PATH)
-      UsdGeom.SetStageUpAxis(stage, UsdGeom.Tokens.y)
-      block = UsdGeom.Xform.Define(stage, "/City/ArcHighlands/HighlandBlock")
-      # TODO: Reference tower A at .../TowerA and tower E at .../TowerE.
-      # TODO: Payload the warehouse at .../Warehouse.
+      stage = Usd.Stage.Open(STAGE_PATH)
+      # This boss opens your accumulated city. Author every graded opinion below.
+      # 1. Author a reference on /City/ArcHighlands/HighlandBlock/TowerA to asset skyscraperA.usd.
+      # 2. Define /City/ArcHighlands/HighlandBlock with type Xform.
+      # 3. Author a reference on /City/ArcHighlands/HighlandBlock/TowerE to asset skyscraperE.usd.
+      # 4. Author a payload on /City/ArcHighlands/HighlandBlock/Warehouse to asset sm_bldgF.usd.
+      # 5. Set /City/ArcHighlands/HighlandBlock metadata documentation to 'Highland Block: Mix References and Payloads cleared.'.
       stage.GetRootLayer().Save()
     language: python
     validator:
       assertions:
-        - has_reference: {path: /City/ArcHighlands/HighlandBlock/TowerA, asset: skyscraperA.usd}
-        - has_reference: {path: /City/ArcHighlands/HighlandBlock/TowerE, asset: skyscraperE.usd}
-        - has_payload: {path: /City/ArcHighlands/HighlandBlock/Warehouse, asset: sm_bldgF.usd}
-        - prim_exists: /City/ArcHighlands/HighlandBlock
+      - has_reference: {path: /City/ArcHighlands/HighlandBlock/TowerA, asset: skyscraperA.usd}
+      - prim_type: {path: /City/ArcHighlands/HighlandBlock, value: Xform}
+      - has_reference: {path: /City/ArcHighlands/HighlandBlock/TowerE, asset: skyscraperE.usd}
+      - has_payload: {path: /City/ArcHighlands/HighlandBlock/Warehouse, asset: sm_bldgF.usd}
+      - metadata_equals: {path: /City/ArcHighlands/HighlandBlock, key: documentation, value: 'Highland Block: Mix References and
+            Payloads cleared.'}
     cookbook: docs/creating-composition-arcs/prim-composition.md
     xp: 400
     reward: {opinion_points: 2, achievement: "District recaptured! The city pack has been deputized."}
@@ -366,57 +390,50 @@ quests:
     brief: "SYSTEM: The block is composed. The sign is lying. A reference says 1, a variant says 2, a payload says 3. Author the local 4 and keep every weaker arc intact."
     starter: |
       from pathlib import Path
-      from pxr import Sdf, Usd
+      from pxr import Gf, Kind, Sdf, Usd, UsdGeom, UsdLux, UsdShade
 
-      stage = Usd.Stage.CreateNew(STAGE_PATH)
+      stage = Usd.Stage.Open(STAGE_PATH)
       folder = Path(STAGE_PATH).parent
+      for filename, root_name, value in (
+          ("ref_sign.usda", "ReferenceSign", 1),
+          ("payload_sign.usda", "PayloadSign", 3),
+      ):
+          fixture = Usd.Stage.CreateNew(str(folder / filename))
+          source = fixture.DefinePrim(f"/{root_name}", "Xform")
+          source.CreateAttribute("floorIndex", Sdf.ValueTypeNames.Int).Set(value)
+          fixture.SetDefaultPrim(source)
+          fixture.GetRootLayer().Save()
 
-      referenced = Usd.Stage.CreateNew(str(folder / "ref_sign.usda"))
-      ref_root = referenced.DefinePrim("/Sign", "Xform")
-      ref_root.CreateAttribute("floorIndex", Sdf.ValueTypeNames.Int).Set(1)
-      referenced.SetDefaultPrim(ref_root)
-      referenced.GetRootLayer().Save()
-
-      payload = Usd.Stage.CreateNew(str(folder / "payload_sign.usda"))
-      payload_root = payload.DefinePrim("/Bulk", "Xform")
-      payload_root.CreateAttribute("floorIndex", Sdf.ValueTypeNames.Int).Set(3)
-      payload.SetDefaultPrim(payload_root)
-      payload.GetRootLayer().Save()
-
-      fallback = stage.CreateClassPrim("/_FallbackIndex")
-      fallback.CreateAttribute("floorIndex", Sdf.ValueTypeNames.Int).Set(0)
-      inherited = stage.CreateClassPrim("/_InheritedIndex")
-      inherited.CreateAttribute("floorIndex", Sdf.ValueTypeNames.Int).Set(5)
-
-      sign = stage.DefinePrim("/City/ArcHighlands/LabyrinthSign", "Xform")
-      sign.GetSpecializes().AddSpecialize(fallback.GetPath())
-      sign.GetPayloads().AddPayload("payload_sign.usda")
-      sign.GetReferences().AddReference("ref_sign.usda")
-      sign.GetInherits().AddInherit(inherited.GetPath())
-      modes = sign.GetVariantSets().AddVariantSet("edition")
-      for name, value in [("draft", 2), ("final", 2)]:
-          modes.AddVariant(name)
-          modes.SetVariantSelection(name)
-          with modes.GetVariantEditContext():
-              sign.CreateAttribute("floorIndex", Sdf.ValueTypeNames.Int).Set(value)
-      modes.SetVariantSelection("final")
-      # TODO: Author a local floorIndex of 4 while preserving the weaker arcs.
+      # This boss opens your accumulated city. Author every graded opinion below.
+      # 1. Define /City/ArcHighlands/LabyrinthSign with type Xform.
+      # 2. Set /City/ArcHighlands/LabyrinthSign.floorIndex to 4.
+      # 3. Make submission.usd the strongest source for /City/ArcHighlands/LabyrinthSign.floorIndex.
+      # 4. Author an inherit arc on /City/ArcHighlands/LabyrinthSign.
+      # 5. On /City/ArcHighlands/LabyrinthSign, author variant set 'edition' with variants ['draft', 'final'] and selection 'final'.
+      # 6. Author a reference on /City/ArcHighlands/LabyrinthSign to asset ref_sign.usda.
+      # 7. Author a payload on /City/ArcHighlands/LabyrinthSign to asset payload_sign.usda.
+      # 8. Author an specializes arc on /City/ArcHighlands/LabyrinthSign.
+      # 9. Compose /City/ArcHighlands/LabyrinthSign from at least 5 prim specs.
+      # 10. Set /City/ArcHighlands/LabyrinthSign metadata documentation to 'Highland Labyrinth: Trace LIVERPS Strength Order cleared.'.
       stage.GetRootLayer().Save()
     language: python
     validator:
       assertions:
-        - attribute_equals: {path: /City/ArcHighlands/LabyrinthSign.floorIndex, value: 4}
-        - attribute_source: {path: /City/ArcHighlands/LabyrinthSign.floorIndex, layer: submission.usd}
-        - has_inherit: {path: /City/ArcHighlands/LabyrinthSign}
-        - has_variant_set:
-            path: /City/ArcHighlands/LabyrinthSign
-            name: edition
-            variants: [draft, final]
-            selection: final
-        - has_reference: {path: /City/ArcHighlands/LabyrinthSign, asset: ref_sign.usda}
-        - has_payload: {path: /City/ArcHighlands/LabyrinthSign, asset: payload_sign.usda}
-        - has_specializes: {path: /City/ArcHighlands/LabyrinthSign}
-        - prim_stack: {path: /City/ArcHighlands/LabyrinthSign, min: 5}
+      - prim_type: {path: /City/ArcHighlands/LabyrinthSign, value: Xform}
+      - attribute_equals: {path: /City/ArcHighlands/LabyrinthSign.floorIndex, value: 4}
+      - attribute_source: {path: /City/ArcHighlands/LabyrinthSign.floorIndex, layer: submission.usd}
+      - has_inherit: {path: /City/ArcHighlands/LabyrinthSign}
+      - has_variant_set:
+          path: /City/ArcHighlands/LabyrinthSign
+          name: edition
+          variants: [draft, final]
+          selection: final
+      - has_reference: {path: /City/ArcHighlands/LabyrinthSign, asset: ref_sign.usda}
+      - has_payload: {path: /City/ArcHighlands/LabyrinthSign, asset: payload_sign.usda}
+      - has_specializes: {path: /City/ArcHighlands/LabyrinthSign}
+      - prim_stack: {path: /City/ArcHighlands/LabyrinthSign, min: 5}
+      - metadata_equals: {path: /City/ArcHighlands/LabyrinthSign, key: documentation, value: 'Highland Labyrinth: Trace LIVERPS
+            Strength Order cleared.'}
     cookbook: docs/creating-composition-arcs/strength-ordering/tracing-through-liverps.md
     xp: 500
     reward:

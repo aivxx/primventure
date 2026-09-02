@@ -105,6 +105,10 @@ class LastFail(BaseModel):
     # A census is bought once per failed run and stays readable after that, so
     # re-reading your own stage never costs a second charge.
     paid: bool = False
+    # Boss recovery is deliberately lighter than a Census: it names the failed
+    # checklist items, but does not expose the composed values observed.
+    debrief_required: bool = False
+    failed_checks: list[str] = Field(default_factory=list)
 
 
 class RunResponse(BaseModel):
@@ -146,6 +150,8 @@ class PlayerState(BaseModel):
     achievements: list[str] = Field(default_factory=list)
     specialization: str | None = None
     benefit_claims: dict[str, bool] = Field(default_factory=dict)
+    # Debt is scoped to the boss that issued it, so another room cannot pay it.
+    boss_debts: dict[str, int] = Field(default_factory=dict)
     recipe_drip_op: int = 0
     # The source that last cleared each room, so revisiting it shows the player
     # their own accepted work instead of the starter. Keyed by quest id.

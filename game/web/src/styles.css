@@ -275,6 +275,13 @@ main { display:grid; grid-template-columns: 250px minmax(420px, 1fr) 450px; gap:
 .boss-confirm .confirm-actions .yes:disabled{opacity:.55;cursor:wait}
 .boss-confirm .confirm-actions .no{padding:0 14px;border:1px solid #6a5c62;background:transparent;color:#cfc3c7;font:700 9px "IBM Plex Mono";cursor:pointer}
 .boss-confirm .confirm-actions .no:hover:not(:disabled){border-color:var(--cream);color:var(--cream)}
+.boss-debrief{padding:14px 15px;border:1px solid #9b6f24;background:linear-gradient(140deg,rgba(255,203,46,.14),#1d1811 62%)}
+.boss-debrief>span{display:block;color:var(--yellow);font-size:8px;font-weight:700;letter-spacing:2.2px}
+.boss-debrief p{margin:7px 0;color:#d8cebb;font-size:8.5px;line-height:1.55}
+.boss-debrief ul{margin:9px 0 12px;padding-left:19px;color:#f0dfb1;font-size:8.5px;line-height:1.6}
+.boss-debrief button{width:100%;min-height:40px;border:0;background:var(--yellow);color:#171208;display:flex;align-items:center;justify-content:center;gap:8px;font:800 9px "IBM Plex Mono";cursor:pointer}
+.boss-debrief button:hover{background:#ffe069}
+.run-button.boss-debrief-button{background:var(--yellow);color:#171208}
 .run-button.boss{background:var(--red);color:#150e10;box-shadow:inset 0 -4px 0 rgba(0,0,0,.28)}
 .run-button.boss:hover:not(:disabled){background:#f2566a}
 .editor-toolbar{height:39px;flex:none;display:flex;align-items:center;justify-content:space-between;padding:0 10px;border-bottom:1px solid #38323c;font-size:8px;font-weight:700}.editor-toolbar>span{display:flex;gap:6px;align-items:center}.editor-toolbar button{background:transparent;color:#77717c;border:0;border-left:1px solid #39333d;padding:8px;cursor:pointer;font-size:8px}.editor-toolbar button.active{color:var(--yellow)}

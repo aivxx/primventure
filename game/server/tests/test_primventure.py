@@ -4,7 +4,7 @@ import shutil
 from pathlib import Path
 
 import yaml
-from pxr import Usd
+from pxr import Sdf, Usd
 
 from primventure.models import PlayerState, Question, Quest, RunRequest
 from primventure import runner as runner_module
@@ -236,12 +236,73 @@ def test_a_boss_fee_never_costs_the_level_its_room_requires(tmp_path: Path) -> N
     assert "Boss fee: 10 XP." in charged.system_message
     assert quest_view(boss, saves.load())["unlocked"]
 
-    # Sitting on the level's floor there is nothing left the fee may take.
-    free = runner.run(boss, RunRequest(answers=[0]))
+    state = saves.load()
+    assert state.last_fail is not None
+    state.last_fail.debrief_required = False
+    saves.save(state)
 
+    # At the level floor, future XP pays a one-time debt instead of demoting.
+    floor_miss = runner.run(boss, RunRequest(answers=[0]))
     assert saves.load().xp == 100
-    assert "Boss fee" not in free.system_message
+    assert "Boss debt: 10 XP" in floor_miss.system_message
     assert quest_view(boss, saves.load())["unlocked"]
+
+
+def test_floor_boss_debt_is_one_time_and_paid_only_by_that_boss(tmp_path: Path) -> None:
+    saves = SaveStore(tmp_path / "save.json")
+    runner = QuestRunner(saves)
+    boss = _boss_that_gates_on_level_two()
+    other = boss.model_copy(update={"id": "other-gate"})
+    saves.save(PlayerState(xp=100, level=2))
+
+    preview = quest_view(boss, saves.load())
+    assert (preview["boss_debt_on_miss"], preview["boss_clear_xp"]) == (10, 100)
+
+    first = runner.run(boss, RunRequest(answers=[0]))
+    state = saves.load()
+    assert state.boss_debts == {"gate": 10}
+    assert state.last_fail is not None and state.last_fail.debrief_required
+    assert state.last_fail.failed_checks == ["Ready?"]
+    assert "Boss debt: 10 XP" in first.system_message
+
+    blocked = runner.run(boss, RunRequest(answers=[1]))
+    assert "DEBRIEF REQUIRED" in blocked.system_message
+    assert saves.load().boss_debts == {"gate": 10}
+
+    state.last_fail.debrief_required = False
+    saves.save(state)
+    repeated = runner.run(boss, RunRequest(answers=[0]))
+    assert "remains capped at 10 XP" in repeated.system_message
+    assert saves.load().boss_debts == {"gate": 10}
+
+    state = saves.load()
+    assert state.last_fail is not None
+    state.last_fail.debrief_required = False
+    saves.save(state)
+    other_clear = runner.run(other, RunRequest(answers=[1]))
+    assert other_clear.success
+    assert saves.load().xp == 200
+    assert saves.load().boss_debts == {"gate": 10}
+
+    clear = runner.run(boss, RunRequest(answers=[1]))
+    state = saves.load()
+    assert clear.success
+    assert "10 XP withheld" in clear.system_message
+    assert state.xp == 290
+    assert state.boss_debts == {}
+
+
+def test_ordinary_room_failure_never_creates_debt_or_a_debrief(tmp_path: Path) -> None:
+    quest = _boss_that_gates_on_level_two().model_copy(update={"id": "room", "kind": "room"})
+    saves = SaveStore(tmp_path / "save.json")
+    saves.save(PlayerState(xp=100, level=2))
+
+    failed = QuestRunner(saves).run(quest, RunRequest(answers=[0]))
+    state = saves.load()
+
+    assert not failed.success
+    assert state.boss_debts == {}
+    assert state.last_fail is not None and not state.last_fail.debrief_required
 
 
 def test_a_fee_never_carries_a_player_across_a_level_boundary() -> None:
@@ -288,6 +349,53 @@ def test_every_python_terminal_ships_the_save_line() -> None:
         if quest.language != "python":
             continue
         assert "Save(" in quest.starter or "Export(" in quest.starter, quest.id
+
+
+def test_bosses_open_the_accumulated_city_without_pre_authoring_answers() -> None:
+    forbidden = (
+        "stage.DefinePrim(",
+        "stage.OverridePrim(",
+        "stage.CreateClassPrim(",
+        ".Define(stage,",
+        "CreateRelationship(",
+        "AddReference(",
+        "AddPayload(",
+        "AddInherit(",
+        "AddSpecialize(",
+        "AddVariantSet(",
+    )
+    bosses = [quest for quest in QuestStore().all() if quest.kind.endswith("boss")]
+    assert len(bosses) == 37
+    for boss in bosses:
+        assert "Usd.Stage.Open(STAGE_PATH)" in boss.starter, boss.id
+        assert "stage.GetRootLayer().Save()" in boss.starter, boss.id
+        assert not any(call in boss.starter for call in forbidden), boss.id
+        for rule in boss.validator["assertions"]:
+            payload = next(iter(rule.values()))
+            if isinstance(payload, dict) and payload.get("path"):
+                assert str(payload["path"]) in boss.starter, (boss.id, payload["path"])
+
+
+def test_boss_assertion_depth_scales_with_tier() -> None:
+    minimum = {"neighborhood_boss": 3, "city_boss": 5, "floor_boss": 7}
+    for boss in (quest for quest in QuestStore().all() if quest.kind.endswith("boss")):
+        # Floor 0 has only taught prims, attributes, the default prim, and the up axis.
+        required = 4 if boss.id == "f0_gatekeeper" else minimum[boss.kind]
+        assert len(boss.validator["assertions"]) >= required, boss.id
+
+
+def test_no_boss_grades_the_same_prim_twice_for_existence_and_type() -> None:
+    """`prim_type` already fails on a missing prim, so a paired `prim_exists` is noise."""
+    for boss in (quest for quest in QuestStore().all() if quest.kind.endswith("boss")):
+        rules = boss.validator["assertions"]
+        typed = {str(rule["prim_type"]["path"]) for rule in rules if "prim_type" in rule}
+        existing = {
+            str(payload["path"] if isinstance(payload, dict) else payload)
+            for rule in rules
+            if (payload := rule.get("prim_exists")) is not None
+        }
+
+        assert not typed & existing, (boss.id, sorted(typed & existing))
 
 
 def test_save_line_is_only_added_where_it_makes_sense() -> None:
@@ -563,10 +671,32 @@ def test_expectations_name_the_exact_value_the_validator_wants() -> None:
     assert quest_view(quests["f0_nameplate"], PlayerState())["expects"] == [
         '/City.cityName is set to "Primventure"',
     ]
-    assert quest_view(quests["f1_civic_record"], PlayerState())["expects"] == [
-        '/City/PropertyWard carries kind metadata "group"',
-        '/City/PropertyWard carries documentation metadata "Civic property district."',
-    ]
+    assert (
+        "/City/BlueprintBorough/Bridge.destination targets exactly "
+        "/City/BlueprintBorough/Stall"
+    ) in quest_view(quests["f2_relationship_bridge"], PlayerState())["expects"]
+
+
+def test_relationship_targets_validate_relationships_not_attributes(tmp_path: Path) -> None:
+    stage_path = tmp_path / "relationship.usda"
+    stage = Usd.Stage.CreateNew(str(stage_path))
+    bridge = stage.DefinePrim("/Bridge", "Xform")
+    stage.DefinePrim("/Stall", "Xform")
+    bridge.CreateRelationship("destination").SetTargets([Sdf.Path("/Stall")])
+    stage.GetRootLayer().Save()
+    runner = QuestRunner(SaveStore(tmp_path / "save.json"))
+
+    exact = runner._validate_stage(
+        stage_path,
+        [{"relationship_targets": {"path": "/Bridge.destination", "targets": ["/Stall"]}}],
+    )
+    wrong = runner._validate_stage(
+        stage_path,
+        [{"relationship_targets": {"path": "/Bridge.destination", "targets": ["/Other"]}}],
+    )
+
+    assert exact[0].passed
+    assert not wrong[0].passed
 
 
 def test_quest_view_advertises_the_payout_the_runner_awards(tmp_path: Path) -> None:
@@ -771,6 +901,7 @@ AUTHORING_CALLS: dict[str, tuple[str, ...]] = {
     "prim_type": ("DefinePrim",),
     "traversal_contains": ("DefinePrim",),
     "attribute_equals": ("CreateAttribute",),
+    "relationship_targets": ("CreateRelationship", "SetTargets", "AddTarget"),
     "metadata_equals": ("SetMetadata", "SetDocumentation", "SetAssetInfo", "SetKind"),
     "kind_equals": ("SetKind", "SetMetadata"),
     "active": ("SetActive",),

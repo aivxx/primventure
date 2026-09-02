@@ -79,25 +79,33 @@ quests:
     brief: "SYSTEM: A reference says 1. You will say 4. GetPropertyStack illuminates the evidence. Leave the weaker arc alive."
     starter: |
       from pathlib import Path
-      from pxr import Sdf, Usd
+      from pxr import Gf, Kind, Sdf, Usd, UsdGeom, UsdLux, UsdShade
 
-      stage = Usd.Stage.CreateNew(STAGE_PATH)
-      source = Usd.Stage.CreateNew(str(Path(STAGE_PATH).parent / "weaker.usda"))
-      root = source.DefinePrim("/Probe", "Xform")
-      root.CreateAttribute("signal", Sdf.ValueTypeNames.Int).Set(1)
-      source.SetDefaultPrim(root)
-      source.GetRootLayer().Save()
-      probe = stage.DefinePrim("/World/Probe", "Xform")
-      probe.GetReferences().AddReference("weaker.usda")
-      # TODO: Author local signal = 4 on /World/Probe.
+      stage = Usd.Stage.Open(STAGE_PATH)
+      fixture = Usd.Stage.CreateNew(str(Path(STAGE_PATH).parent / "weaker.usda"))
+      source = fixture.DefinePrim("/Probe", "Xform")
+      source.CreateAttribute("signal", Sdf.ValueTypeNames.Int).Set(1)
+      fixture.SetDefaultPrim(source)
+      fixture.GetRootLayer().Save()
+
+      # This boss opens your accumulated city. Author every graded opinion below.
+      # 1. Define /World/Probe with type Xform.
+      # 2. Set /World/Probe.signal to 4.
+      # 3. Make submission.usd the strongest source for /World/Probe.signal.
+      # 4. Author a reference on /World/Probe to asset weaker.usda.
+      # 5. Compose /World/Probe from at least 2 prim specs.
+      # 6. Set /World/Probe metadata documentation to 'Stack Inspector: Read the Property Stack cleared.'.
       stage.GetRootLayer().Save()
     language: python
     validator:
       assertions:
-        - attribute_equals: {path: /World/Probe.signal, value: 4}
-        - attribute_source: {path: /World/Probe.signal, layer: submission.usd}
-        - has_reference: {path: /World/Probe, asset: weaker.usda}
-        - prim_stack: {path: /World/Probe, min: 2}
+      - prim_type: {path: /World/Probe, value: Xform}
+      - attribute_equals: {path: /World/Probe.signal, value: 4}
+      - attribute_source: {path: /World/Probe.signal, layer: submission.usd}
+      - has_reference: {path: /World/Probe, asset: weaker.usda}
+      - prim_stack: {path: /World/Probe, min: 2}
+      - metadata_equals: {path: /World/Probe, key: documentation, value: 'Stack Inspector: Read the Property Stack
+            cleared.'}
     cookbook: docs/beyond-basics/value-resolution.md
     xp: 300
     reward: {opinion_points: 1, achievement: "New achievement! You inspected the stack and still wrote the stronger opinion yourself."}
@@ -198,18 +206,26 @@ quests:
     stats: {craft: 4, insight: 4}
     brief: "SYSTEM: Three attributes, one Sdf.ChangeBlock. Give the notices one orderly entrance. usd-core can do this much without a full build."
     starter: |
-      from pxr import Sdf, Usd
+      from pathlib import Path
+      from pxr import Gf, Kind, Sdf, Usd, UsdGeom, UsdLux, UsdShade
 
-      stage = Usd.Stage.CreateNew(STAGE_PATH)
-      prim = stage.DefinePrim("/World/Batch", "Xform")
-      # TODO: Inside Sdf.ChangeBlock(), create integer attributes a, b, and c set to 1, 2, 3.
+      stage = Usd.Stage.Open(STAGE_PATH)
+      # This boss opens your accumulated city. Author every graded opinion below.
+      # 1. Define /World/Batch with type Xform.
+      # 2. Set /World/Batch.a to 1.
+      # 3. Set /World/Batch.b to 2.
+      # 4. Set /World/Batch.c to 3.
+      # 5. Set /World/Batch metadata documentation to 'Notice Marshal: Batch Edits in a ChangeBlock cleared.'.
       stage.GetRootLayer().Save()
     language: python
     validator:
       assertions:
-        - attribute_equals: {path: /World/Batch.a, value: 1}
-        - attribute_equals: {path: /World/Batch.b, value: 2}
-        - attribute_equals: {path: /World/Batch.c, value: 3}
+      - prim_type: {path: /World/Batch, value: Xform}
+      - attribute_equals: {path: /World/Batch.a, value: 1}
+      - attribute_equals: {path: /World/Batch.b, value: 2}
+      - attribute_equals: {path: /World/Batch.c, value: 3}
+      - metadata_equals: {path: /World/Batch, key: documentation, value: 'Notice Marshal: Batch Edits in a ChangeBlock
+            cleared.'}
     cookbook: docs/beyond-basics/custom-properties.md
     xp: 240
     reward: {opinion_points: 1, achievement: "New achievement! You used a ChangeBlock. The notice queue sends flowers."}
@@ -285,10 +301,23 @@ quests:
     exam_tasks: ["6.4", hydra_architecture]
     stats: {lore: 6, insight: 4}
     brief: "SYSTEM: Hydra is the bridge between scene data and rendering. Name the parts. HdStorm ships; your custom delegate remains stranded several toolchains above this basement."
-    starter: ""
-    language: none
+    starter: |
+      from pathlib import Path
+      from pxr import Gf, Kind, Sdf, Usd, UsdGeom, UsdLux, UsdShade
+
+      stage = Usd.Stage.Open(STAGE_PATH)
+      # This boss opens your accumulated city. Author every graded opinion below.
+      # 1. Define /City/CrownDistrict/HydraMarker with type Scope.
+      # 2. Set /City/CrownDistrict/HydraMarker.architecture to 'scene delegate -> render index -> render delegate'.
+      # 3. Set /City/CrownDistrict/HydraMarker metadata documentation to 'Hydra Herald: Name the Hydra Architecture cleared.'.
+      stage.GetRootLayer().Save()
+    language: python
     validator:
-      assertions: []
+      assertions:
+      - prim_type: {path: /City/CrownDistrict/HydraMarker, value: Scope}
+      - attribute_equals: {path: /City/CrownDistrict/HydraMarker.architecture, value: scene delegate -> render index -> render delegate}
+      - metadata_equals: {path: /City/CrownDistrict/HydraMarker, key: documentation, value: 'Hydra Herald: Name the Hydra Architecture
+            cleared.'}
     cookbook: docs/beyond-basics/hydra.md
     xp: 280
     reward: {opinion_points: 1, achievement: "New achievement! You described Hydra without claiming to have written HdStorm."}
@@ -322,17 +351,25 @@ quests:
     stats: {lore: 6, insight: 6}
     brief: "SYSTEM: Archivist Prime permits no memorized incantations. Original questions. If you copy a dump, the crowd will know."
     starter: |
-      from pxr import Usd
+      from pathlib import Path
+      from pxr import Gf, Kind, Sdf, Usd, UsdGeom, UsdLux, UsdShade
 
-      stage = Usd.Stage.CreateNew(STAGE_PATH)
-      archive = stage.DefinePrim("/City/CrownDistrict/CertificationArchive", "Scope")
-      archive.SetDocumentation("Composition knowledge verified.")
+      stage = Usd.Stage.Open(STAGE_PATH)
+      # This boss opens your accumulated city. Author every graded opinion below.
+      # 1. Define /City/CrownDistrict/CertificationArchive with type Scope.
+      # 2. Set /City/CrownDistrict/CertificationArchive metadata documentation to 'Composition knowledge verified.'.
+      # 3. Set stage up axis to Y.
+      # 4. Set stage metersPerUnit to 0.01.
+      # 5. Set stage startTimeCode to 1.
       stage.GetRootLayer().Save()
     language: python
     validator:
       assertions:
-        - prim_type: {path: /City/CrownDistrict/CertificationArchive, value: Scope}
-        - metadata_equals: {path: /City/CrownDistrict/CertificationArchive, key: documentation, value: "Composition knowledge verified."}
+      - prim_type: {path: /City/CrownDistrict/CertificationArchive, value: Scope}
+      - metadata_equals: {path: /City/CrownDistrict/CertificationArchive, key: documentation, value: Composition knowledge verified.}
+      - {up_axis: Y}
+      - {meters_per_unit: 0.01}
+      - {start_time: 1}
     cookbook: docs/creating-composition-arcs/strength-ordering/what-is-liverps.md
     xp: 400
     reward: {opinion_points: 2, achievement: "Archive sealed. Your opinions have been indexed against the official study guide."}
@@ -381,27 +418,33 @@ quests:
     brief: "SYSTEM: The Null Monarch leaves matter standing after meaning disappears. Reassert the city contract, instance a sign, and keep Y-up. Last fight. No C++. No mercy for missing default prims."
     starter: |
       from pathlib import Path
-      from pxr import Kind, Usd, UsdGeom
+      from pxr import Gf, Kind, Sdf, Usd, UsdGeom, UsdLux, UsdShade
 
-      sign = (Path(WORLD_ROOT) / "assets" / "sign.usda").as_posix()
-      stage = Usd.Stage.CreateNew(STAGE_PATH)
-      city = UsdGeom.Xform.Define(stage, "/City").GetPrim()
-      throne = UsdGeom.Xform.Define(stage, "/City/CrownDistrict/RootThrone").GetPrim()
-      # TODO: default prim /City, Y-up, start 1, end 48.
-      # TODO: Reference the civic sign on the throne and set instanceable True.
-      # TODO: Mark /City kind group.
+      stage = Usd.Stage.Open(STAGE_PATH)
+      # This boss opens your accumulated city. Author every graded opinion below.
+      # 1. Define /City/CrownDistrict/RootThrone with type Xform.
+      # 2. Author a reference on /City/CrownDistrict/RootThrone to asset sign.usda.
+      # 3. Set /City/CrownDistrict/RootThrone instanceable to True.
+      # 4. Set the stage default prim to /City.
+      # 5. Set stage up axis to Y.
+      # 6. Set stage startTimeCode to 1.
+      # 7. Set stage endTimeCode to 48.
+      # 8. Set /City model kind to group.
+      # 9. Set /City/CrownDistrict/RootThrone metadata documentation to 'Null Monarch: Capstone Stage Authoring cleared.'.
       stage.GetRootLayer().Save()
     language: python
     validator:
       assertions:
-        - prim_exists: /City/CrownDistrict/RootThrone
-        - has_reference: {path: /City/CrownDistrict/RootThrone, asset: sign.usda}
-        - instanceable: {path: /City/CrownDistrict/RootThrone, value: true}
-        - default_prim: /City
-        - up_axis: Y
-        - start_time: 1
-        - end_time: 48
-        - kind_equals: {path: /City, value: group}
+      - prim_type: {path: /City/CrownDistrict/RootThrone, value: Xform}
+      - has_reference: {path: /City/CrownDistrict/RootThrone, asset: sign.usda}
+      - instanceable: {path: /City/CrownDistrict/RootThrone, value: true}
+      - {default_prim: /City}
+      - {up_axis: Y}
+      - {start_time: 1}
+      - {end_time: 48}
+      - kind_equals: {path: /City, value: group}
+      - metadata_equals: {path: /City/CrownDistrict/RootThrone, key: documentation, value: 'Null Monarch: Capstone Stage Authoring
+            cleared.'}
     cookbook: docs/asset-structure/asset-structure-principles/index.md
     xp: 800
     reward:

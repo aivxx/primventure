@@ -10,8 +10,9 @@ from typing import Any
 
 from pxr import Sdf, Usd, UsdGeom
 
-from .benefits import boss_fee_for, recipe_bonus
+from .benefits import boss_fee_for, preview_boss_debt, recipe_bonus
 from .census import snapshot
+from .expectations import describe_assertions
 from .models import PlayerState, Quest, RunRequest, RunResponse, ValidationResult
 from .store import (
     ROOT,
@@ -56,6 +57,22 @@ class QuestRunner:
             )
             return self._response(quest, state, False, [], "", f"STAIRWELL LOCKED. {reason}")
 
+        live_boss = quest.kind.endswith("boss") and quest.id not in state.completed_quests
+        if (
+            live_boss
+            and state.last_fail
+            and state.last_fail.quest_id == quest.id
+            and state.last_fail.debrief_required
+        ):
+            return self._response(
+                quest,
+                state,
+                False,
+                [],
+                "",
+                "BOSS DEBRIEF REQUIRED. Review the failed checks before retrying.",
+            )
+
         question_results = self._validate_questions(quest, request.answers)
         before_usda = ""
         after_usda = ""
@@ -80,6 +97,7 @@ class QuestRunner:
 
         success = bool(results) and all(result.passed for result in results)
         if success:
+            debt_paid = state.boss_debts.get(quest.id, 0)
             if state.last_fail and state.last_fail.quest_id == quest.id:
                 state.last_fail = None
             if artifact is not None:
@@ -88,15 +106,21 @@ class QuestRunner:
                 state.submissions[quest.id] = request.code
             state = self._award(quest, state)
             message = VICTORIES[sum(map(ord, quest.id)) % len(VICTORIES)]
+            if debt_paid:
+                message += f" Boss debt paid: {debt_paid} XP withheld from this clear."
         else:
             message = TAUNTS[sum(map(ord, quest.id)) % len(TAUNTS)]
             # The submission lives in a temp directory that outlives this call by
             # accident, not contract, so the stage is read into the save now.
             state.last_fail = snapshot(quest, artifact, results)
+            if live_boss:
+                state.last_fail.debrief_required = True
+                state.last_fail.failed_checks = self._failed_check_descriptions(quest, results)
             # Rooms gate on level and every room pays its XP only once, so a fee
             # that demoted the player would lock the door it just charged them at
             # with no way left to earn the level back. Bill only what the current
             # level can spare.
+            debt = preview_boss_debt(state, quest)
             fee, kind = boss_fee_for(state, quest)
             if fee > 0:
                 state.xp -= fee
@@ -104,6 +128,15 @@ class QuestRunner:
                 message += f" Boss fee: {fee} XP."
             elif kind == "waiver":
                 message += " Boss fee waived (Exchanger)."
+            elif debt > 0:
+                state.boss_debts[quest.id] = debt
+                message += (
+                    f" Boss debt: {debt} XP will be withheld from this boss's clear reward."
+                )
+            elif live_boss and state.boss_debts.get(quest.id, 0):
+                message += " Boss debt remains capped at 10 XP."
+            if live_boss:
+                message += " Debrief the failed checks before retrying."
             self.saves.save(state)
         return self._response(
             quest,
@@ -115,6 +148,41 @@ class QuestRunner:
             before_usda,
             after_usda,
         )
+
+    @staticmethod
+    def _failed_check_descriptions(
+        quest: Quest, results: list[ValidationResult]
+    ) -> list[str]:
+        """Name failed requirements without revealing the Census's observed values."""
+        expectations = describe_assertions(quest.validator)
+        stage_index = 0
+        failed: list[str] = []
+        for result in results:
+            if result.rule.startswith("question_"):
+                if not result.passed:
+                    try:
+                        index = int(result.rule.removeprefix("question_")) - 1
+                    except ValueError:
+                        index = -1
+                    failed.append(
+                        quest.questions[index].prompt
+                        if 0 <= index < len(quest.questions)
+                        else "Recheck the briefing question."
+                    )
+                continue
+            if result.rule in {"execution", "stage_open"}:
+                if not result.passed:
+                    failed.append("Run code that authors a stage USD can open.")
+                continue
+            description = (
+                expectations[stage_index]
+                if stage_index < len(expectations)
+                else f"Pass the {result.rule} check."
+            )
+            stage_index += 1
+            if not result.passed:
+                failed.append(description)
+        return failed
 
     def _execute(
         self, quest: Quest, request: RunRequest
@@ -351,6 +419,17 @@ class QuestRunner:
             value = QuestRunner._as_plain(value)
             expected_plain = QuestRunner._as_plain(expected)
             passed = value == expected_plain
+        elif name == "relationship_targets":
+            relationship = (
+                stage.GetRelationshipAtPath(path)
+                if path and "." in path
+                else prim.GetRelationship(data["relationship"]) if prim else None
+            )
+            actual = [target.pathString for target in relationship.GetTargets()] if relationship else []
+            wanted = [str(target) for target in data.get("targets", expected or [])]
+            passed = actual == wanted if data.get("exact", True) else all(
+                target in actual for target in wanted
+            )
         elif name == "metadata_equals":
             target = prim if prim else stage
             value = target.GetMetadata(data.get("metadata", data.get("key"))) if target else None
@@ -527,7 +606,8 @@ class QuestRunner:
         first_clear = quest.id not in state.completed_quests
         if first_clear:
             state.completed_quests.append(quest.id)
-            state.xp += quest.xp
+            debt = state.boss_debts.pop(quest.id, 0)
+            state.xp += max(0, quest.xp - debt)
             state.level = level_for_xp(state.xp)
             stat_domains = {
                 "craft": "Authoring",

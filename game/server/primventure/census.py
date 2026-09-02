@@ -95,6 +95,14 @@ def _attribute(stage: Usd.Stage, data: dict[str, Any], path: Any) -> Usd.Attribu
     return prim.GetAttribute(name) if prim and prim.IsValid() and name else None
 
 
+def _relationship(stage: Usd.Stage, data: dict[str, Any], path: Any) -> Usd.Relationship | None:
+    if path and "." in str(path):
+        return stage.GetRelationshipAtPath(str(path))
+    prim = stage.GetPrimAtPath(str(path)) if path else None
+    name = data.get("relationship")
+    return prim.GetRelationship(name) if prim and prim.IsValid() and name else None
+
+
 def _arc_assets(prim: Usd.Prim, field: str) -> list[str]:
     items = prim.GetMetadata(field)
     if not items:
@@ -132,6 +140,22 @@ def observe(stage: Usd.Stage, name: str, data: dict[str, Any]) -> str:
         if value is None:
             return f"The attribute exists (type {attribute.GetTypeName()}) but holds no value."
         return f"It holds {_show(_plain(value))} (type {attribute.GetTypeName()})."
+    if name == "relationship_targets":
+        relationship = _relationship(stage, data, path)
+        if relationship is None or not relationship.IsValid():
+            if not valid:
+                return _missing(stage, prim_path)
+            authored = list(prim.GetAuthoredPropertyNames())
+            if authored:
+                return (
+                    "The prim exists but that relationship is not authored. "
+                    f"Authored here: {', '.join(authored[:6])}."
+                )
+            return "The prim exists with no authored properties at all."
+        targets = [target.pathString for target in relationship.GetTargets()]
+        if not targets:
+            return "The relationship exists but targets nothing."
+        return f"It targets {', '.join(targets)}."
     if name == "metadata_equals":
         key = data.get("metadata", data.get("key"))
         holder = prim if valid else stage

@@ -208,30 +208,59 @@ def _holding_xp(xp: int) -> int:
     return xp - (xp // 100) * 100
 
 
+BOSS_DEBT = 10
+
+
+def _unused_exchanger_waiver(state: PlayerState, quest: Quest) -> bool:
+    return (
+        quest.kind.endswith("boss")
+        and state.specialization == "Exchanger"
+        and is_home_floor(state.specialization, quest.floor)
+        and not state.benefit_claims.get(claim_key("boss_waiver", quest.floor))
+    )
+
+
 def boss_fee_for(state: PlayerState, quest: Quest) -> tuple[int, str]:
+    if not quest.kind.endswith("boss"):
+        return 0, "none"
+    if _unused_exchanger_waiver(state, quest):
+        state.benefit_claims[claim_key("boss_waiver", quest.floor)] = True
+        return 0, "waiver"
     base = min(25, _holding_xp(state.xp))
-    if not quest.kind.endswith("boss") or base <= 0:
+    if base <= 0:
         return 0, "none"
     if not is_home_floor(state.specialization, quest.floor):
         return base, "standard"
-    waiver_key = claim_key("boss_waiver", quest.floor)
-    if state.specialization == "Exchanger" and not state.benefit_claims.get(waiver_key):
-        state.benefit_claims[waiver_key] = True
-        return 0, "waiver"
-    return base // 2, "home"
+    return max(1, base // 2), "home"
 
 
 def preview_boss_fee(state: PlayerState, quest: Quest) -> tuple[int, str]:
     """Fee that would be charged, without mutating claims."""
+    if not quest.kind.endswith("boss"):
+        return 0, "none"
+    if _unused_exchanger_waiver(state, quest):
+        return 0, "waiver"
     base = min(25, _holding_xp(state.xp))
-    if not quest.kind.endswith("boss") or base <= 0:
+    if base <= 0:
         return 0, "none"
     if not is_home_floor(state.specialization, quest.floor):
         return base, "standard"
-    waiver_key = claim_key("boss_waiver", quest.floor)
-    if state.specialization == "Exchanger" and not state.benefit_claims.get(waiver_key):
-        return 0, "waiver"
-    return base // 2, "home"
+    return max(1, base // 2), "home"
+
+
+def preview_boss_debt(state: PlayerState, quest: Quest) -> int:
+    """Debt a miss would add after all fee waivers, without mutating state."""
+    fee, kind = preview_boss_fee(state, quest)
+    if (
+        fee > 0
+        or kind == "waiver"
+        or _holding_xp(state.xp) > 0
+        or not quest.kind.endswith("boss")
+        or quest.id in state.completed_quests
+        or state.boss_debts.get(quest.id, 0) > 0
+    ):
+        return 0
+    return BOSS_DEBT
 
 
 def recipe_bonus(state: PlayerState, recipes: list[str]) -> int:

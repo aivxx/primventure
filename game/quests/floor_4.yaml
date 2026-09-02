@@ -70,21 +70,28 @@ quests:
     stats: {insight: 3, resolve: 3}
     brief: "SYSTEM: Two faces. One is a draft. Deactivate Draft, leave Hero. Deletion is vandalism. Inactive is manners."
     starter: |
-      from pxr import Usd, UsdGeom
+      from pathlib import Path
+      from pxr import Gf, Kind, Sdf, Usd, UsdGeom, UsdLux, UsdShade
 
-      stage = Usd.Stage.CreateNew(STAGE_PATH)
-      UsdGeom.Sphere.Define(stage, "/City/BeyondTheWalls/Topiary/Hero")
-      UsdGeom.Cube.Define(stage, "/City/BeyondTheWalls/Topiary/Draft")
-      # TODO: Set Draft inactive. Leave Hero active.
+      stage = Usd.Stage.Open(STAGE_PATH)
+      # This boss opens your accumulated city. Author every graded opinion below.
+      # 1. Define /City/BeyondTheWalls/Topiary with type Xform.
+      # 2. Set /City/BeyondTheWalls/Topiary/Hero active to True.
+      # 3. Set /City/BeyondTheWalls/Topiary/Draft active to False.
+      # 4. Traversal must include ['/City/BeyondTheWalls/Topiary/Hero'] and exclude ['/City/BeyondTheWalls/Topiary/Draft'].
+      # 5. Set /City/BeyondTheWalls/Topiary metadata documentation to 'Two-Faced Topiary: Active and Inactive Prims cleared.'.
       stage.GetRootLayer().Save()
     language: python
     validator:
       assertions:
-        - active: {path: /City/BeyondTheWalls/Topiary/Hero, value: true}
-        - active: {path: /City/BeyondTheWalls/Topiary/Draft, value: false}
-        - traversal_contains:
-            paths: [/City/BeyondTheWalls/Topiary/Hero]
-            excluded: [/City/BeyondTheWalls/Topiary/Draft]
+      - prim_type: {path: /City/BeyondTheWalls/Topiary, value: Xform}
+      - active: {path: /City/BeyondTheWalls/Topiary/Hero, value: true}
+      - active: {path: /City/BeyondTheWalls/Topiary/Draft, value: false}
+      - traversal_contains:
+          paths: [/City/BeyondTheWalls/Topiary/Hero]
+          excluded: [/City/BeyondTheWalls/Topiary/Draft]
+      - metadata_equals: {path: /City/BeyondTheWalls/Topiary, key: documentation, value: 'Two-Faced Topiary: Active and Inactive
+            Prims cleared.'}
     cookbook: docs/beyond-basics/active-inactive-prims.md
     xp: 240
     reward: {opinion_points: 1, achievement: "New achievement! You deactivated a draft and preserved the evidence."}
@@ -172,16 +179,22 @@ quests:
     stats: {lore: 4, craft: 3}
     brief: "SYSTEM: A lamp post qualifies as a component. Kind it before Floor 6 assembles your regrets for you."
     starter: |
-      from pxr import Kind, Usd, UsdGeom
+      from pathlib import Path
+      from pxr import Gf, Kind, Sdf, Usd, UsdGeom, UsdLux, UsdShade
 
-      stage = Usd.Stage.CreateNew(STAGE_PATH)
-      lamp = UsdGeom.Xform.Define(stage, "/City/BeyondTheWalls/LampPost").GetPrim()
-      # TODO: Set kind to component.
+      stage = Usd.Stage.Open(STAGE_PATH)
+      # This boss opens your accumulated city. Author every graded opinion below.
+      # 1. Define /City/BeyondTheWalls/LampPost with type Xform.
+      # 2. Set /City/BeyondTheWalls/LampPost model kind to component.
+      # 3. Set /City/BeyondTheWalls/LampPost metadata documentation to 'Kind Inspector: Set a Component Model Kind cleared.'.
       stage.GetRootLayer().Save()
     language: python
     validator:
       assertions:
-        - kind_equals: {path: /City/BeyondTheWalls/LampPost, value: component}
+      - prim_type: {path: /City/BeyondTheWalls/LampPost, value: Xform}
+      - kind_equals: {path: /City/BeyondTheWalls/LampPost, value: component}
+      - metadata_equals: {path: /City/BeyondTheWalls/LampPost, key: documentation, value: 'Kind Inspector: Set a Component Model
+            Kind cleared.'}
     cookbook: docs/beyond-basics/model-kinds.md
     xp: 220
     reward: {opinion_points: 1, achievement: "New achievement! You used a model kind before the Foundry made it fashionable."}
@@ -234,25 +247,37 @@ quests:
     stats: {insight: 4, resolve: 4, craft: 3}
     brief: "SYSTEM: Floor boss. Author a visible mesh, hide a draft, stamp units, paint a primvar. Hydra still will not render here. Competence will."
     starter: |
-      from pxr import Gf, Kind, Sdf, Usd, UsdGeom
+      from pathlib import Path
+      from pxr import Gf, Kind, Sdf, Usd, UsdGeom, UsdLux, UsdShade
 
-      stage = Usd.Stage.CreateNew(STAGE_PATH)
-      world = UsdGeom.Xform.Define(stage, "/World").GetPrim()
-      hero = UsdGeom.Mesh.Define(stage, "/World/Hero")
-      draft = UsdGeom.Mesh.Define(stage, "/World/Draft")
-      # TODO: Y-up, centimeters, /World default prim and component kind.
-      # TODO: Deactivate Draft. Constant displayColor (1, 0.75, 0.25) on Hero.
+      stage = Usd.Stage.Open(STAGE_PATH)
+      # This boss opens your accumulated city. Author every graded opinion below.
+      # 1. Define /World/Hero with type Mesh.
+      # 2. Set the stage default prim to /World.
+      # 3. Set stage up axis to Y.
+      # 4. Set stage metersPerUnit to 0.01.
+      # 5. Set /World model kind to component.
+      # 6. Set /World/Hero active to True.
+      # 7. Set /World/Draft active to False.
+      # 8. Set /World/Hero.primvars:displayColor to [[1.0, 0.75, 0.25]].
+      # 9. Set /World/Hero metadata documentation to 'Hydra of Choices: Primvars, Activation, and Units cleared.'.
       stage.GetRootLayer().Save()
     language: python
     validator:
       assertions:
-        - default_prim: /World
-        - up_axis: Y
-        - meters_per_unit: 0.01
-        - kind_equals: {path: /World, value: component}
-        - active: {path: /World/Hero, value: true}
-        - active: {path: /World/Draft, value: false}
-        - attribute_equals: {path: /World/Hero.primvars:displayColor, value: [[1.0, 0.75, 0.25]]}
+      - prim_type: {path: /World/Hero, value: Mesh}
+      - {default_prim: /World}
+      - {up_axis: Y}
+      - {meters_per_unit: 0.01}
+      - kind_equals: {path: /World, value: component}
+      - active: {path: /World/Hero, value: true}
+      - active: {path: /World/Draft, value: false}
+      - attribute_equals:
+          path: /World/Hero.primvars:displayColor
+          value:
+          - [1.0, 0.75, 0.25]
+      - metadata_equals: {path: /World/Hero, key: documentation, value: 'Hydra of Choices: Primvars, Activation,
+            and Units cleared.'}
     cookbook: docs/beyond-basics/value-resolution.md
     xp: 380
     reward:

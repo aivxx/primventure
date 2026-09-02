@@ -1,7 +1,9 @@
 from pathlib import Path
 
 from fastapi.testclient import TestClient
+from pxr import Sdf, Usd
 
+from primventure.census import observe
 from primventure.models import PlayerState
 from primventure.runner import QuestRunner
 from primventure.store import SaveStore, migrate
@@ -263,6 +265,54 @@ def test_retired_consumables_migrate_into_censuses() -> None:
     assert "free_peek:3" not in raw["benefit_claims"]
     assert raw["upgrades"] == ["prim_census", "deeper_hints"]
     assert "last_fail" not in raw
+
+
+def test_census_reads_the_targets_a_relationship_actually_holds(tmp_path: Path) -> None:
+    """Without this the boss charges XP and reports only a prim count."""
+    stage = Usd.Stage.CreateNew(str(tmp_path / "relationship.usda"))
+    bridge = stage.DefinePrim("/Bridge", "Xform")
+    stage.DefinePrim("/Stall", "Xform")
+    bridge.CreateRelationship("destination").SetTargets([Sdf.Path("/Depot")])
+    lamp = stage.DefinePrim("/Lamp", "Xform")
+    lamp.CreateAttribute("wattage", Sdf.ValueTypeNames.Int).Set(60)
+
+    wrong_target = observe(stage, "relationship_targets", {"path": "/Bridge.destination"})
+    unauthored = observe(stage, "relationship_targets", {"path": "/Lamp.destination"})
+    missing_prim = observe(stage, "relationship_targets", {"path": "/Nowhere.destination"})
+
+    assert wrong_target == "It targets /Depot."
+    assert "relationship is not authored" in unauthored
+    assert "wattage" in unauthored
+    assert "No prim at this path" in missing_prim
+
+
+def test_boss_debrief_unlocks_retry_without_spending_an_assist(
+    tmp_path: Path, monkeypatch
+) -> None:
+    client = _client(
+        tmp_path,
+        monkeypatch,
+        xp=1800,
+        level=19,
+        completed_quests=["f9_customizing_raid"],
+    )
+    failed = _run(client, "f9_hydra_brief", "this is not python(")
+    assert failed["success"] is False
+    room = client.get("/api/quests/f9_hydra_brief").json()
+    assert room["boss_debrief_required"] is True
+    assert room["boss_debt"] == 10
+
+    blocked = _run(client, "f9_hydra_brief", "this is not python(")
+    assert "DEBRIEF REQUIRED" in blocked["system_message"]
+    inventory = client.get("/api/state").json()["inventory"]
+
+    debrief = client.post("/api/quests/f9_hydra_brief/debrief")
+    assert debrief.status_code == 200
+    report = debrief.json()
+    assert report["checks"]
+    assert "Prim Census" in report["message"]
+    assert report["state"]["inventory"] == inventory
+    assert client.get("/api/quests/f9_hydra_brief").json()["boss_debrief_required"] is False
 
 
 def test_migration_keeps_a_current_fail_readable() -> None:

@@ -15,6 +15,7 @@ from .benefits import (
     free_assist_available,
     home_boss_bonus,
     is_home_floor,
+    preview_boss_debt,
     preview_boss_fee,
 )
 from .models import LessonCard, PlayerState, Quest
@@ -313,6 +314,10 @@ def quest_view(
     fee, fee_kind = preview_boss_fee(state, quest)
     data["boss_fee"] = fee
     data["boss_fee_kind"] = fee_kind
+    debt = state.boss_debts.get(quest.id, 0)
+    data["boss_debt"] = debt
+    data["boss_debt_on_miss"] = preview_boss_debt(state, quest)
+    data["boss_clear_xp"] = max(0, quest.xp - debt)
     data["free_hint"] = free_assist_available(state, quest, "hint")
     data["free_census"] = free_assist_available(state, quest, "census")
     fail = state.last_fail
@@ -325,6 +330,12 @@ def quest_view(
     )
     data["census_armed"] = armed
     data["census_paid"] = bool(armed and fail and fail.paid)
+    data["boss_debrief_required"] = bool(
+        fail
+        and fail.quest_id == quest.id
+        and fail.debrief_required
+        and quest.id not in state.completed_quests
+    )
     data["expects"] = describe_assertions(quest.validator)
     data["lesson"] = lesson
     data["submission"] = state.submissions.get(quest.id, "")

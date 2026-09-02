@@ -22,7 +22,7 @@ provides:
 - Grading: `validator.assertions`, a list of single-key declarative assertions.
 
 Supported assertion keys are `prim_exists`, `prim_type`, `attribute_equals`,
-`metadata_equals`, `has_reference`, `has_payload`, `has_variant_set`,
+`relationship_targets`, `metadata_equals`, `has_reference`, `has_payload`, `has_variant_set`,
 `has_inherit`, `has_specializes`, `instanceable`, `specifier_equals`,
 `prim_stack`, `sublayer_order`, `attribute_source`, `traversal_contains`,
 `kind_equals`, `meters_per_unit`, `point_instancer`, `layer_offset`,
@@ -32,6 +32,16 @@ such as `assetInfo` or `customData`.
 Scalar assertions carry the expected value directly. Object assertions include
 `path` plus the expected `value`, `asset`, `name`, variants, selection, time,
 metadata key, or nested field as applicable.
+`relationship_targets` accepts either a property `path` or a prim `path` plus
+`relationship`, and a `targets` list. Targets must match in order by default;
+set `exact: false` to require only that the listed targets are present.
+
+Boss starters always open the accumulated city with
+`Usd.Stage.Open(STAGE_PATH)`. They provide imports, required fixture layers,
+precise path/value comments, and save plumbing, but never pre-author a graded
+prim, property, relationship, or composition arc. Neighborhood bosses combine
+the current skill with an earlier authoring skill; city and floor bosses grade
+progressively broader synthesis.
 
 Python starters expect the runner to inject `STAGE_PATH`. USDA starters are
 complete text documents that the runner writes to that path. Cookbook values

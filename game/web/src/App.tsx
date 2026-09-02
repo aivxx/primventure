@@ -27,6 +27,8 @@ type Quest = {
   stats: Record<string, number>; questions?: Question[]; lesson?: Lesson | null;
   opinion_points: number; expects: string[]; submission: string;
   home_floor?: boolean; boss_fee?: number; boss_fee_kind?: string;
+  boss_debt?: number; boss_debt_on_miss?: number; boss_clear_xp?: number;
+  boss_debrief_required?: boolean;
   free_hint?: boolean; free_census?: boolean;
   census_armed?: boolean; census_paid?: boolean;
 };
@@ -53,6 +55,7 @@ type PlayerState = {
   inventory: Record<string, number>; upgrades: string[]; recipes: string[];
   achievements: string[]; specialization?: string; shop: Record<string, ShopItem>;
   class_benefits?: ClassBenefits; stamped_items?: Record<string, number>; curio?: CurioDesk;
+  boss_debts?: Record<string, number>;
 };
 type CurioResponse = { stamped: Record<string, number>; granted: Record<string, number>; state: PlayerState };
 type Recipe = { id: string; label: string; category: string; unlocked: boolean; affinity?: boolean };
@@ -85,6 +88,7 @@ type AssistResult = {
 };
 type HintResponse = { hint: string; state: PlayerState };
 type CensusResponse = { census: Census; state: PlayerState };
+type DebriefResponse = { checks: string[]; message: string; state: PlayerState };
 
 const CLASS_PATHS: ClassPath[] = [
   {
@@ -193,7 +197,7 @@ const GUIDE_STEPS: Array<{ target: GuideTarget; title: string; body: string }> =
   {
     target: "run",
     title: "Run the room",
-    body: "usd-core opens your stage and checks it against the list in the room card. Ordinary rooms cost nothing to retry. Boss rooms ask you to confirm first, because a wrong answer costs XP.",
+    body: "usd-core opens your stage and checks it against the list in the room card. Ordinary rooms cost nothing to retry. Boss misses cost within-level XP; at the XP floor, the first miss adds 10 XP debt to that boss instead. Review failed checks before retrying. Your level cannot drop.",
   },
   {
     target: "usda",
@@ -208,7 +212,7 @@ const GUIDE_STEPS: Array<{ target: GuideTarget; title: string; body: string }> =
   {
     target: "level",
     title: "Find your level here",
-    body: "Your current level is always in the LVL badge at the top right. Clearing a room pays its XP once, and every 100 XP raises that number. Prerequisites are not the only lock: some rooms also require a level. Losing to a boss costs XP but never lowers your level.",
+    body: "Your current level is always in the LVL badge at the top right. The XP meter shows current progress out of the 100 XP required for the next level, not lifetime XP. Boss losses can reduce that progress to zero; a miss at zero adds one-time boss debt, but your level cannot drop.",
   },
   {
     target: "payout",
@@ -497,9 +501,10 @@ function Landing({ onStart, hasProgress, nextQuest, quests, floors }: {
         </ol>
         <p className="landing-note">
           Win and your work is filed into a real 3D city that keeps growing on your disk, and the room pays XP once —
-          every 100 of it is a level, and a few rooms will not open below one. Miss and the System says something
-          unkind and hands the room straight back. Nothing you build is ever taken away; losing to a boss costs a
-          little XP and never a level.
+          each level needs 100 XP, and a few rooms will not open below one. Miss and the System says something
+          unkind and hands the room straight back. A boss miss takes at most the XP earned inside your current level.
+          At that level's XP floor, the first miss adds 10 XP debt to that boss's clear reward instead. Your current
+          level and published city cannot be taken away.
         </p>
       </section>
 
@@ -915,6 +920,7 @@ export default function App() {
   const [pendingSpend, setPendingSpend] = useState<"hint_tokens" | "prim_censuses" | null>(null);
   const [pendingReset, setPendingReset] = useState<ResetScope | null>(null);
   const [pendingBossRun, setPendingBossRun] = useState(false);
+  const [bossDebrief, setBossDebrief] = useState<{ checks: string[]; message: string } | null>(null);
   const [resetting, setResetting] = useState(false);
   const [checks, setChecks] = useState<boolean[]>([]);
   const [usdaView, setUsdaView] = useState<USDAView>({ before_usda: "", after_usda: "" });
@@ -1007,6 +1013,7 @@ export default function App() {
     }
     setBrowseFloor(quest.floor);
     setMapScope("floor");
+    if (quest.id !== activeQuest?.id) setBossDebrief(null);
     setActiveQuest(quest);
   };
 
@@ -1227,15 +1234,23 @@ export default function App() {
   const lessonRead = activeQuest ? lessonsRead().has(activeQuest.id) : false;
   const spotlight = guideStep === null ? null : GUIDE_STEPS[guideStep].target;
   const xpFloor = (state.level - 1) * 100;
-  const xpProgress = ((state.xp - xpFloor) / Math.max(state.next_level_xp - xpFloor, 1)) * 100;
+  const xpIntoLevel = Math.max(0, state.xp - xpFloor);
+  const xpRequired = Math.max(state.next_level_xp - xpFloor, 1);
+  const xpProgress = (xpIntoLevel / xpRequired) * 100;
   const liveBossFight = Boolean(
     activeQuest?.kind.endsWith("boss") && !activeQuest.completed && !playbackScene && !reviewPending,
   );
   const bossFee = activeQuest?.boss_fee ?? Math.min(25, Math.max(0, state.xp - xpFloor));
+  const bossDebt = activeQuest?.boss_debt ?? 0;
+  const bossDebtOnMiss = activeQuest?.boss_debt_on_miss ?? 0;
+  const bossClearXp = activeQuest?.boss_clear_xp ?? activeQuest?.xp ?? 0;
+  const bossRewardAfterMiss = Math.max(0, bossClearXp - bossDebtOnMiss);
+  const xpAfterBossMiss = xpIntoLevel - bossFee;
   const classPaths = state.class_benefits?.catalog?.length ? state.class_benefits.catalog : CLASS_PATHS;
 
   const runQuest = async () => {
     if (!activeQuest) return;
+    const debtBeforeClear = activeQuest.boss_debt ?? 0;
     setRunning(true);
     try {
       const result = await api<RunResult>(`/quests/${activeQuest.id}/run`, {
@@ -1267,13 +1282,21 @@ export default function App() {
           title: "VALIDATION FAILED",
           message: `${result.system_message} ${result.results.filter((item) => !item.passed).map((item) => item.message).join(" ")}`,
         });
-      }
-      await refresh(result.success && !needsUsdaReview);
-      if (needsUsdaReview && payout > 0) {
+      } else if (debtBeforeClear > 0) {
         setToast({
           kind: "info",
-          title: `+${payout} OPINION POINT${payout === 1 ? "" : "S"}`,
-          message: "Payout banked. Review the updated USDA before continuing.",
+          title: "BOSS DEBT PAID",
+          message: `${debtBeforeClear} XP was withheld. This clear paid ${activeQuest.boss_clear_xp ?? activeQuest.xp} XP.`,
+        });
+      }
+      await refresh(result.success && !needsUsdaReview);
+      if (needsUsdaReview && (payout > 0 || debtBeforeClear > 0)) {
+        setToast({
+          kind: "info",
+          title: payout > 0 ? `+${payout} OPINION POINT${payout === 1 ? "" : "S"}` : "BOSS DEBT PAID",
+          message: debtBeforeClear > 0
+            ? `Payout banked with ${debtBeforeClear} XP withheld for boss debt. Review the updated USDA before continuing.`
+            : "Payout banked. Review the updated USDA before continuing.",
         });
       }
     } catch (error) {
@@ -1290,6 +1313,25 @@ export default function App() {
     }
     setPendingBossRun(false);
     void runQuest();
+  };
+
+  const reviewBossDebrief = async () => {
+    if (!activeQuest || running) return;
+    setRunning(true);
+    try {
+      const result = await api<DebriefResponse>(`/quests/${activeQuest.id}/debrief`, { method: "POST" });
+      setState(result.state);
+      setBossDebrief({ checks: result.checks, message: result.message });
+      await refresh();
+    } catch (error) {
+      setToast({
+        kind: "error",
+        title: "DEBRIEF DENIED",
+        message: error instanceof Error ? error.message : "The incident report could not be opened.",
+      });
+    } finally {
+      setRunning(false);
+    }
   };
 
   const useHint = async () => {
@@ -1490,11 +1532,12 @@ export default function App() {
           <div className="panel-heading"><span><Swords size={15} /> RUN STATUS</span><em>{state.completed_quests.length}/{quests.length}</em></div>
           <div className="stat-line"><span><Trophy size={15} /> CITY CONTROL</span><b>{quests.length ? Math.round(state.completed_quests.length / quests.length * 100) : 0}%</b></div>
           <div className="meter health"><i style={{ width: `${quests.length ? state.completed_quests.length / quests.length * 100 : 0}%` }} /></div>
-          <div className="stat-line"><span><Zap size={15} /> EXPERIENCE</span><b>{state.xp}/{state.next_level_xp}</b></div>
+          <div className="stat-line"><span><Zap size={15} /> TO NEXT LEVEL</span><b>{xpIntoLevel} / {xpRequired} XP</b></div>
           <div className="meter xp"><i style={{ width: `${xpProgress}%` }} /></div>
           <p className="currency-note">
-            Each room pays its XP once, and <b>100 XP</b> is a level. Some rooms stay shut below a
-            level. Losing to a boss costs XP, never a level.
+            This meter shows progress inside level {state.level}. Each room pays XP once. A boss
+            miss can reduce this progress to zero; at zero, one-time boss debt reduces that boss's
+            eventual payout instead. A miss <b>cannot lower your current level</b>.
           </p>
           <div className="currency"><CircleDollarSign size={18} /><div><small>OPINION POINTS</small><b>{state.opinion_points}</b></div></div>
           <p className="currency-note">
@@ -1784,16 +1827,34 @@ export default function App() {
             options={{ readOnly: activeQuest?.language === "none" || reviewPending, minimap: { enabled: false }, fontSize: 13, lineHeight: 21, padding: { top: 16 }, scrollBeyondLastLine: false, tabSize: 4 }}
           />
           <div className="run-slot" ref={runRef}>
-            {pendingBossRun && liveBossFight
+            {bossDebrief
+              ? <div className="boss-debrief">
+                  <span>POST-FIGHT DEBRIEF</span>
+                  <p>{bossDebrief.message}</p>
+                  <ul>{bossDebrief.checks.map((check) => <li key={check}>{check}</li>)}</ul>
+                  <button onClick={() => setBossDebrief(null)}>
+                    <CheckCircle2 /> I'VE REVIEWED THE FAILED CHECKS
+                  </button>
+                </div>
+              : activeQuest?.boss_debrief_required && liveBossFight
+                ? <button className="run-button boss-debrief-button" onClick={reviewBossDebrief} disabled={running}>
+                    {running ? <RefreshCw className="spin" /> : <ListChecks />}
+                    {running ? "OPENING INCIDENT REPORT..." : "REVIEW FAILED CHECKS BEFORE RETRY"}
+                  </button>
+              : pendingBossRun && liveBossFight
               ? <div className={`boss-confirm ${spotlight === "run" ? "spotlight" : ""}`}>
                   <span>READY TO CHALLENGE?</span>
                   <p>
                     {bossFee > 0
-                      ? <>A wrong answer costs <b>{bossFee} XP</b>{activeQuest?.boss_fee_kind === "home" ? " (class rate: half)" : ""}. Your level stays {state.level}. </>
+                      ? <>Current progress: <b>{xpIntoLevel} / {xpRequired} XP</b>. A miss costs exactly <b>{bossFee} XP</b>{activeQuest?.boss_fee_kind === "home" ? " (home-floor class rate: half)" : ""}, leaving <b>{xpAfterBossMiss} / {xpRequired} XP</b>. </>
                       : activeQuest?.boss_fee_kind === "waiver"
-                        ? <>Exchanger waiver: this first Customs miss costs no XP. Your level stays {state.level}. </>
-                        : <>You're on the floor of this level, so a miss costs no XP this time. </>}
-                    A clear is the only way onto the next room. Are you sure you're ready?
+                        ? <>Current progress: <b>{xpIntoLevel} / {xpRequired} XP</b>. Exchanger waiver: this first Customs miss adds <b>no XP fee or debt</b>. </>
+                        : bossDebtOnMiss > 0
+                          ? <>Current progress: <b>0 / {xpRequired} XP</b>. A miss adds a one-time <b>{bossDebtOnMiss} XP debt</b>, reducing this boss's clear reward to <b>{bossRewardAfterMiss} XP</b>. </>
+                          : bossDebt > 0
+                            ? <>Current progress: <b>0 / {xpRequired} XP</b>. This boss already holds its one-time <b>{bossDebt} XP debt</b>; another miss adds no debt, and a clear pays <b>{bossClearXp} XP</b>. </>
+                            : <>Current progress: <b>{xpIntoLevel} / {xpRequired} XP</b>. This miss costs exactly <b>0 XP</b>. </>}
+                    Your current level <b>cannot drop below {state.level}</b>. Every miss requires a failed-check debrief before retrying.
                   </p>
                   <div className="confirm-actions">
                     <button className="yes" onClick={requestRun} disabled={running}>
@@ -1810,7 +1871,7 @@ export default function App() {
       </section>
       <aside className="editor-rail">
         <section className="challenge-card">
-          <div className="eyebrow"><span>{playbackScene ? "PLAYBACK SCENE · " : "LIVE · "}{activeQuest?.kind.replaceAll("_", " ").toUpperCase() || "NO SIGNAL"}</span><b>+{activeQuest?.xp || 0} XP{activeQuest?.opinion_points ? ` · +${activeQuest.opinion_points} OP` : ""}</b></div>
+          <div className="eyebrow"><span>{playbackScene ? "PLAYBACK SCENE · " : "LIVE · "}{activeQuest?.kind.replaceAll("_", " ").toUpperCase() || "NO SIGNAL"}</span><b>+{activeQuest?.boss_clear_xp ?? activeQuest?.xp ?? 0} XP{activeQuest?.opinion_points ? ` · +${activeQuest.opinion_points} OP` : ""}</b></div>
           <h2>{activeQuest?.title || "Waiting for the System"}</h2><p>{activeQuest?.brief}</p>
           {playbackScene && activeQuest && <p className="playback-note">Originally aired as {episodeCode(activeQuest.floor)}. The audience is watching the recap. Your live assignment has not moved.</p>}
           <div className="objective"><ChevronRight size={16} /><span><small>NEIGHBORHOOD</small>{activeQuest?.neighborhood}</span></div>

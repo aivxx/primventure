@@ -68,17 +68,24 @@ quests:
     stats: {insight: 2, resolve: 2}
     brief: "SYSTEM: The bridge exists, but knows no destination. Author the connection."
     starter: |
-      from pxr import Usd
+      from pathlib import Path
+      from pxr import Gf, Kind, Sdf, Usd, UsdGeom, UsdLux, UsdShade
+
       stage = Usd.Stage.Open(STAGE_PATH)
-      bridge = stage.DefinePrim("/City/BlueprintBorough/Bridge", "Xform")
-      stage.DefinePrim("/City/BlueprintBorough/Stall", "Cube")
-      # Create relationship destination targeting the Stall.
+      # This boss opens your accumulated city. Author every graded opinion below.
+      # 1. Define /City/BlueprintBorough/Bridge with type Xform.
+      # 2. Create /City/BlueprintBorough/Bridge.destination targeting exactly ['/City/BlueprintBorough/Stall'].
+      # 3. Set /City/BlueprintBorough/Bridge metadata documentation to 'Bridge Warden: Relationships and Targets cleared.'.
       stage.GetRootLayer().Save()
     language: python
     validator:
       assertions:
-        - prim_exists: /City/BlueprintBorough/Bridge
-        - attribute_equals: {path: /City/BlueprintBorough/Bridge.destination, value: [/City/BlueprintBorough/Stall]}
+      - prim_type: {path: /City/BlueprintBorough/Bridge, value: Xform}
+      - relationship_targets:
+          path: /City/BlueprintBorough/Bridge.destination
+          targets: [/City/BlueprintBorough/Stall]
+      - metadata_equals: {path: /City/BlueprintBorough/Bridge, key: documentation, value: 'Bridge Warden: Relationships and Targets
+            cleared.'}
     cookbook: docs/stage-setting/properties/relationships.md
     xp: 150
     reward: Silver Binding Cable
@@ -97,20 +104,32 @@ quests:
     stats: {craft: 3, resolve: 2}
     brief: "SYSTEM: The Warden rejects vague forms. Declare type, purpose, and visibility."
     starter: |
-      #usda 1.0
-      (
-          defaultPrim = "City"
-      )
-      def Xform "City" {
-          def Xform "BlueprintBorough" {
-              # Define a Scope named WardenVault with purpose = "guide".
-          }
-      }
-    language: usda
+      from pathlib import Path
+      from pxr import Gf, Kind, Sdf, Usd, UsdGeom, UsdLux, UsdShade
+
+      stage = Usd.Stage.Open(STAGE_PATH)
+      # This boss opens your accumulated city. Author every graded opinion below.
+      # 1. Define /City/BlueprintBorough/WardenVault with type Scope.
+      # 2. Set /City/BlueprintBorough/WardenVault.purpose to 'guide'.
+      # 3. Set /City/BlueprintBorough/WardenVault metadata documentation to 'Schema Warden: USDA Text and API Schemas cleared.'.
+      # 4. Set stage up axis to Y.
+      # 5. Set stage startTimeCode to 1.
+      # 6. Set stage endTimeCode to 48.
+      # 7. Keep /City/BlueprintBorough/Bridge.destination targeting /City/BlueprintBorough/Stall.
+      stage.GetRootLayer().Save()
+    language: python
     validator:
       assertions:
-        - prim_type: {path: /City/BlueprintBorough/WardenVault, value: Scope}
-        - attribute_equals: {path: /City/BlueprintBorough/WardenVault.purpose, value: guide}
+      - prim_type: {path: /City/BlueprintBorough/WardenVault, value: Scope}
+      - attribute_equals: {path: /City/BlueprintBorough/WardenVault.purpose, value: guide}
+      - metadata_equals: {path: /City/BlueprintBorough/WardenVault, key: documentation, value: 'Schema Warden: USDA Text and API
+            Schemas cleared.'}
+      - {up_axis: Y}
+      - {start_time: 1}
+      - {end_time: 48}
+      - relationship_targets:
+          path: /City/BlueprintBorough/Bridge.destination
+          targets: [/City/BlueprintBorough/Stall]
     cookbook: docs/stage-setting/usd-file-formats.md
     xp: 200
     reward: Blueprint Sigil

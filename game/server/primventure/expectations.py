@@ -57,6 +57,10 @@ def describe_assertion(rule: dict[str, Any]) -> str:
         target = path if "." in str(path) else f"{path}.{data.get('attribute', '')}"
         at_time = f" at time {data['time']}" if "time" in data else ""
         return f"{target} is set to {_quote(expected)}{at_time}"
+    if name == "relationship_targets":
+        target = path if "." in str(path) else f"{path}.{data.get('relationship', '')}"
+        qualifier = "targets exactly" if data.get("exact", True) else "includes targets"
+        return f"{target} {qualifier} {_join(data.get('targets', expected or []))}"
     if name == "metadata_equals":
         key = data.get("metadata", data.get("key", "metadata"))
         field = f" field {data['field']}" if data.get("field") else ""

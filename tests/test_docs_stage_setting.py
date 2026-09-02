@@ -252,7 +252,7 @@ class TestRelationshipsNotebook:
         assert members.IsValid()
         targets = list(members.GetTargets())
         assert len(targets) == 2
-        assert (nb._work_dir / "_assets" / "relationships_ex1.usda").exists()
+        assert (nb._work_dir / "_assets" / "relationships_ex3.usda").exists()
 
     def test_cell_proxy_prim(self, run_notebook):
         nb = run_notebook(
@@ -280,7 +280,7 @@ class TestRelationshipsNotebook:
         mat = binding_api.GetDirectBinding().GetMaterial()
         assert mat is not None
         assert "GreenMat" in str(mat.GetPath())
-        assert (nb._work_dir / "_assets" / "relationships_ex3.usda").exists()
+        assert (nb._work_dir / "_assets" / "relationships_ex1.usda").exists()
 
 
 class TestAttributesNotebook:

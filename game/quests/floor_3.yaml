@@ -50,26 +50,33 @@ quests:
     brief: "SYSTEM: Two departments issued opposite permits. Put the intended opinion on top. Bureaucracy is combat with stationery."
     starter: |
       from pathlib import Path
-      from pxr import Sdf, Usd
+      from pxr import Gf, Kind, Sdf, Usd, UsdGeom, UsdLux, UsdShade
 
       stage = Usd.Stage.Open(STAGE_PATH)
       folder = Path(STAGE_PATH).parent
-      for filename, status in [("safety.usda", "closed"), ("commerce.usda", "open")]:
-          source = Usd.Stage.CreateNew(str(folder / filename))
-          desk = source.DefinePrim("/City/CompositionQuarter/PermitDesk", "Xform")
-          desk.CreateAttribute("permitStatus", Sdf.ValueTypeNames.String).Set(status)
-          source.GetRootLayer().Save()
+      for filename, status in (("safety.usda", "closed"), ("commerce.usda", "open")):
+          fixture = Usd.Stage.CreateNew(str(folder / filename))
+          permit = fixture.DefinePrim("/City/CompositionQuarter/PermitDesk", "Xform")
+          permit.CreateAttribute("permitStatus", Sdf.ValueTypeNames.String).Set(status)
+          fixture.GetRootLayer().Save()
 
-      # Wrong: the first sublayer is strongest, so Safety currently wins.
-      stage.GetRootLayer().subLayerPaths = ["safety.usda", "commerce.usda"]
-      # TODO: Reorder the sublayers so Commerce's "open" opinion wins.
+      # This boss opens your accumulated city. Author every graded opinion below.
+      # 1. Define /City/CompositionQuarter/PermitDesk with type Xform.
+      # 2. Set /City/CompositionQuarter/PermitDesk.permitStatus to 'open'.
+      # 3. Make commerce.usda the strongest source for /City/CompositionQuarter/PermitDesk.permitStatus.
+      # 4. Set root sublayers strongest-first to ['commerce.usda', 'safety.usda'].
+      # 5. Set /City/CompositionQuarter/PermitDesk metadata documentation to 'Two-Faced Permit Desk: Sublayer Strength Order cleared.'.
       stage.GetRootLayer().Save()
     language: python
     validator:
       assertions:
-        - attribute_equals: {path: /City/CompositionQuarter/PermitDesk.permitStatus, value: open}
-        - attribute_source: {path: /City/CompositionQuarter/PermitDesk.permitStatus, layer: commerce.usda}
-        - sublayer_order: {layers: [commerce.usda, safety.usda]}
+      - prim_type: {path: /City/CompositionQuarter/PermitDesk, value: Xform}
+      - attribute_equals: {path: /City/CompositionQuarter/PermitDesk.permitStatus, value: open}
+      - attribute_source: {path: /City/CompositionQuarter/PermitDesk.permitStatus, layer: commerce.usda}
+      - sublayer_order:
+          layers: [commerce.usda, safety.usda]
+      - metadata_equals: {path: /City/CompositionQuarter/PermitDesk, key: documentation, value: 'Two-Faced Permit Desk: Sublayer
+            Strength Order cleared.'}
     cookbook: docs/composition-basics/layers.md
     xp: 180
     reward: {opinion_points: 1, achievement: "New achievement! You won an argument by moving one string in a list."}
@@ -164,29 +171,30 @@ quests:
     stats: {insight: 3, resolve: 2}
     brief: "SYSTEM: One blueprint, one concrete booth, and one traversal. Classify them before the abstract one demands a building permit."
     starter: |
-      from pxr import Sdf, Usd
+      from pathlib import Path
+      from pxr import Gf, Kind, Sdf, Usd, UsdGeom, UsdLux, UsdShade
 
       stage = Usd.Stage.Open(STAGE_PATH)
-      blueprint = stage.CreateClassPrim("/City/CompositionQuarter/_BoothBlueprint")
-      blueprint.CreateAttribute("department", Sdf.ValueTypeNames.String).Set("permits")
-      # TODO: Define /City/CompositionQuarter/PermitBooth as an Xform.
-
-      # Supplied by the System: the inherit arc that carries the blueprint's
-      # department opinion to the booth. Floor 05 teaches you to author these.
-      booth = stage.GetPrimAtPath("/City/CompositionQuarter/PermitBooth")
-      if booth:
-          booth.GetInherits().AddInherit(blueprint.GetPath())
+      # This boss opens your accumulated city. Author every graded opinion below.
+      # 1. Define /City/CompositionQuarter/PermitBooth with type Xform.
+      # 2. Author /City/CompositionQuarter/_BoothBlueprint so its composed specifier is class.
+      # 3. Author /City/CompositionQuarter/PermitBooth so its composed specifier is def.
+      # 4. Set /City/CompositionQuarter/PermitBooth.department to 'permits'.
+      # 5. Traversal must include ['/City/CompositionQuarter/PermitBooth'] and exclude ['/City/CompositionQuarter/_BoothBlueprint'].
+      # 6. Set /City/CompositionQuarter/PermitBooth metadata documentation to 'The Abstract Blueprint: Def, Over, and Class cleared.'.
       stage.GetRootLayer().Save()
     language: python
     validator:
       assertions:
-        - specifier_equals: {path: /City/CompositionQuarter/_BoothBlueprint, value: class}
-        - specifier_equals: {path: /City/CompositionQuarter/PermitBooth, value: def}
-        - has_inherit: {path: /City/CompositionQuarter/PermitBooth}
-        - attribute_equals: {path: /City/CompositionQuarter/PermitBooth.department, value: permits}
-        - traversal_contains:
-            paths: [/City/CompositionQuarter/PermitBooth]
-            excluded: [/City/CompositionQuarter/_BoothBlueprint]
+      - prim_type: {path: /City/CompositionQuarter/PermitBooth, value: Xform}
+      - specifier_equals: {path: /City/CompositionQuarter/_BoothBlueprint, value: class}
+      - specifier_equals: {path: /City/CompositionQuarter/PermitBooth, value: def}
+      - attribute_equals: {path: /City/CompositionQuarter/PermitBooth.department, value: permits}
+      - traversal_contains:
+          paths: [/City/CompositionQuarter/PermitBooth]
+          excluded: [/City/CompositionQuarter/_BoothBlueprint]
+      - metadata_equals: {path: /City/CompositionQuarter/PermitBooth, key: documentation, value: 'The Abstract Blueprint: Def, Over,
+            and Class cleared.'}
     cookbook: docs/composition-basics/specifiers.md
     xp: 210
     reward: {opinion_points: 1, achievement: "New achievement! You excluded an abstract class from polite traversal."}
@@ -288,26 +296,33 @@ quests:
     brief: "SYSTEM: The Baron insists referenced assets are immutable. Correct him locally and charge admission."
     starter: |
       from pathlib import Path
-      from pxr import Sdf, Usd
+      from pxr import Gf, Kind, Sdf, Usd, UsdGeom, UsdLux, UsdShade
 
       stage = Usd.Stage.Open(STAGE_PATH)
-      asset = Usd.Stage.CreateNew(str(Path(STAGE_PATH).parent / "baron_sign.usda"))
-      source = asset.DefinePrim("/BaronSign", "Xform")
+      fixture = Usd.Stage.CreateNew(str(Path(STAGE_PATH).parent / "baron_sign.usda"))
+      source = fixture.DefinePrim("/BaronSign", "Xform")
       source.CreateAttribute("marquee", Sdf.ValueTypeNames.String).Set("THE BARON OWNS THIS")
-      asset.SetDefaultPrim(source)
-      asset.GetRootLayer().Save()
+      fixture.SetDefaultPrim(source)
+      fixture.GetRootLayer().Save()
 
-      sign = stage.DefinePrim("/City/CompositionQuarter/BaronSign", "Xform")
-      sign.GetReferences().AddReference("baron_sign.usda")
-      # TODO: Author a stronger local marquee: "THE CITY OWNS ITSELF".
+      # This boss opens your accumulated city. Author every graded opinion below.
+      # 1. Define /City/CompositionQuarter/BaronSign with type Xform.
+      # 2. Author a reference on /City/CompositionQuarter/BaronSign to asset baron_sign.usda.
+      # 3. Set /City/CompositionQuarter/BaronSign.marquee to 'THE CITY OWNS ITSELF'.
+      # 4. Make submission.usd the strongest source for /City/CompositionQuarter/BaronSign.marquee.
+      # 5. Compose /City/CompositionQuarter/BaronSign from at least 2 prim specs.
+      # 6. Set /City/CompositionQuarter/BaronSign metadata documentation to 'Duplicate Baron: Override a Referenced Asset cleared.'.
       stage.GetRootLayer().Save()
     language: python
     validator:
       assertions:
-        - has_reference: {path: /City/CompositionQuarter/BaronSign, asset: baron_sign.usda}
-        - attribute_equals: {path: /City/CompositionQuarter/BaronSign.marquee, value: "THE CITY OWNS ITSELF"}
-        - attribute_source: {path: /City/CompositionQuarter/BaronSign.marquee, layer: submission.usd}
-        - prim_stack: {path: /City/CompositionQuarter/BaronSign, min: 2}
+      - prim_type: {path: /City/CompositionQuarter/BaronSign, value: Xform}
+      - has_reference: {path: /City/CompositionQuarter/BaronSign, asset: baron_sign.usda}
+      - attribute_equals: {path: /City/CompositionQuarter/BaronSign.marquee, value: THE CITY OWNS ITSELF}
+      - attribute_source: {path: /City/CompositionQuarter/BaronSign.marquee, layer: submission.usd}
+      - prim_stack: {path: /City/CompositionQuarter/BaronSign, min: 2}
+      - metadata_equals: {path: /City/CompositionQuarter/BaronSign, key: documentation, value: 'Duplicate Baron: Override a Referenced
+            Asset cleared.'}
     cookbook: docs/composition-basics/strength-ordering.md
     xp: 230
     reward: {opinion_points: 1, achievement: "New achievement! You overruled a Baron without editing his asset."}
@@ -371,28 +386,28 @@ quests:
     stats: {insight: 3, resolve: 3}
     brief: "SYSTEM: The Curator offers red or blue, then secretly selects red. Author the requested selection. Free will sold separately."
     starter: |
-      from pxr import Sdf, Usd
+      from pathlib import Path
+      from pxr import Gf, Kind, Sdf, Usd, UsdGeom, UsdLux, UsdShade
 
       stage = Usd.Stage.Open(STAGE_PATH)
-      exhibit = stage.DefinePrim("/City/CompositionQuarter/ChoiceExhibit", "Xform")
-      colors = exhibit.GetVariantSets().AddVariantSet("color")
-      for name in ("red", "blue"):
-          colors.AddVariant(name)
-          colors.SetVariantSelection(name)
-          with colors.GetVariantEditContext():
-              exhibit.CreateAttribute("activeColor", Sdf.ValueTypeNames.String).Set(name)
-      colors.SetVariantSelection("red")
-      # TODO: Select blue without deleting either variant.
+      # This boss opens your accumulated city. Author every graded opinion below.
+      # 1. Define /City/CompositionQuarter/ChoiceExhibit with type Xform.
+      # 2. On /City/CompositionQuarter/ChoiceExhibit, author variant set 'color' with variants ['red', 'blue'] and selection 'blue'.
+      # 3. Set /City/CompositionQuarter/ChoiceExhibit.activeColor to 'blue'.
+      # 4. Set /City/CompositionQuarter/ChoiceExhibit metadata documentation to 'Curator of False Choices: Variant Selection cleared.'.
       stage.GetRootLayer().Save()
     language: python
     validator:
       assertions:
-        - has_variant_set:
-            path: /City/CompositionQuarter/ChoiceExhibit
-            name: color
-            variants: [red, blue]
-            selection: blue
-        - attribute_equals: {path: /City/CompositionQuarter/ChoiceExhibit.activeColor, value: blue}
+      - prim_type: {path: /City/CompositionQuarter/ChoiceExhibit, value: Xform}
+      - has_variant_set:
+          path: /City/CompositionQuarter/ChoiceExhibit
+          name: color
+          variants: [red, blue]
+          selection: blue
+      - attribute_equals: {path: /City/CompositionQuarter/ChoiceExhibit.activeColor, value: blue}
+      - metadata_equals: {path: /City/CompositionQuarter/ChoiceExhibit, key: documentation, value: 'Curator of False Choices: Variant
+            Selection cleared.'}
     cookbook: docs/composition-basics/variant-sets.md
     xp: 220
     reward: {opinion_points: 1, achievement: "New achievement! You selected blue. The focus group is inconsolable."}
@@ -421,30 +436,33 @@ quests:
     brief: "SYSTEM: Build a market block from one reusable stall. Three references, three addresses, zero duplicated geometry."
     starter: |
       from pathlib import Path
-      from pxr import Sdf, Usd
+      from pxr import Gf, Kind, Sdf, Usd, UsdGeom, UsdLux, UsdShade
 
       stage = Usd.Stage.Open(STAGE_PATH)
-      asset = Usd.Stage.CreateNew(str(Path(STAGE_PATH).parent / "market_stall.usda"))
-      stall = asset.DefinePrim("/MarketStall", "Xform")
-      stall.CreateAttribute("assetClass", Sdf.ValueTypeNames.String).Set("market_stall")
-      asset.SetDefaultPrim(stall)
-      asset.GetRootLayer().Save()
-
-      market = stage.DefinePrim("/City/CompositionQuarter/ModularMarket", "Xform")
-      # TODO: Define Stall_A, Stall_B, and Stall_C beneath market.
-      # TODO: Add a reference to market_stall.usda on each stall.
-      # TODO: Give each stall a local string attribute stallId matching A, B, or C.
+      # This boss opens your accumulated city. Author every graded opinion below.
+      # 1. Define /City/CompositionQuarter/ModularMarket with type Xform.
+      # 2. Author a reference on /City/CompositionQuarter/ModularMarket/Stall_A to asset market_stall.usda.
+      # 3. Author a reference on /City/CompositionQuarter/ModularMarket/Stall_B to asset market_stall.usda.
+      # 4. Author a reference on /City/CompositionQuarter/ModularMarket/Stall_C to asset market_stall.usda.
+      # 5. Set /City/CompositionQuarter/ModularMarket/Stall_A.stallId to 'A'.
+      # 6. Set /City/CompositionQuarter/ModularMarket/Stall_B.stallId to 'B'.
+      # 7. Set /City/CompositionQuarter/ModularMarket/Stall_C.stallId to 'C'.
+      # 8. Set /City/CompositionQuarter/ModularMarket/Stall_C.assetClass to 'market_stall'.
+      # 9. Set /City/CompositionQuarter/ModularMarket metadata documentation to 'Modular Market: Compose a Block From One Asset cleared.'.
       stage.GetRootLayer().Save()
     language: python
     validator:
       assertions:
-        - has_reference: {path: /City/CompositionQuarter/ModularMarket/Stall_A, asset: market_stall.usda}
-        - has_reference: {path: /City/CompositionQuarter/ModularMarket/Stall_B, asset: market_stall.usda}
-        - has_reference: {path: /City/CompositionQuarter/ModularMarket/Stall_C, asset: market_stall.usda}
-        - attribute_equals: {path: /City/CompositionQuarter/ModularMarket/Stall_A.stallId, value: A}
-        - attribute_equals: {path: /City/CompositionQuarter/ModularMarket/Stall_B.stallId, value: B}
-        - attribute_equals: {path: /City/CompositionQuarter/ModularMarket/Stall_C.stallId, value: C}
-        - attribute_equals: {path: /City/CompositionQuarter/ModularMarket/Stall_C.assetClass, value: market_stall}
+      - prim_type: {path: /City/CompositionQuarter/ModularMarket, value: Xform}
+      - has_reference: {path: /City/CompositionQuarter/ModularMarket/Stall_A, asset: market_stall.usda}
+      - has_reference: {path: /City/CompositionQuarter/ModularMarket/Stall_B, asset: market_stall.usda}
+      - has_reference: {path: /City/CompositionQuarter/ModularMarket/Stall_C, asset: market_stall.usda}
+      - attribute_equals: {path: /City/CompositionQuarter/ModularMarket/Stall_A.stallId, value: A}
+      - attribute_equals: {path: /City/CompositionQuarter/ModularMarket/Stall_B.stallId, value: B}
+      - attribute_equals: {path: /City/CompositionQuarter/ModularMarket/Stall_C.stallId, value: C}
+      - attribute_equals: {path: /City/CompositionQuarter/ModularMarket/Stall_C.assetClass, value: market_stall}
+      - metadata_equals: {path: /City/CompositionQuarter/ModularMarket, key: documentation, value: 'Modular Market: Compose a Block
+            From One Asset cleared.'}
     cookbook: docs/composition-basics/references.md
     xp: 300
     reward: {opinion_points: 2, achievement: "District recaptured! Modular Market now contains 300% more stall and 0% more source asset."}
@@ -473,59 +491,39 @@ quests:
     brief: "SYSTEM: Six arcs enter. One opinion leaves. Author the strongest value and prove you know why it wins."
     starter: |
       from pathlib import Path
-      from pxr import Sdf, Usd
+      from pxr import Gf, Kind, Sdf, Usd, UsdGeom, UsdLux, UsdShade
 
       stage = Usd.Stage.Open(STAGE_PATH)
-      folder = Path(STAGE_PATH).parent
+      fixture = Usd.Stage.CreateNew(str(Path(STAGE_PATH).parent / "reference_threat.usda"))
+      source = fixture.DefinePrim("/ThreatSource", "Xform")
+      source.CreateAttribute("threatLevel", Sdf.ValueTypeNames.Int).Set(40)
+      fixture.SetDefaultPrim(source)
+      fixture.GetRootLayer().Save()
 
-      reference_stage = Usd.Stage.CreateNew(str(folder / "reference_threat.usda"))
-      reference_root = reference_stage.DefinePrim("/ThreatSource", "Xform")
-      reference_root.CreateAttribute("threatLevel", Sdf.ValueTypeNames.Int).Set(40)
-      reference_stage.SetDefaultPrim(reference_root)
-      reference_stage.GetRootLayer().Save()
-
-      payload_stage = Usd.Stage.CreateNew(str(folder / "payload_threat.usda"))
-      payload_root = payload_stage.DefinePrim("/PayloadSource", "Xform")
-      payload_root.CreateAttribute("threatLevel", Sdf.ValueTypeNames.Int).Set(30)
-      payload_stage.SetDefaultPrim(payload_root)
-      payload_stage.GetRootLayer().Save()
-
-      fallback = stage.CreateClassPrim("/City/CompositionQuarter/_FallbackThreat")
-      fallback.CreateAttribute("threatLevel", Sdf.ValueTypeNames.Int).Set(10)
-      inherited = stage.CreateClassPrim("/City/CompositionQuarter/_InheritedThreat")
-      inherited.CreateAttribute("threatLevel", Sdf.ValueTypeNames.Int).Set(20)
-
-      boss = stage.DefinePrim("/City/CompositionQuarter/OpinionColossus", "Xform")
-      boss.GetSpecializes().AddSpecialize(fallback.GetPath())
-      boss.GetPayloads().AddPayload("payload_threat.usda")
-      boss.GetReferences().AddReference("reference_threat.usda")
-      boss.GetInherits().AddInherit(inherited.GetPath())
-
-      modes = boss.GetVariantSets().AddVariantSet("threatMode")
-      for name, value in [("calm", 60), ("enraged", 80)]:
-          modes.AddVariant(name)
-          modes.SetVariantSelection(name)
-          with modes.GetVariantEditContext():
-              boss.CreateAttribute("threatLevel", Sdf.ValueTypeNames.Int).Set(value)
-      modes.SetVariantSelection("enraged")
-
-      # TODO: Author a direct local threatLevel of 100 on OpinionColossus.
+      # This boss opens your accumulated city. Author every graded opinion below.
+      # 1. Define /City/CompositionQuarter/OpinionColossus with type Xform.
+      # 2. Set /City/CompositionQuarter/OpinionColossus.threatLevel to 100.
+      # 3. Make submission.usd the strongest source for /City/CompositionQuarter/OpinionColossus.threatLevel.
+      # 4. On /City/CompositionQuarter/OpinionColossus, author variant set 'threatMode' with variants ['calm', 'enraged'] and selection 'enraged'.
+      # 5. Author a reference on /City/CompositionQuarter/OpinionColossus to asset reference_threat.usda.
+      # 6. Compose /City/CompositionQuarter/OpinionColossus from at least 3 prim specs.
+      # 7. Set /City/CompositionQuarter/OpinionColossus metadata documentation to 'Opinion Colossus: Resolve the Strongest Opinion cleared.'.
       stage.GetRootLayer().Save()
     language: python
     validator:
       assertions:
-        - attribute_equals: {path: /City/CompositionQuarter/OpinionColossus.threatLevel, value: 100}
-        - attribute_source: {path: /City/CompositionQuarter/OpinionColossus.threatLevel, layer: submission.usd}
-        - has_inherit: {path: /City/CompositionQuarter/OpinionColossus}
-        - has_variant_set:
-            path: /City/CompositionQuarter/OpinionColossus
-            name: threatMode
-            variants: [calm, enraged]
-            selection: enraged
-        - has_reference: {path: /City/CompositionQuarter/OpinionColossus, asset: reference_threat.usda}
-        - has_payload: {path: /City/CompositionQuarter/OpinionColossus, asset: payload_threat.usda}
-        - has_specializes: {path: /City/CompositionQuarter/OpinionColossus}
-        - prim_stack: {path: /City/CompositionQuarter/OpinionColossus, min: 5}
+      - prim_type: {path: /City/CompositionQuarter/OpinionColossus, value: Xform}
+      - attribute_equals: {path: /City/CompositionQuarter/OpinionColossus.threatLevel, value: 100}
+      - attribute_source: {path: /City/CompositionQuarter/OpinionColossus.threatLevel, layer: submission.usd}
+      - has_variant_set:
+          path: /City/CompositionQuarter/OpinionColossus
+          name: threatMode
+          variants: [calm, enraged]
+          selection: enraged
+      - has_reference: {path: /City/CompositionQuarter/OpinionColossus, asset: reference_threat.usda}
+      - prim_stack: {path: /City/CompositionQuarter/OpinionColossus, min: 3}
+      - metadata_equals: {path: /City/CompositionQuarter/OpinionColossus, key: documentation, value: 'Opinion Colossus: Resolve
+            the Strongest Opinion cleared.'}
     cookbook: docs/composition-basics/strength-ordering.md
     xp: 450
     reward:

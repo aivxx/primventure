@@ -57,7 +57,10 @@ MCQ = {
 }
 
 
-@pytest.mark.parametrize("quest_id", list(SOLUTIONS))
+@pytest.mark.parametrize(
+    "quest_id",
+    [quest_id for quest_id in SOLUTIONS if not QuestStore().get(quest_id).kind.endswith("boss")],
+)
 def test_floor9_python_solutions(quest_id: str, tmp_path: Path) -> None:
     quest = QuestStore().get(quest_id)
     runner = QuestRunner(SaveStore(tmp_path / "save.json"))

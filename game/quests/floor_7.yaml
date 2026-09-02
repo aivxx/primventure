@@ -51,21 +51,22 @@ quests:
     brief: "SYSTEM: The Sentinel asks which forms truly share. Keep BenchB instanceable. Name it in metadata, not by exploding the prototype."
     starter: |
       from pathlib import Path
-      from pxr import Usd, UsdGeom
+      from pxr import Gf, Kind, Sdf, Usd, UsdGeom, UsdLux, UsdShade
 
-      bench = (Path(WORLD_ROOT) / "assets" / "bench.usda").as_posix()
-      stage = Usd.Stage.CreateNew(STAGE_PATH)
-      prim = UsdGeom.Xform.Define(stage, "/City/InstanceWilds/BenchB").GetPrim()
-      prim.GetReferences().AddReference(bench)
-      prim.SetInstanceable(True)
-      # TODO: Set displayName to "Shared Foundry Bench" without clearing instanceable.
+      stage = Usd.Stage.Open(STAGE_PATH)
+      # This boss opens your accumulated city. Author every graded opinion below.
+      # 1. Define /City/InstanceWilds/BenchB with type Xform.
+      # 2. Set /City/InstanceWilds/BenchB instanceable to True.
+      # 3. Author a reference on /City/InstanceWilds/BenchB to asset bench.usda.
+      # 4. Set /City/InstanceWilds/BenchB metadata displayName to 'Shared Foundry Bench'.
       stage.GetRootLayer().Save()
     language: python
     validator:
       assertions:
-        - instanceable: {path: /City/InstanceWilds/BenchB, value: true}
-        - has_reference: {path: /City/InstanceWilds/BenchB, asset: bench.usda}
-        - metadata_equals: {path: /City/InstanceWilds/BenchB, key: displayName, value: "Shared Foundry Bench"}
+      - prim_type: {path: /City/InstanceWilds/BenchB, value: Xform}
+      - instanceable: {path: /City/InstanceWilds/BenchB, value: true}
+      - has_reference: {path: /City/InstanceWilds/BenchB, asset: bench.usda}
+      - metadata_equals: {path: /City/InstanceWilds/BenchB, key: displayName, value: Shared Foundry Bench}
     cookbook: docs/asset-modularity-instancing/authoring-scenegraph-instancing/scenegraph-instancing-intro.md
     xp: 260
     reward: {opinion_points: 1, achievement: "New achievement! You named an instance without de-instancing it."}
@@ -163,24 +164,25 @@ quests:
     brief: "SYSTEM: Crates and benches in one instancer. protoIndices choose. Copies are a moral failing."
     starter: |
       from pathlib import Path
-      from pxr import Gf, Usd, UsdGeom
+      from pxr import Gf, Kind, Sdf, Usd, UsdGeom, UsdLux, UsdShade
 
-      cargo = (Path(WORLD_ROOT) / "assets" / "cargo.usda").as_posix()
-      bench = (Path(WORLD_ROOT) / "assets" / "bench.usda").as_posix()
-      stage = Usd.Stage.CreateNew(STAGE_PATH)
-      scatter = UsdGeom.PointInstancer.Define(stage, "/World/Scatter")
-      crate = stage.DefinePrim("/World/Scatter/Prototypes/Crate", "Xform")
-      crate.GetReferences().AddReference(cargo)
-      seat = stage.DefinePrim("/World/Scatter/Prototypes/Bench", "Xform")
-      seat.GetReferences().AddReference(bench)
-      # TODO: prototypes = [Crate, Bench], protoIndices = [0, 1, 0, 1], four X positions.
+      stage = Usd.Stage.Open(STAGE_PATH)
+      # This boss opens your accumulated city. Author every graded opinion below.
+      # 1. Define /World/Scatter with type PointInstancer.
+      # 2. Define /World/Scatter as a PointInstancer with at least 4 instances and 2 prototypes.
+      # 3. Author a reference on /World/Scatter/Prototypes/Crate to asset cargo.usda.
+      # 4. Author a reference on /World/Scatter/Prototypes/Bench to asset bench.usda.
+      # 5. Set /World/Scatter metadata documentation to 'Cargo Foreman: Two Prototypes, One Instancer cleared.'.
       stage.GetRootLayer().Save()
     language: python
     validator:
       assertions:
-        - point_instancer: {path: /World/Scatter, min_instances: 4, prototype_count: 2}
-        - has_reference: {path: /World/Scatter/Prototypes/Crate, asset: cargo.usda}
-        - has_reference: {path: /World/Scatter/Prototypes/Bench, asset: bench.usda}
+      - prim_type: {path: /World/Scatter, value: PointInstancer}
+      - point_instancer: {path: /World/Scatter, min_instances: 4, prototype_count: 2}
+      - has_reference: {path: /World/Scatter/Prototypes/Crate, asset: cargo.usda}
+      - has_reference: {path: /World/Scatter/Prototypes/Bench, asset: bench.usda}
+      - metadata_equals: {path: /World/Scatter, key: documentation, value: 'Cargo Foreman: Two Prototypes,
+            One Instancer cleared.'}
     cookbook: docs/asset-modularity-instancing/authoring-point-instancing/point-instancing-intro.md
     xp: 320
     reward: {opinion_points: 1, achievement: "New achievement! Two prototypes, zero duplicated warehouses."}
@@ -208,22 +210,27 @@ quests:
     brief: "SYSTEM: City boss. Scenegraph instances for the office benches. Point instancer for the crate field. The warehouse pack can wait; these assets already work."
     starter: |
       from pathlib import Path
-      from pxr import Gf, Usd, UsdGeom
+      from pxr import Gf, Kind, Sdf, Usd, UsdGeom, UsdLux, UsdShade
 
-      cargo = (Path(WORLD_ROOT) / "assets" / "cargo.usda").as_posix()
-      bench = (Path(WORLD_ROOT) / "assets" / "bench.usda").as_posix()
-      stage = Usd.Stage.CreateNew(STAGE_PATH)
-      UsdGeom.Xform.Define(stage, "/City/InstanceWilds/Warehouse")
-      # TODO: Instanceable benches at Office/BenchA and Office/BenchB referencing bench.usda.
-      # TODO: PointInstancer /City/InstanceWilds/Warehouse/CrateField with cargo prototype and 6 instances.
+      stage = Usd.Stage.Open(STAGE_PATH)
+      # This boss opens your accumulated city. Author every graded opinion below.
+      # 1. Define /City/InstanceWilds/Warehouse with type Xform.
+      # 2. Set /City/InstanceWilds/Warehouse/Office/BenchA instanceable to True.
+      # 3. Set /City/InstanceWilds/Warehouse/Office/BenchB instanceable to True.
+      # 4. Author a reference on /City/InstanceWilds/Warehouse/Office/BenchA to asset bench.usda.
+      # 5. Define /City/InstanceWilds/Warehouse/CrateField as a PointInstancer with at least 6 instances and 1 prototypes.
+      # 6. Set /City/InstanceWilds/Warehouse metadata documentation to 'Warehouse District: Mix Both Instancing Types cleared.'.
       stage.GetRootLayer().Save()
     language: python
     validator:
       assertions:
-        - instanceable: {path: /City/InstanceWilds/Warehouse/Office/BenchA, value: true}
-        - instanceable: {path: /City/InstanceWilds/Warehouse/Office/BenchB, value: true}
-        - has_reference: {path: /City/InstanceWilds/Warehouse/Office/BenchA, asset: bench.usda}
-        - point_instancer: {path: /City/InstanceWilds/Warehouse/CrateField, min_instances: 6, prototype_count: 1}
+      - prim_type: {path: /City/InstanceWilds/Warehouse, value: Xform}
+      - instanceable: {path: /City/InstanceWilds/Warehouse/Office/BenchA, value: true}
+      - instanceable: {path: /City/InstanceWilds/Warehouse/Office/BenchB, value: true}
+      - has_reference: {path: /City/InstanceWilds/Warehouse/Office/BenchA, asset: bench.usda}
+      - point_instancer: {path: /City/InstanceWilds/Warehouse/CrateField, min_instances: 6, prototype_count: 1}
+      - metadata_equals: {path: /City/InstanceWilds/Warehouse, key: documentation, value: 'Warehouse District: Mix Both Instancing
+            Types cleared.'}
     cookbook: docs/asset-modularity-instancing/asset-modularity/exercise-assets-overview.md
     xp: 400
     reward: {opinion_points: 2, achievement: "Warehouse recaptured. The crowd pretends they understood prototypes."}
@@ -251,19 +258,28 @@ quests:
     brief: "SYSTEM: A row of benches that is itself instanceable. Nest on purpose. Mirrors inside mirrors, but this time you hold the spec."
     starter: |
       from pathlib import Path
-      from pxr import Usd, UsdGeom
+      from pxr import Gf, Kind, Sdf, Usd, UsdGeom, UsdLux, UsdShade
 
-      row = (Path(WORLD_ROOT) / "assets" / "bench_row.usda").as_posix()
-      stage = Usd.Stage.CreateNew(STAGE_PATH)
-      prim = UsdGeom.Xform.Define(stage, "/City/InstanceWilds/BenchRow").GetPrim()
-      prim.GetReferences().AddReference(row)
-      # TODO: Make BenchRow instanceable.
+      stage = Usd.Stage.Open(STAGE_PATH)
+      # This boss opens your accumulated city. Author every graded opinion below.
+      # 1. Define /City/InstanceWilds/BenchRow with type Xform.
+      # 2. Author a reference on /City/InstanceWilds/BenchRow to asset bench_row.usda.
+      # 3. Set /City/InstanceWilds/BenchRow kind to 'assembly'.
+      # 4. Set /City/InstanceWilds/BenchRow instanceable to True.
+      # 5. Set /City/InstanceWilds/BenchRow metadata documentation to 'Mirror Forge: Nested Instancing cleared.'.
+      # 6. Set stage up axis to Y.
+      # 7. Set stage metersPerUnit to 0.01.
       stage.GetRootLayer().Save()
     language: python
     validator:
       assertions:
-        - has_reference: {path: /City/InstanceWilds/BenchRow, asset: bench_row.usda}
-        - instanceable: {path: /City/InstanceWilds/BenchRow, value: true}
+      - prim_type: {path: /City/InstanceWilds/BenchRow, value: Xform}
+      - has_reference: {path: /City/InstanceWilds/BenchRow, asset: bench_row.usda}
+      - kind_equals: {path: /City/InstanceWilds/BenchRow, value: assembly}
+      - instanceable: {path: /City/InstanceWilds/BenchRow, value: true}
+      - metadata_equals: {path: /City/InstanceWilds/BenchRow, key: documentation, value: 'Mirror Forge: Nested Instancing cleared.'}
+      - {up_axis: Y}
+      - {meters_per_unit: 0.01}
     cookbook: docs/asset-modularity-instancing/authoring-scenegraph-instancing/nested-instancing.md
     xp: 460
     reward:

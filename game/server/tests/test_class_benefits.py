@@ -5,6 +5,7 @@ from fastapi.testclient import TestClient
 from primventure.benefits import (
     home_boss_bonus,
     is_home_floor,
+    preview_boss_debt,
     preview_boss_fee,
     recipe_bonus,
 )
@@ -143,6 +144,41 @@ def test_exchanger_waiver_then_half(tmp_path: Path) -> None:
     assert first.success is False
     assert "waived" in first.system_message.lower()
     assert saves.load().xp == 150
+    blocked = runner.run(quest, RunRequest(answers=[0]))
+    assert "DEBRIEF REQUIRED" in blocked.system_message
+    state = saves.load()
+    assert state.last_fail is not None
+    state.last_fail.debrief_required = False
+    saves.save(state)
     second = runner.run(quest, RunRequest(answers=[0]))
     assert "Boss fee: 12 XP" in second.system_message
     assert saves.load().xp == 138
+
+
+def test_exchanger_waiver_prevents_floor_debt_once(tmp_path: Path) -> None:
+    from primventure.models import Question, RunRequest
+
+    quest = _boss(
+        id="customs-floor",
+        floor=7,
+        kind="city_boss",
+        questions=[Question(prompt="Ready?", choices=["no", "yes"], answer=1)],
+    )
+    state = PlayerState(xp=100, level=2, specialization="Exchanger")
+    assert preview_boss_fee(state, quest) == (0, "waiver")
+    assert preview_boss_debt(state, quest) == 0
+    saves = SaveStore(tmp_path / "save.json")
+    saves.save(state)
+    runner = QuestRunner(saves)
+
+    waived = runner.run(quest, RunRequest(answers=[0]))
+    state = saves.load()
+    assert "waived" in waived.system_message.lower()
+    assert state.boss_debts == {}
+    assert state.last_fail is not None
+    state.last_fail.debrief_required = False
+    saves.save(state)
+
+    charged_to_reward = runner.run(quest, RunRequest(answers=[0]))
+    assert "Boss debt: 10 XP" in charged_to_reward.system_message
+    assert saves.load().boss_debts == {"customs-floor": 10}

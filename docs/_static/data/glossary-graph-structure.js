@@ -83,6 +83,7 @@ const graphStructure = {
         { id: 'Stage Traversal', label: 'Stage Traversal', category: 'stage-population' },
         { id: 'Subcomponent', label: 'Subcomponent', category: 'multi-domain-schemas' },
         { id: 'Sublayer', label: 'Sublayer', category: 'composition' },
+        { id: 'Target', label: 'Target', category: 'path-grammar' },
         { id: 'Time Code', label: 'Time Code', category: 'value-resolution' },
         { id: 'Time Sample', label: 'Time Sample', category: 'value-resolution' },
         { id: 'Value Clips', label: 'Value Clips', category: 'value-resolution' },
@@ -198,7 +199,8 @@ const graphStructure = {
         { source: 'Path', target: 'Prim', label: 'locates' },
         { source: 'Path', target: 'Property', label: 'locates' },
         { source: 'Path', target: 'Path Translation', label: 'may undergo' },
-        { source: 'Relationship', target: 'Path', label: 'targets' },
+        { source: 'Relationship', target: 'Target', label: 'has' },
+        { source: 'Target', target: 'Path', label: 'is a' },
         { source: 'Relationship', target: 'Property', label: 'type of' },
         { source: 'Attribute', target: 'Property', label: 'type of' },
 

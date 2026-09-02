@@ -223,6 +223,36 @@ def buy_hint(quest_id: str) -> dict[str, Any]:
     }
 
 
+@app.post("/api/quests/{quest_id}/debrief")
+def review_boss_debrief(quest_id: str) -> dict[str, Any]:
+    quests.refresh()
+    try:
+        quest = quests.get(quest_id)
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    state = saves.load()
+    fail = state.last_fail
+    if (
+        not quest.kind.endswith("boss")
+        or fail is None
+        or fail.quest_id != quest.id
+        or quest.id in state.completed_quests
+    ):
+        raise HTTPException(status_code=409, detail="No boss debrief is waiting here.")
+    checks = list(fail.failed_checks) or ["Recheck the room's validation checklist."]
+    fail.debrief_required = False
+    state.last_fail = fail
+    saves.save(state)
+    return {
+        "checks": checks,
+        "message": (
+            "These are the requirements that failed. A Prim Census can inspect "
+            "the values your stage actually composed."
+        ),
+        "state": get_state(),
+    }
+
+
 @app.post("/api/quests/{quest_id}/census")
 def read_prim_census(quest_id: str) -> dict[str, Any]:
     quests.refresh()

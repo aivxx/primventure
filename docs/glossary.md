@@ -625,6 +625,15 @@ Sublayer
     **Also Known As:** *sublayer arc, subLayer*  
     **Further Reading**: [Sublayers](<./creating-composition-arcs/sublayers/index.md>), [SubLayers -- OpenUSD.org](<inv:usd:std#glossary:sublayers>)
 
+Target
+
+    A target is a single path stored by a relationship, identifying an object that the relationship points at.
+
+    A relationship's value is an ordered list of paths, and each path in that list is one of its targets. The prim holding the relationship is where the link starts and the targets are where it lands, which lets a prim point at objects anywhere in the scene rather than only at its own children. Because a target is a path rather than a string, USD applies path translation to keep it valid as composition brings the target into a new namespace, supports list editing so stronger layers can add or remove individual targets, and can traverse targets to discover what a prim depends on.
+
+    **Also Known As:** *relationship target, target path*
+    **Further Reading**: [Relationships](<./stage-setting/properties/relationships.md>), [Relationship -- OpenUSD.org](<inv:usd:std#glossary:relationship>)
+
 Time Code
 
     A time code represents a point in time for querying or authoring time-varying data in USD.

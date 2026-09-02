@@ -68,16 +68,23 @@ quests:
     stats: {resolve: 2, insight: 1}
     brief: "SYSTEM: The Gatekeeper accepts only a stage with a clear entrance."
     starter: |
-      from pxr import Usd, UsdGeom
+      from pathlib import Path
+      from pxr import Gf, Kind, Sdf, Usd, UsdGeom, UsdLux, UsdShade
+
       stage = Usd.Stage.Open(STAGE_PATH)
-      city = stage.GetPrimAtPath("/City")
-      # Set /City as default prim and choose Y as the up axis.
+      # This boss opens your accumulated city. Author every graded opinion below.
+      # 1. Define /City with type Xform.
+      # 2. Set the stage default prim to /City.
+      # 3. Set stage up axis to Y.
+      # 4. Keep /City.cityName set to 'Primventure'.
       stage.GetRootLayer().Save()
     language: python
     validator:
       assertions:
-        - default_prim: /City
-        - up_axis: Y
+      - prim_type: {path: /City, value: Xform}
+      - {default_prim: /City}
+      - {up_axis: Y}
+      - attribute_equals: {path: /City.cityName, value: Primventure}
     cookbook: docs/stage-setting/stage.md
     xp: 100
     reward: Threshold Transit Pass
