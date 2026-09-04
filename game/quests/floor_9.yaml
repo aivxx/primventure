@@ -448,9 +448,8 @@ quests:
     cookbook: docs/asset-structure/asset-structure-principles/index.md
     xp: 800
     reward:
-      opinion_points: 5
+      opinion_points: 7
       achievement: "Colosseum clear. Contestant USD-01 remains underqualified and employed."
-      inventory: {prim_censuses: 2}
     world_target: /City
     recipes: [Default Prim, Instancing, Kind]
     questions:

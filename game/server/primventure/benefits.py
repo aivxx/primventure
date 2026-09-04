@@ -25,9 +25,9 @@ HOME_NAMES: dict[str, tuple[str, ...]] = {
 }
 
 STARTER_KITS: dict[str, dict[str, int]] = {
-    "Compositor": {"prim_censuses": 1},
+    "Compositor": {},
     "Aggregator": {"hint_tokens": 1},
-    "Exchanger": {"hint_tokens": 1, "prim_censuses": 1},
+    "Exchanger": {"hint_tokens": 1},
 }
 
 AFFINITY_MARKERS: dict[str, tuple[str, ...]] = {
@@ -48,19 +48,21 @@ AFFINITY_MARKERS: dict[str, tuple[str, ...]] = {
 }
 
 RECIPE_DRIP_CAP = 5
+HINT_CAP = 2
+USD_CHECK_CAP = 2
+AGGREGATOR_HINT_CAP = 3
 
 CLASS_CATALOG: list[dict[str, Any]] = [
     {
         "id": "Compositor",
         "title": "Compositor",
         "blurb": "Layers, composition arcs, and competing opinions resolving into one stage.",
-        "kit": "Declare and receive 1 Prim Census.",
+        "kit": "Declare and receive one free USD Check on each home floor.",
         "perks": [
             "Home: Opinion Quarter and Composition Highlands.",
-            "Census restocks cost 1 OP.",
             "City bosses +1 OP, floor bosses +2 OP on home floors.",
             "Home-floor boss misses charge half XP.",
-            "One free census after a fail per home floor, even at zero stock.",
+            "One free USD Check after a fail per home floor.",
             "Affinity recipes pay +1 OP, up to 5 for the crawl.",
         ],
     },
@@ -71,7 +73,7 @@ CLASS_CATALOG: list[dict[str, Any]] = [
         "kit": "Declare and receive 1 Hint Token.",
         "perks": [
             "Home: Hierarchy Foundry and Prototype Wilds.",
-            "Hint restocks grant 3 tokens instead of 2.",
+            "Assist restocks fill Hint Tokens to 3.",
             "City bosses +1 OP, floor bosses +2 OP on home floors.",
             "Home-floor boss misses charge half XP.",
             "One free Hint per home floor, even at zero stock.",
@@ -82,10 +84,10 @@ CLASS_CATALOG: list[dict[str, Any]] = [
         "id": "Exchanger",
         "title": "Exchanger",
         "blurb": "Moving data between OpenUSD and other tools with honest units and validation.",
-        "kit": "Declare and receive 1 Hint Token and 1 Prim Census.",
+        "kit": "Declare and receive 1 Hint Token.",
         "perks": [
             "Home: Customs Terminal.",
-            "Hint and census restocks both cost 1 OP.",
+            "Assist restocks cost 1 OP.",
             "Neighborhood bosses +1 OP, city bosses +2 OP on Customs Terminal.",
             "Home-floor boss misses charge half XP.",
             "The first Customs Terminal boss miss costs 0 XP.",
@@ -142,34 +144,38 @@ def compose_title(state: PlayerState) -> None:
     state.title = f"{state.specialization} · {base}" if state.specialization else base
 
 
+def assist_caps(state: PlayerState) -> dict[str, int]:
+    hints = AGGREGATOR_HINT_CAP if state.specialization == "Aggregator" else HINT_CAP
+    return {"hint_tokens": hints, "usd_checks": USD_CHECK_CAP}
+
+
+def assists_full(state: PlayerState) -> bool:
+    return all(state.inventory.get(name, 0) >= cap for name, cap in assist_caps(state).items())
+
+
+def restock_assists(state: PlayerState) -> bool:
+    """Fill Hint Tokens and USD Checks up to cap. False if both were already full."""
+    if assists_full(state):
+        return False
+    for name, cap in assist_caps(state).items():
+        state.inventory[name] = max(state.inventory.get(name, 0), cap)
+    return True
+
+
 def priced_shop(catalog: dict[str, dict[str, Any]], state: PlayerState) -> dict[str, dict[str, Any]]:
     shop = {key: dict(item) for key, item in catalog.items()}
-    for item in shop.values():
-        if "inventory" in item:
-            item["inventory"] = dict(item["inventory"])
+    caps = assist_caps(state)
     spec = state.specialization
-    if spec == "Compositor" and "prim_census" in shop:
-        shop["prim_census"]["cost"] = 1
-        shop["prim_census"]["description"] = (
-            "Restocks two Prim Censuses. After a failed run, a census lists the prims "
-            "USD actually composed and the real value behind every failing check. "
-            "Compositor rate: 1 OP."
-        )
-    if spec == "Aggregator" and "hint_refill" in shop:
-        shop["hint_refill"]["inventory"] = {"hint_tokens": 3}
+    if "hint_refill" in shop:
+        shop["hint_refill"]["caps"] = caps
+        shop["hint_refill"]["full"] = assists_full(state)
         shop["hint_refill"]["description"] = (
-            "Restocks three Hint Tokens. Aggregator bulk rate."
+            f"Fills Hint Tokens to {caps['hint_tokens']} and USD Checks to "
+            f"{caps['usd_checks']}."
+            + (" Aggregator bulk rate." if spec == "Aggregator" else "")
         )
-    if spec == "Exchanger":
-        if "hint_refill" in shop:
+        if spec == "Exchanger":
             shop["hint_refill"]["cost"] = 1
-        if "prim_census" in shop:
-            shop["prim_census"]["cost"] = 1
-            shop["prim_census"]["description"] = (
-                "Restocks two Prim Censuses. After a failed run, a census lists the prims "
-                "USD actually composed and the real value behind every failing check. "
-                "Exchanger rate: 1 OP."
-            )
     return shop
 
 
@@ -182,7 +188,7 @@ def consume_free_assist(state: PlayerState, quest: Quest, kind: str) -> bool:
     spec = state.specialization
     if kind == "hint" and spec != "Aggregator":
         return False
-    if kind == "census" and spec != "Compositor":
+    if kind == "check" and spec != "Compositor":
         return False
     if not is_home_floor(spec, quest.floor):
         return False
@@ -197,7 +203,7 @@ def free_assist_available(state: PlayerState, quest: Quest, kind: str) -> bool:
     spec = state.specialization
     if kind == "hint" and spec != "Aggregator":
         return False
-    if kind == "census" and spec != "Compositor":
+    if kind == "check" and spec != "Compositor":
         return False
     if not is_home_floor(spec, quest.floor):
         return False

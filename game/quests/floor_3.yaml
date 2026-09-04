@@ -7,7 +7,7 @@ quests:
     floor_name: Opinion Quarter
     neighborhood: Layer Lane
     kind: room
-    prerequisites: [f2_schema_warden]
+    prerequisites: [f2_blueprint_marshal]
     level_required: 6
     exam_tasks: [create_layer, add_sublayer, inspect_layer_stack]
     stats: {craft: 2, lore: 2}
@@ -527,9 +527,8 @@ quests:
     cookbook: docs/composition-basics/strength-ordering.md
     xp: 450
     reward:
-      opinion_points: 3
+      opinion_points: 4
       achievement: "Floor clear! You survived LIVRPS. The weaker opinions request a recount."
-      inventory: {prim_censuses: 1}
     world_target: /City/CompositionQuarter/OpinionColossus
     recipes: [LIVERPS Strength Ordering, Composition, Index]
     questions:

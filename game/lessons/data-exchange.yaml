@@ -88,14 +88,27 @@ lessons:
 
           assert prim.GetCustomDataByKey("sourceFormat") == "OBJ"
           stage.GetRootLayer().Save()
-      - kind: pitfall
-        heading: Where customs rejects the crate
+      - kind: work_order
+        heading: Stamp the source format and intake note on the kiosk
         system: >-
           "Universal" stops well short of "telepathic." OpenUSD still requires you to explain what
           the foreign numbers mean.
         body: |
-          A successful exchange reaches past a successful parse. The result must preserve relevant
-          meaning, declare assumptions, and remain useful to its intended consumers.
+          A crate of foreign geometry has cleared the dock, and the Intake Platform has already
+          built its stand-in: one Xform at /City/ExchangeTerminal/ImportedKiosk, alone on an
+          otherwise empty stage. The kiosk has a path and a type and no metadata of any kind.
+
+          Nothing on that prim records where the geometry came from. Its path and type place a kiosk
+          in the exchange terminal; they do not say the contents arrived as OBJ text or that intake
+          normalized them on the way in. The only remaining trace of the source is the filename on
+          the crate, which any copy or rename discards.
+
+          Author two opinions on the kiosk: a customData entry whose sourceFormat key reads OBJ, and
+          a documentation string matching the intake note exactly. customData is one
+          dictionary-valued field, so writing the whole dictionary replaces every entry already
+          there, while SetCustomDataByKey edits one key and leaves its siblings intact. documentation
+          is free-form, so a paraphrase or a dropped period is still valid metadata and no longer the
+          note intake actually recorded.
         points:
           - Parse OBJ text directly in builds where no OBJ file format plugin is installed.
           - Author provenance metadata on the asset interface, where it survives copying and renaming.
@@ -208,14 +221,28 @@ lessons:
           mesh.CreateSubdivisionSchemeAttr(UsdGeom.Tokens.none)
           if source_normals:
               mesh.CreateNormalsAttr(source_normals)
-      - kind: pitfall
-        heading: Where extraction drops geometry
+      - kind: work_order
+        heading: Author the parsed cube vertices as a typed mesh
         system: >-
-          Off-by-one topology produces modern sculpture. The validator remains stubbornly
-          provincial about it.
+          Off-by-one topology points faces at the wrong vertices. Convert the source indices
+          before authoring them.
         body: |
-          Geometry attributes are interdependent. Valid-looking arrays can still describe wrong or
-          unreadable faces when indexing, ownership, or ordering is mishandled.
+          shapes.obj is open on the dock and the reading is already done: every vertex record turned
+          into a Gf.Vec3f, the pass halted at the first object boundary, the first eight positions
+          waiting in cube_points. The stage they are bound for holds a root Xform at /World and
+          nothing beneath it.
+
+          Those eight positions exist only as a Python list. No prim in the terminal describes the
+          crate's geometry, and this build has no OBJ file format plugin, so Usd.Stage.Open cannot
+          read shapes.obj and nothing else will turn that text into scene description. The file also
+          holds more than one object behind a single global vertex list, which is why the pass halts
+          where it does.
+
+          Define a UsdGeom.Mesh at /World/Cube and set its points to cube_points. That points array
+          belongs to this mesh alone, which is the detail OBJ makes easy to miss: the file numbers
+          vertices globally across every object it contains, so an index copied from the source
+          addresses that global list rather than the eight positions now on this prim, and OBJ
+          writes those indices one-based while a mesh indexes its points from zero.
         points:
           - OBJ text indices are one-based; UsdGeom.Mesh indices are zero-based.
           - Global OBJ vertices may require remapping into each mesh's local points array.
@@ -320,14 +347,27 @@ lessons:
               Gf.Vec3f(1, 1, 1),
           ])
           stage.GetRootLayer().Save()
-      - kind: pitfall
-        heading: Where completeness becomes fiction
+      - kind: work_order
+        heading: Bring the published cube up to the extraction contract
         system: >-
           An incorrect extent is worse than no manifest. It sends the renderer searching the wrong
           warehouse while the asset remains exactly where you left it.
         body: |
-          Completeness is measured against the source and the extraction contract. Authoring an
-          attribute name is insufficient when its value is stale, partial, or semantically wrong.
+          The Dock Overseer inspects the city as it currently stands rather than a fresh stage.
+          /World/Cube is already in it, published when the cube came off the crate, and it carries
+          positions and nothing else: no bounds, no note recording that it passed inspection.
+
+          Those positions are the coordinates parsed straight out of shapes.obj, so they describe
+          the crate as it arrived rather than the eight unit corners the extraction contract states.
+          With no extent authored, nothing on the prim declares the bounds it occupies, and every
+          consumer is left to scan the full point array or assume a volume for it.
+
+          Type the prim as Mesh, set its points to the eight unit corners in the order the contract
+          lists, author the matching extent from (-1, -1, -1) to (1, 1, 1), and record the clearance
+          note in documentation. Extent is exactly two vectors, minimum then maximum, in the mesh's
+          local space before any ancestor transform applies, and it is the easiest part to leave
+          stale: a pair carried over from the earlier coordinates describes a volume the geometry no
+          longer occupies while every position on the prim is correct.
         points:
           - Extent is measured in local space, before ancestor transforms apply.
           - A stale extent can cause incorrect culling and bounds even when points are correct.
@@ -431,14 +471,28 @@ lessons:
           )
           kiosk.AddTranslateOp().Set(Gf.Vec3d(10, 0, -4))
           stage.GetRootLayer().Save()
-      - kind: pitfall
-        heading: Where the switchyard derails
+      - kind: work_order
+        heading: Convert the shipment to Y-up and park the kiosk
         system: >-
           A changed label leaves the shipment exactly where it stood, though the accident now
           conforms to paperwork.
         body: |
-          Hierarchy and coordinate conversions affect paths and spatial meaning. Apply them in a
-          deliberate order and validate the composed result.
+          The Axis Switchyard has the shipment on a stage that declares Z as the up axis, with one
+          Xform at /City/ExchangeTerminal/ImportedKiosk and untyped ancestors above it where Define
+          created the intervening prims. The kiosk carries no local transformation at all.
+
+          The line the switchyard feeds runs Y-up, and this shipment arrived flat and Z-up exactly
+          as it came off the dock. Sitting at the origin with no transform, the kiosk overlaps
+          whatever the exchange terminal already occupies instead of standing in the space kept for
+          it at (10, 0, -4).
+
+          Declare Y with SetStageUpAxis and add one translate op placing the kiosk at (10, 0, -4).
+          upAxis is a declaration: writing the Y token states which axis consumers should treat as
+          vertical while every authored point, extent, and translation keeps the number it already
+          had, so a genuinely Z-up shipment relabeled this way is described differently rather than
+          moved. A real conversion rewrites the spatial data or introduces a conversion transform
+          first. Local transformations are an ordered list, so AddTranslateOp appends to
+          xformOpOrder instead of replacing an existing op.
         points:
           - Capture root children before defining the destination root or you may try to parent /World beneath itself.
           - Check ApplyEdits because namespace edits can fail when composition prevents a safe move.
@@ -535,14 +589,29 @@ lessons:
           - Pruning can improve client relevance but permanently removes data unless it is preserved elsewhere.
           - Added data and client-specific overrides can be separate transformation steps.
           - Stable, reusable steps make behavior consistent across source-format exporters.
-      - kind: pitfall
-        heading: Where the gauge explodes
+      - kind: work_order
+        heading: Declare centimeters and leave the coordinates alone
         system: >-
           Declaring centimeters over inch-valued coordinates leaves the error intact and
           professionally documented.
         body: |
-          Unit metadata and numeric conversion must agree. Validate both the declaration and a
-          known physical dimension after transformation.
+          The Meter Gauge works on the city the terminal has been assembling. It declares Y as the
+          up axis and holds coordinates from every room that has published into it, the kiosk
+          translation at (10, 0, -4) among them. There is no marker prim at
+          /City/ExchangeTerminal/UnitMarker yet.
+
+          The crate came in labelled inches, and OBJ itself carries no linear unit, so nothing on
+          the city states what one scene unit is worth. Every published coordinate is a bare number,
+          and a consumer reading the terminal has to infer the scale from context or fall back on an
+          assumption this city never made explicit.
+
+          Define the marker Xform, declare metersPerUnit as 0.01 for centimeters, record the
+          clearance note, and change nothing else. metersPerUnit states how many meters one scene
+          unit represents and converts nothing, so inch-valued numbers under a 0.01 declaration are
+          described as centimeters rather than turned into them. Scale values exactly once, then
+          declare the unit that honestly describes what ended up in the file. Up axis and linear
+          units are independent conventions, and a units pass is where the axis tends to get
+          overwritten on the way past.
         points:
           - SetStageMetersPerUnit writes metadata, while numeric scaling is a separate edit to the authored values.
           - Leave upAxis as authored while normalizing units unless an axis conversion is also required.
@@ -641,14 +710,26 @@ lessons:
           - Reopen file-backed output before final validation to catch missing saves and serialization differences.
           - Separate general USD compliance rules from organization-specific policy rules.
           - Treat automatic fixes as explicit transformation steps when they alter delivered content.
-      - kind: pitfall
-        heading: Where validation becomes theater
+      - kind: work_order
+        heading: Author the three contract terms the concourse requires
         system: >-
           Checking only that the file exists is attendance, and attendance has never cleared a
           crate.
         body: |
-          A narrow happy-path check can pass while the delivered asset violates conventions or loses
-          data. Validation must inspect composed values and meaningful relationships among them.
+          The crate on the Validation Concourse holds a stage with a single Xform at /World and no
+          stage metadata on it. It opens without complaint and parses cleanly, and it states nothing
+          at all about how the asset it contains is meant to be used.
+
+          None of the three terms the concourse contract requires are present. With no default prim,
+          a reference that names no prim path has nothing to resolve to. With no up axis declared, a
+          consumer has no way to know which direction is vertical. With no kind on /World, no tool
+          can treat the result as a self-contained model.
+
+          Name /World as the default prim, declare Y as the up axis, and set the component kind on
+          /World. Each term is legal to omit, which is why an asset can be valid USD and still
+          unusable to the pipeline receiving it, and why these assumptions are worth encoding as
+          usdchecker-style rules. A default prim also has to be a root prim, so a nested prim cannot
+          serve as the asset interface however central it looks in the scenegraph.
         points:
           - Validate the saved file itself whenever that file is the delivered product.
           - SetDefaultPrim expects a root Usd.Prim, not a path string.
@@ -759,14 +840,28 @@ lessons:
           assert Usd.ModelAPI(root).GetKind() == Kind.Tokens.component
           assert root.GetCustomDataByKey("sourceFormat") == "OBJ"
           assert cube and len(cube.GetPointsAttr().Get()) == 8
-      - kind: pitfall
-        heading: Where the Engine finds discrepancies
+      - kind: work_order
+        heading: Deliver the whole intake manifest on one stage
         system: >-
-          The machine does not care that five of six checks passed. Neither does the city boss, the
-          sponsor, or the door.
+          The delivery contract is one complete manifest. Each required opinion belongs on the
+          same saved stage.
         body: |
-          End-to-end failures often come from correct individual calls applied to the wrong object,
-          omitted from the saved layer, or paired with inconsistent conventions.
+          The Customs Engine takes delivery of the whole city as one asset: /World and everything
+          published beneath it, including the cube that came off the crate and the kiosk stamped
+          back on the intake platform.
+
+          The intake manifest is spread across the terminal in pieces, and no single stage carries
+          all of it. The cube's points are still the coordinates parsed out of shapes.obj rather
+          than the eight unit corners, and the source stamp sits on the intake kiosk rather than on
+          /World, which is the prim a reference resolves to when it names no prim path.
+
+          Author the complete manifest here: /World/Cube typed as Mesh with the eight unit-cube
+          corners in order, /World as the default prim carrying the component kind and a customData
+          entry whose sourceFormat reads OBJ, Y as the up axis, metersPerUnit 0.01, and the
+          clearance note on the cube. Then save, because the file leaving the terminal is the asset.
+          Provenance belongs on /World, setting one customData key preserves sibling entries where
+          writing the dictionary replaces them, declaring metersPerUnit leaves the corner values as
+          listed, and the root prim has to exist before it can be named the default prim.
         points:
           - Stamp provenance on the root prim, which is the stable asset interface downstream tools find first.
           - Remember that the parsed OBJ coordinates keep their values when metersPerUnit is declared.

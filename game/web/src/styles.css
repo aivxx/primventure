@@ -187,23 +187,12 @@ main { display:grid; grid-template-columns: 250px minmax(420px, 1fr) 450px; gap:
 .cookbook-link:hover{background:#3a3016;border-color:var(--yellow);animation:none}
 @keyframes lesson-breathe{0%,100%{border-color:#7a6320;box-shadow:0 0 0 rgba(255,203,46,0)}50%{border-color:var(--yellow);box-shadow:0 0 13px rgba(255,203,46,.32)}}
 .assist-result{position:relative;margin:7px;padding:10px 28px 10px 11px;border:1px solid #634887;border-left:3px solid var(--purple);background:#1b1521}
-.assist-result.census{border-color:#4b745f;border-left-color:var(--green);background:#142019}
-.assist-result>span{color:#c798ff;font-size:7px;font-weight:700;letter-spacing:1.5px}.assist-result.census>span{color:var(--green)}
+.assist-result.usd-check{border-color:#4b745f;border-left-color:var(--green);background:#142019}
+.assist-result>span{color:#c798ff;font-size:7px;font-weight:700;letter-spacing:1.5px}.assist-result.usd-check>span{color:var(--green)}
 .assist-result p{margin:5px 0 0;color:#d7cedd;font-size:8px;line-height:1.55;white-space:pre-wrap;word-break:break-word}
-/* The census is a stage readout, so it scrolls inside the rail rather than
-   pushing the rest of the backpack off screen. */
-.census{margin-top:6px;max-height:280px;overflow:auto}
-.census-findings{margin:0 0 7px;padding:0;list-style:none;display:grid;gap:6px}
-.census-findings li{display:grid;gap:2px;padding:6px 7px;border-left:2px solid var(--red);background:#1d1418}
-.census-findings em{color:#ff8d9c;font-style:normal;font-size:7.5px;font-weight:700;letter-spacing:.6px;word-break:break-all}
-.census-findings span{color:#e4dae0;font-size:8px;line-height:1.5}
-.census-stage{padding:5px 7px;border:1px dashed #3d5c4c;color:#9fc4ae;font-size:7.5px;line-height:1.5;word-break:break-word}
-.census-tree{margin:6px 0 0;padding:0;list-style:none;display:grid;gap:5px}
-.census-tree li{display:grid;gap:1px;padding:4px 6px;border-left:1px solid #3d5c4c;background:#111a15}
-.census-tree b{color:var(--green);font-size:7.5px;letter-spacing:.5px}
-.census-tree span{color:#d7cedd;font-size:8px;word-break:break-all}
-.census-tree small{color:#8fae9c;font-size:7px;letter-spacing:.4px}
-.census-tree i{color:#7f9a8b;font-size:7px;font-style:normal;word-break:break-all}
+.usd-check{margin-top:7px}
+.usd-check>small{display:block;margin-bottom:6px;color:#8fae9c;font-size:6.5px;letter-spacing:1px}
+.usd-check pre{max-height:320px;margin:0;padding:9px;overflow:auto;border:1px dashed #3d5c4c;background:#0d1511;color:#c9ead6;font:7.5px/1.5 "IBM Plex Mono";white-space:pre;tab-size:2}
 .assist-result button{position:absolute;right:5px;top:5px;padding:2px;border:0;background:transparent;color:#8e8393;cursor:pointer}.assist-result button svg{width:12px;height:12px}
 .lesson-overlay{position:fixed;inset:0;z-index:80;display:flex;justify-content:flex-end}
 .lesson-backdrop{position:absolute;inset:0;border:0;background:rgba(7,6,9,.42);backdrop-filter:blur(2px);cursor:pointer}
@@ -238,14 +227,14 @@ main { display:grid; grid-template-columns: 250px minmax(420px, 1fr) 450px; gap:
 .lesson-beat .beat-index{font:900 italic 28px/1 "Barlow Condensed";color:#4e4753}
 .beat-kind{display:inline-block;padding:3px 7px;border:1px solid #514858;color:#b3aabd;font-size:7px;font-weight:700;letter-spacing:1.6px;text-transform:uppercase}
 .beat-kind.concept{border-color:#6f4b99;color:#c79bff}.beat-kind.api{border-color:#2f865d;color:var(--green)}
-.beat-kind.pitfall{border-color:#8f3446;color:#ff8593}.beat-kind.recap{border-color:#7a6320;color:var(--yellow)}
+.beat-kind.work_order{border-color:#8f3446;color:#ff8593}.beat-kind.recap{border-color:#7a6320;color:var(--yellow)}
 .lesson-beat h3{margin:6px 0 0;font:800 22px/1.15 "Barlow Condensed";color:var(--cream)}
 .lesson-beat>p{max-width:64ch;margin:11px 0 0;color:#ded7e3;font-size:12.5px;line-height:1.75}
 .lesson-beat>ul{max-width:64ch;margin:12px 0 0;padding:0;list-style:none}
 .lesson-beat>ul>li{position:relative;margin-top:7px;padding-left:16px;color:#c8c0d1;font-size:12px;line-height:1.65}
 .lesson-beat>ul>li::before{content:"";position:absolute;left:2px;top:7px;width:5px;height:5px;transform:rotate(45deg);background:var(--purple)}
 .lesson-beat>pre{margin:14px 0 0;padding:15px 17px;overflow:auto;border:1px solid #3b3540;border-left:3px solid var(--green);background:#0b0a0d;color:#cdf6e0;font:11.5px/1.7 "IBM Plex Mono"}
-.lesson-beat.pitfall>pre{border-left-color:var(--red)}
+.lesson-beat.work_order>pre{border-left-color:var(--red)}
 
 .lesson-apply{margin-top:22px;padding:17px;border:1px solid #66531b;background:linear-gradient(140deg,rgba(255,203,46,.12),#1d1811 60%)}
 .apply-tag{display:block;margin-bottom:11px;color:var(--yellow);font-size:8px;font-weight:700;letter-spacing:2.4px}
@@ -285,6 +274,18 @@ main { display:grid; grid-template-columns: 250px minmax(420px, 1fr) 450px; gap:
 .run-button.boss{background:var(--red);color:#150e10;box-shadow:inset 0 -4px 0 rgba(0,0,0,.28)}
 .run-button.boss:hover:not(:disabled){background:#f2566a}
 .editor-toolbar{height:39px;flex:none;display:flex;align-items:center;justify-content:space-between;padding:0 10px;border-bottom:1px solid #38323c;font-size:8px;font-weight:700}.editor-toolbar>span{display:flex;gap:6px;align-items:center}.editor-toolbar button{background:transparent;color:#77717c;border:0;border-left:1px solid #39333d;padding:8px;cursor:pointer;font-size:8px}.editor-toolbar button.active{color:var(--yellow)}
+.briefing-slate{flex:1;min-height:0;display:flex;flex-direction:column;overflow-y:auto;padding:16px;gap:14px;background:#141217}
+.briefing-slate>header{display:flex;gap:10px;align-items:flex-start;padding-bottom:13px;border-bottom:1px solid #38323c}
+.briefing-slate>header svg{flex:none;margin-top:1px;color:var(--yellow)}
+.briefing-slate>header strong{display:block;color:var(--cream);font-size:10px;letter-spacing:.02em}
+.briefing-slate>header p{margin:5px 0 0;color:#a49b86;font-size:8px;line-height:1.6}
+.briefing-slate .briefing-questions{flex:1}
+.briefing-slate .boss-question{margin-top:0;margin-bottom:14px;font-size:9px}
+.briefing-slate .boss-question input,.briefing-slate .boss-question select{background:#1c1920;font-size:9px;padding:9px}
+.briefing-slate>footer{flex:none;display:flex;align-items:center;justify-content:space-between;gap:10px;padding-top:11px;border-top:1px solid #38323c;color:#77717c;font-size:8px;font-weight:700}
+.briefing-slate>footer .ready{color:var(--yellow)}
+.briefing-slate .slate-lesson{display:flex;align-items:center;gap:6px;background:transparent;border:1px solid #514758;color:#d7cdaa;padding:7px 10px;cursor:pointer;font:700 8px "IBM Plex Mono"}
+.briefing-slate .slate-lesson:hover{border-color:var(--yellow);color:var(--yellow)}
 .run-button{margin:12px;border:0;background:var(--yellow);color:#12100a;min-height:49px;font-weight:800;font-size:11px;display:flex;justify-content:center;align-items:center;gap:9px;cursor:pointer;clip-path:polygon(2% 0,100% 0,98% 100%,0 100%);box-shadow:inset 0 -4px 0 rgba(0,0,0,.22)}.run-button:hover{background:#ffe069}.run-button:disabled{filter:grayscale(.7);cursor:not-allowed}.run-button.is-running{cursor:wait}.run-button svg{width:17px}.run-button kbd{position:absolute;right:27px;font-size:8px;color:#75601c}.spin{animation:spin 1s linear infinite}
 .usda-panel{flex:1;min-height:0;display:flex;flex-direction:column;overflow:hidden}
 .usda-heading{height:42px;flex:none;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #38323c;padding-left:12px}

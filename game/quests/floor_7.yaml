@@ -283,9 +283,8 @@ quests:
     cookbook: docs/asset-modularity-instancing/authoring-scenegraph-instancing/nested-instancing.md
     xp: 460
     reward:
-      opinion_points: 3
+      opinion_points: 4
       achievement: "Floor clear! Nested instancing survived the Mirror Forge."
-      inventory: {prim_censuses: 1}
     world_target: /City/InstanceWilds/BenchRow
     recipes: [Instancing]
     questions:

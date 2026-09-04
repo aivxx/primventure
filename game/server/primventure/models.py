@@ -6,7 +6,7 @@ from pydantic import BaseModel, Field
 
 
 QuestKind = Literal["orientation", "room", "neighborhood_boss", "city_boss", "floor_boss"]
-LessonBeatKind = Literal["concept", "api", "pitfall", "recap"]
+LessonBeatKind = Literal["concept", "api", "work_order", "recap"]
 
 
 class Question(BaseModel):
@@ -93,7 +93,7 @@ class CheckObservation(BaseModel):
 
 
 class LastFail(BaseModel):
-    """The stage a failed run left behind, so a Prim Census can report it."""
+    """The failed run retained for debriefs, contextual hints, and USD Check."""
     quest_id: str
     # A stage that composed zero prims is still a readable census, and the most
     # useful one a beginner gets, so arming tracks the stage and not the prims.
@@ -102,13 +102,16 @@ class LastFail(BaseModel):
     prims: list[CensusNode] = Field(default_factory=list)
     observations: list[CheckObservation] = Field(default_factory=list)
     truncated: bool = False
-    # A census is bought once per failed run and stays readable after that, so
-    # re-reading your own stage never costs a second charge.
+    # A USD Check is bought once per failed run and stays readable after that,
+    # so re-reading the same reference never costs a second OP.
     paid: bool = False
     # Boss recovery is deliberately lighter than a Census: it names the failed
     # checklist items, but does not expose the composed values observed.
     debrief_required: bool = False
     failed_checks: list[str] = Field(default_factory=list)
+    # Indices into the room's assertions, so a hint can name the exact demand
+    # that missed and the call that authors it.
+    failed_assertions: list[int] = Field(default_factory=list)
 
 
 class RunResponse(BaseModel):
@@ -140,9 +143,9 @@ class PlayerState(BaseModel):
         }
     )
     inventory: dict[str, int] = Field(
-        default_factory=lambda: {"hint_tokens": 2, "prim_censuses": 1}
+        default_factory=lambda: {"hint_tokens": 2, "usd_checks": 2}
     )
-    # Trophy units already traded at the Curio Desk. Held separately from
+    # Trophy units already cashed in for Opinion Points. Held separately from
     # `inventory` so a trade never erases the record of a cleared room.
     stamped_items: dict[str, int] = Field(default_factory=dict)
     upgrades: list[str] = Field(default_factory=list)

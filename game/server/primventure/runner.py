@@ -113,9 +113,12 @@ class QuestRunner:
             # The submission lives in a temp directory that outlives this call by
             # accident, not contract, so the stage is read into the save now.
             state.last_fail = snapshot(quest, artifact, results)
-            if live_boss:
-                state.last_fail.debrief_required = True
-                state.last_fail.failed_checks = self._failed_check_descriptions(quest, results)
+            # Every room records what missed: the boss debrief reads it, and so
+            # does a hint bought after the miss.
+            checks, indices = self._failed_checks(quest, results)
+            state.last_fail.failed_checks = checks
+            state.last_fail.failed_assertions = indices
+            state.last_fail.debrief_required = live_boss
             # Rooms gate on level and every room pays its XP only once, so a fee
             # that demoted the player would lock the door it just charged them at
             # with no way left to earn the level back. Bill only what the current
@@ -150,13 +153,19 @@ class QuestRunner:
         )
 
     @staticmethod
-    def _failed_check_descriptions(
+    def _failed_checks(
         quest: Quest, results: list[ValidationResult]
-    ) -> list[str]:
-        """Name failed requirements without revealing the Census's observed values."""
+    ) -> tuple[list[str], list[int]]:
+        """Name failed requirements, and index the assertions among them.
+
+        Descriptions carry the debrief and the toast; the indices let a hint
+        reach the assertion payload and name the call that authors it. Neither
+        reveals what the stage composed, which stays with contextual hints.
+        """
         expectations = describe_assertions(quest.validator)
         stage_index = 0
         failed: list[str] = []
+        indices: list[int] = []
         for result in results:
             if result.rule.startswith("question_"):
                 if not result.passed:
@@ -179,10 +188,12 @@ class QuestRunner:
                 if stage_index < len(expectations)
                 else f"Pass the {result.rule} check."
             )
-            stage_index += 1
             if not result.passed:
                 failed.append(description)
-        return failed
+                if stage_index < len(expectations):
+                    indices.append(stage_index)
+            stage_index += 1
+        return failed, indices
 
     def _execute(
         self, quest: Quest, request: RunRequest
@@ -339,6 +350,21 @@ class QuestRunner:
         results: list[ValidationResult] = []
         for index, question in enumerate(quest.questions):
             supplied = answers[index] if index < len(answers) else ""
+            # A blank field is not a wrong answer, and saying so sends learners
+            # back to the lesson looking for a mistake they never made.
+            if supplied is None or (isinstance(supplied, str) and not supplied.strip()):
+                results.append(
+                    ValidationResult(
+                        rule=f"question_{index + 1}",
+                        passed=False,
+                        message=(
+                            "Not answered yet. Choose an option for this question, then run the room."
+                            if question.choices
+                            else "Not answered yet. Write your reasoning for this question, then run the room."
+                        ),
+                    )
+                )
+                continue
             if question.answer is not None:
                 passed = supplied == question.answer
             else:

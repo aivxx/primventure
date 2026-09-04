@@ -233,25 +233,33 @@ class QuestStore:
 
 
 def migrate(raw: dict[str, Any]) -> dict[str, Any]:
-    """Carry older saves onto the current consumable.
+    """Carry retired diagnosis items onto stocked USD Checks.
 
-    Opinion X-Rays became Inspector's Slips and then the Prim Census. Stock,
-    home-floor claims, and the repeatable shop entry all move across so a save
-    in flight neither loses supplies nor earns a second free use.
+    Opinion X-Rays became Inspector's Slips and then Prim Censuses, then a
+    direct OP charge. Those stocked uses still refund as OP. USD Check is a
+    consumable again, so a save that never had `usd_checks` starts at cap.
+    Claimed class freebies migrate without granting a second free use.
     """
     inventory = raw.setdefault("inventory", {})
     for retired in ("system_peeks", "inspectors_slips"):
         if retired in inventory:
             inventory["prim_censuses"] = inventory.get("prim_censuses", 0) + inventory.pop(retired)
+    stocked = int(inventory.pop("prim_censuses", 0) or 0)
+    raw["opinion_points"] = int(raw.get("opinion_points", 0) or 0) + stocked
+    if "usd_checks" not in inventory:
+        inventory["usd_checks"] = 2
     claims = raw.get("benefit_claims") or {}
-    for key in [key for key in claims if key.startswith("free_peek:")]:
-        claims[f"free_census:{key.split(':', 1)[1]}"] = claims.pop(key)
+    for prefix in ("free_peek:", "free_census:"):
+        for key in [key for key in claims if key.startswith(prefix)]:
+            claims[f"free_check:{key.split(':', 1)[1]}"] = claims.pop(key)
     raw["upgrades"] = [
-        "prim_census" if entry == "system_peek" else entry for entry in raw.get("upgrades") or []
+        entry
+        for entry in raw.get("upgrades") or []
+        if entry not in {"system_peek", "prim_census"}
     ]
-    # A fail recorded by the retired diagnosis carried no census. Only that
+    # A fail recorded by the retired diagnosis carried no stage snapshot. Only that
     # shape is dropped; discarding a current one would erase the stage reading
-    # on every load and leave the census permanently unarmed.
+    # on every load and leave USD Check permanently unarmed.
     fail = raw.get("last_fail")
     if isinstance(fail, dict) and "has_stage" not in fail:
         raw.pop("last_fail")
@@ -319,17 +327,18 @@ def quest_view(
     data["boss_debt_on_miss"] = preview_boss_debt(state, quest)
     data["boss_clear_xp"] = max(0, quest.xp - debt)
     data["free_hint"] = free_assist_available(state, quest, "hint")
-    data["free_census"] = free_assist_available(state, quest, "census")
+    data["free_check"] = free_assist_available(state, quest, "check")
     fail = state.last_fail
-    # A census reads a stage, so a run that never produced one cannot be sold.
+    # USD Check is a target reference, so even a syntax error can unlock it. A
+    # briefing-only room has no graded USDA to show.
     armed = (
         fail is not None
         and fail.quest_id == quest.id
         and quest.id not in state.completed_quests
-        and fail.has_stage
+        and bool(quest.validator.get("assertions"))
     )
-    data["census_armed"] = armed
-    data["census_paid"] = bool(armed and fail and fail.paid)
+    data["check_armed"] = armed
+    data["check_paid"] = bool(armed and fail and fail.paid)
     data["boss_debrief_required"] = bool(
         fail
         and fail.quest_id == quest.id

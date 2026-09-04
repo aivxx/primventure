@@ -99,13 +99,27 @@ lessons:
           - "stage.DefinePrim(path) creates an untyped prim, and a type name as the second argument creates a typed one."
           - "Schema classes such as UsdGeom.Xform.Define(stage, path) are the clearer, less brittle option when the type is known."
           - An invalid prim evaluates as False, which makes existence checks cheap before you author an override.
-      - kind: pitfall
-        heading: Where contestants lose the room
+      - kind: work_order
+        heading: The city stage is empty and no prim answers to /City
         system: >-
           I keep these on a clipboard. It is the only paperwork I enjoy.
         body: |
-          Authoring a prim puts it in memory. Persisting it takes a save, and the judges read the
-          file.
+          The Arrival Hall is the one room that builds its own stage rather than opening the city
+          you have already authored. The layer at the stage path does not exist yet, so the
+          scenegraph holds nothing but the pseudo-root, and /City is the single address the hall
+          is built around.
+
+          Nothing answers to that address. There is no prim spec at /City in any layer, so asking
+          the stage for the prim there hands back an invalid prim instead of raising, and there is
+          no type name for anything to read. An untyped container would be a legal prim and still
+          leave the city without a labelled place to hang anything, because the type is what tells
+          a reader the prim holds a transform.
+
+          The work is one typed prim. Author /City with the type name Xform, either through
+          stage.DefinePrim with the type as its second argument or through UsdGeom.Xform.Define,
+          then save the root layer. The save is the step most often left off: authoring changes
+          the stage held in memory, and the file keeps its old contents until the layer is
+          written.
         points:
           - "GetChild returns direct children only. Reach a grandchild by stepping down one level at a time."
           - "Forgetting stage.GetRootLayer().Save() or stage.Save() means the validator sees an empty stage."
@@ -232,13 +246,26 @@ lessons:
           - A fallback is the schema's answer for an attribute the scene never mentions, which is how Get succeeds against an empty file.
           - A value you author always outranks a fallback, and only authored values are written to the layer.
           - "HasAuthoredValue tells you whether a value came from the file or from the schema."
-      - kind: pitfall
-        heading: Where contestants lose the room
+      - kind: work_order
+        heading: The prims exist and the values they should carry do not
         system: >-
-          Type mismatches are my favorite failure. They fail loudly and take dignity with them.
+          Three values belong on the city record, and two of them belong to no schema at all.
         body: |
-          The value you pass must match the declared type. A Color3fArray expects a list of
-          triples, and a String attribute rejects a float outright.
+          /City stands as an Xform from the Arrival Hall, the alley's lamp post waits for its
+          glass, and the Departure Gate is where /City/Threshold belongs. The city needs a name,
+          the lamp globe needs a radius of 0.4, and the Threshold needs its district label.
+
+          None of those values is authored, and they are absent in two different ways. cityName
+          and districtName belong to no schema, so nothing has declared them and there is nothing
+          to read at all. The Sphere schema declares its radius as double radius = 1, so the
+          globe reports 1.0 the moment it is defined while its layer stays silent, and 1.0 is not
+          the 0.4 the alley wants.
+
+          Author each value where ownership points. Sphere owns radius, so its schema accessor
+          sets it. Nothing owns a city or a district name, so those are declared with
+          CreateAttribute and an explicit Sdf.ValueTypeNames.String, then set. The detail worth
+          watching is that GetRadiusAttr hands back the attribute object rather than the number,
+          so nothing is written until Get or Set is chained onto it.
         points:
           - "GetRadiusAttr() hands back the attribute object, so chain .Get() when you want the number."
           - "displayColor is an array-valued primvar, so wrap the triple in a list: [(0, 1, 0)]."
@@ -252,13 +279,18 @@ lessons:
           the data; reach for CreateAttribute with an explicit Sdf type when nothing does.
     apply:
       f0_nameplate: >-
-        Author cityName as a string attribute set to Primventure — exactly, punctuation included,
+        Author cityName as a string attribute set to Primventure, exactly, punctuation included,
         because the Registrar reads it aloud. No schema owns a city's name, so this is the generic
         CreateAttribute case. A city that cannot state its own name gets struck from the ledger.
       f1_lamp_post: >-
         A Sphere is a typed prim, so its radius arrives already declared and the schema accessor
         is right there. Define the globe, then set radius to 0.4. The alley has been dark since
         the last contestant, who is also still in there, and glass is as far as you get today.
+      f0_gatekeeper: >-
+        Everything the floor taught, in one submission. Define /City as an Xform with cityName still
+        reading Primventure, define /City/Threshold as an Xform, and give it a string attribute
+        districtName set to Prim Threshold. The Gatekeeper reads all four and grades none of them
+        generously.
 
   - source: docs/stage-setting/stage.md
     title: Stages
@@ -302,28 +334,34 @@ lessons:
           - "stage.Save() writes every edited layer contributing to the stage, the root among them."
           - "Usd.Stage.CreateInMemory() builds a stage with no file until you call Export."
       - kind: concept
-        heading: Stage metadata is the contract consumers read first
+        heading: A stage does not have to be backed by a file
         system: >-
-          Two pieces of metadata prevent roughly eighty percent of the screaming I hear on this
-          floor. I have measured. I keep charts. Nobody asks to see them.
+          Scratch work that never reaches disk. The one place in this building where nothing can
+          be held against you permanently.
         body: |
-          Stage-level metadata declares scene-wide conventions. The default prim names the primary
-          root prim, which lets an external reference target the layer without naming a prim path.
-          The up axis declares which axis is vertical so downstream tools do not tip your city onto
-          its side.
+          CreateNew and Open both tie a stage to a layer on disk, but a stage can also exist purely
+          in memory. CreateInMemory builds one with no file behind it, which is what you want for
+          scratch work, for tests, and for scene description you intend to assemble before deciding
+          where it should live.
+
+          An in-memory stage behaves like any other. You author prims and properties on it and read
+          the composed result back the same way. The difference is that there is no root layer file
+          to write to, so persisting it means exporting rather than saving. Export writes the
+          composed stage to a path you name, and ExportToString hands you the same text without
+          touching the filesystem at all.
         code: |
-          from pxr import Usd, UsdGeom
+          from pxr import Usd
 
-          stage = Usd.Stage.CreateNew("city.usda")
-          city = stage.DefinePrim("/City", "Xform")
+          stage = Usd.Stage.CreateInMemory()
+          stage.DefinePrim("/City", "Xform")
 
-          stage.SetDefaultPrim(city)
-          UsdGeom.SetStageUpAxis(stage, UsdGeom.Tokens.y)
-
-          stage.GetDefaultPrim().GetPath()   # Sdf.Path('/City')
-          UsdGeom.GetStageUpAxis(stage)      # 'Y'
-
-          stage.GetRootLayer().Save()
+          # Nothing exists on disk yet. Either of these changes that.
+          print(stage.ExportToString(addSourceFileComment=False))
+          stage.Export("city.usda")
+        points:
+          - "Usd.Stage.CreateInMemory() takes no path, because there is no file to name."
+          - "stage.Save() has nothing to write for an in-memory stage, so Export is what persists it."
+          - "ExportToString returns the layer as text, which makes it the quickest way to read back what you authored."
       - kind: api
         heading: Creating, opening, and saving
         body: |
@@ -337,28 +375,44 @@ lessons:
           stage.Save()                               # write all edited layers
 
           print(stage.ExportToString(addSourceFileComment=False))
-      - kind: pitfall
-        heading: Where contestants lose the room
+      - kind: work_order
+        heading: The city has no stage, and the intake decision has not been made
         system: >-
-          SetDefaultPrim wants an actual prim. Contestants keep offering path strings, string
-          literals, and a hopeful gesture at the screen.
+          Two constructors and one save. The desk needs all three settled before you touch a
+          keyboard.
         body: |
-          Default prim and up axis are stage metadata, so you author them on the stage itself
-          rather than through a prim's attributes. A default prim must also be a root-level prim.
+          The Intake Desk is the first stop on the floor and it sits in front of an empty city.
+          There is no root layer under the stage path, no scenegraph composed over it, and no
+          prims to inspect. Nothing is authored here. The desk needs the intake decision stated in
+          the language of CreateNew, Open, and the root layer, because the next room's first line
+          is exactly that choice.
+
+          What is absent here is the decision itself. Each file-backed constructor assumes a
+          different state on disk: CreateNew makes the layer and raises when the file is already
+          there, while Open loads an existing layer and raises when it is not. Nothing yet
+          separates those two situations, and nothing yet accounts for the step that turns an
+          edit held in memory into a file another reader can open.
+
+          State that a stage over a file which does not exist yet comes from Usd.Stage.CreateNew,
+          that an existing file is opened with Usd.Stage.Open, and that edits reach disk only when
+          the stage or its root layer is saved. The detail is what authoring does not do: defining
+          a prim changes the composed stage and leaves the layer on disk untouched.
         points:
-          - "stage.SetDefaultPrim(prim) expects a Usd.Prim object, so resolve the path first with GetPrimAtPath."
-          - "UsdGeom.SetStageUpAxis is a free function in UsdGeom; pass the stage as its first argument."
-          - "CreateNew raises if the file exists. Use Open when the room already made the stage for you."
+          - "CreateNew raises if the file already exists. Use Open when the room has already made the stage for you."
+          - "Open raises if the file does not exist, so it is never the call that starts an empty scene."
+          - "Skipping stage.Save() or stage.GetRootLayer().Save() leaves every check reading a stage with nothing in it."
       - kind: recap
         heading: What you now know
         body: |
-          A stage is the composed scenegraph assembled from layers, anchored by a root layer, and
-          described by stage metadata. Default prim and up axis are the two contracts every
-          consumer of your asset reads before anything else.
+          A stage is the composed scenegraph assembled from one or more layers and anchored by a
+          root layer. CreateNew opens a stage over a new file, Open opens one over a file that
+          already exists, and CreateInMemory skips the file altogether. Saving or exporting is what
+          makes any of it readable by anyone but you.
     apply:
-      f0_gatekeeper: >-
-        Make /City the default prim and set the stage up axis to Y. The Gatekeeper accepts exactly
-        one clear entrance and has never once accepted an explanation.
+      f0_stage_intake: >-
+        No code this round, just the desk. It wants you to say which call makes a stage over a file
+        that does not exist yet, which one opens a file that does, and what has to happen before anything
+        on disk reflects your edits. Answer in the language of CreateNew, Open, and the root layer.
 
   - source: docs/stage-setting/metadata.md
     title: Metadata
@@ -405,46 +459,62 @@ lessons:
           Note the dict-key variants. They exist because someone profiled this and was horrified.
         body: |
           Usd.Object exposes generic GetMetadata and SetMetadata, and the stage has its own
-          equivalents. Well-known keys such as documentation, kind, and displayName also have
-          convenience accessors. When you need one entry inside a dictionary-valued key, the
-          ByDictKey variants avoid fetching the whole dictionary.
+          equivalents. Well-known keys such as documentation and displayName also have convenience
+          accessors. When you need one entry inside a dictionary-valued key, the ByDictKey variants
+          avoid fetching and rewriting the whole dictionary.
         code: |
-          from pxr import Kind, Usd
+          from pxr import Usd
 
           prim = stage.GetPrimAtPath("/City/PropertyWard")
 
-          prim.SetMetadata("kind", "group")
-          prim.SetDocumentation("Civic property district.")
           prim.SetMetadata("documentation", "Civic property district.")
+          prim.SetDocumentation("Civic property district.")   # the same field, named accessor
+          prim.GetMetadata("documentation")
 
           prim.SetCustomDataByKey("sourceFormat", "OBJ")
           prim.GetMetadataByDictKey("customData", "sourceFormat")
 
-          Usd.ModelAPI(prim).SetKind(Kind.Tokens.group)
           stage.SetMetadata("comment", "Composed by contestant USD-01.")
-      - kind: pitfall
-        heading: Where contestants lose the room
+      - kind: work_order
+        heading: The districts and the lamp globe carry no record of themselves
         system: >-
-          "customData" is the key, spelled exactly that way. I have watched contestants invent four
-          alternatives in one afternoon.
+          "customData" is the key, spelled exactly that way. The vocabulary is fixed and I did not
+          fix it.
         body: |
-          Metadata keys are fixed unless a schema introduces new ones, so a typo becomes an error
-          rather than a new field. Dictionary-valued keys also replace wholesale if you set the
-          whole dictionary instead of one entry.
+          The city already stands. The lamp globe is a Sphere at
+          /City/PropertyWard/LampGlobe with the radius set in the alley, and the Registrar's
+          ledger covers two districts, /City/PropertyWard and /City/Archive, plus the stacks
+          beneath the Archive. The prims are all there. The record kept about them is not.
+
+          documentation is unauthored on the globe and on both districts, comment is unauthored on
+          the globe and on /City/Archive/Stacks, and the stacks hold no indexes relationship
+          pointing at the clock. comment and documentation are separate fields, so stamping one
+          leaves the other exactly as empty as it was.
+
+          Author each one as metadata on the prim, passing the field name and the string to
+          SetMetadata. The tool to leave alone is CreateAttribute: it authors a property with that
+          name and leaves the metadata field unauthored, because metadata sits outside the schema
+          and annotates the record rather than describing the object. Each string is stored exactly
+          as typed, closing period included.
         points:
           - "Setting customData with a full dictionary discards entries you did not include."
           - "documentation is a well-known key. Arbitrary top-level keys need a schema."
-          - "kind participates in model hierarchy rules, so its value comes from a fixed vocabulary."
+          - "comment and documentation are separate fields, so stamping one leaves the other unauthored."
       - kind: recap
         heading: What you now know
         body: |
           Metadata annotates scene description outside the schema, never animates, and is the
-          right home for provenance, documentation, kind, and pipeline data. Attributes remain
-          the home for values that describe or animate the object itself.
+          right home for provenance, documentation, and pipeline data. Attributes remain the home
+          for values that describe or animate the object itself.
     apply:
+      f1_records_office: >-
+        Stamp the record on /City/PropertyWard/LampGlobe: documentation set to "Alley lamp globe."
+        and comment set to "Glass blown on floor one." Neither is an attribute, so neither goes
+        through CreateAttribute. Punctuation included, because the Registrar reads it aloud.
       f1_civic_record: >-
-        Restore kind and documentation metadata on /City/PropertyWard. The Registrar erased the
-        ledger, and unlike the Registrar, I keep receipts.
+        Restore the whole ledger. Both districts typed as Xform, documentation on /City/PropertyWard
+        and /City/Archive, comment on /City/Archive/Stacks, and an indexes relationship from the
+        stacks to the clock. The Registrar erased it, and unlike the Registrar, I keep receipts.
 
   - source: docs/stage-setting/timecodes-timesamples.md
     title: Timecodes and Time Samples
@@ -510,14 +580,28 @@ lessons:
 
           attr.GetTimeSamples()       # [1.0, 48.0]
           attr.ValueMightBeTimeVarying()
-      - kind: pitfall
-        heading: Where contestants lose the room
+      - kind: work_order
+        heading: The clock holds no time samples and the stage declares no range
         system: >-
-          Authoring one sample and calling it animation is a bold artistic statement. The room stays
-          locked.
+          The second argument to Set is the entire difference between a clock and a very confident
+          still image.
         body: |
-          Transform animation runs through xform ops, so the op must exist before you can sample
-          it. Adding a translate op twice stacks two ops rather than replacing one.
+          Clockwork Crossing sits above the Property Ward, and the clock is the prim both rooms
+          work on: a Cube at /City/PropertyWard/Clock. The clock face has to change over the
+          cycle rather than sit still, size 1.0 at time code 1 and 10.0 at time code 48, and the
+          crossing needs the stage to declare the span those two moments belong to.
+
+          The clock's size carries no time samples. Unauthored, it resolves to the Cube schema's
+          fallback at every moment; authored once without a time, it holds one default value that
+          resolves identically at time code 1 and at time code 48. The timeline is absent too,
+          since startTimeCode and endTimeCode are stage metadata rather than values on the
+          attribute, and nothing has declared either of them.
+
+          Set size twice on that one attribute, passing a time code alongside each value, so the
+          layer records two samples and interpolation covers the span between them. Declare the
+          range separately through the stage's start and end time codes. The detail is that
+          omitting the time authors the default value instead of a sample, in which case the
+          second call overwrites the first rather than adding to it.
         points:
           - "Set(value) and Set(value, time) author different things. Mixing them up leaves a static default."
           - "Metadata cannot be time sampled, so animated data belongs on attributes."
@@ -529,9 +613,14 @@ lessons:
           end time codes declare the playback range, and interpolation fills the gaps between
           authored moments.
     apply:
+      f1_clockwork_room: >-
+        Define a Cube at /City/PropertyWard/Clock, then sample its size attribute twice: 1.0 at time
+        code 1 and 10.0 at time code 48. Two samples, one attribute. Set it once without a time and
+        the clock face simply sits there being confident.
       f1_clockwork_crossing: >-
-        Bind the city clock from 1 to 48 and author translate samples at both endpoints. The
-        crossing has been looping outside time and the commuters have opinions.
+        Bind the city clock from 1 to 48, then sample the Cube's size at both endpoints, 1.0 at
+        time code 1 and 10.0 at time code 48. The crossing has been looping outside time and the
+        commuters have opinions.
 
   - source: docs/stage-setting/properties/relationships.md
     title: Relationships
@@ -576,15 +665,28 @@ lessons:
           destination.AddTarget("/City/BlueprintBorough/Stall2")
 
           bridge.GetRelationships()     # every relationship on the prim
-      - kind: pitfall
-        heading: Where contestants lose the room
+      - kind: work_order
+        heading: The canal and the bridge stand beside the lamp with nothing pointing at it
         system: >-
           A relationship will happily target a prim nobody authored. USD treats that as a promise,
           and USD keeps promises badly.
         body: |
-          Authoring a target path performs no existence check, so a typo produces a relationship
-          that resolves to nothing at all. Relationships also live alongside attributes in the
-          property namespace, so GetProperties returns both kinds.
+          Both rooms work in the Property Ward, where the lamp globe already exists as a Sphere at
+          /City/PropertyWard/LampGlobe. The canal room defines the ward and /City/PropertyWard/Canal
+          beneath it, and the bridge that follows defines /City/PropertyWard/Bridge. Each of those
+          new prims needs a link: feeds on the Canal, naming the lamp it supplies, then destination
+          and origin on the Bridge, naming the two banks it spans.
+
+          None of those properties exists. The canal sits next to the globe with no authored link
+          between them, and the bridge names neither bank, so nothing in the layer records which
+          prim it starts from or which it lands on. The hierarchy cannot supply any of this,
+          because a prim has exactly one parent and the globe already sits elsewhere in the ward.
+
+          Author the link with CreateRelationship on the prim that holds it, then hand SetTargets
+          the exact path list: feeds targeting the globe, destination targeting the globe, origin
+          targeting the canal. Two details matter. A relationship has no data type and verifies
+          nothing about its targets, so a mistyped path is written down verbatim and resolves to
+          nothing, and SetTargets replaces the whole list rather than adding to it.
         points:
           - "SetTargets replaces the entire target list, discarding anything previously authored."
           - "Dangling targets fail silently. Verify with GetTargets and a prim existence check."
@@ -595,9 +697,15 @@ lessons:
           Relationships are properties that hold scene paths, letting one prim point at others
           without duplicating them. They are how USD expresses connection instead of copying.
     apply:
+      f1_binding_canal: >-
+        Define /City/PropertyWard as an Xform and /City/PropertyWard/Canal as an Xform beneath it,
+        then create a relationship named feeds on the Canal targeting /City/PropertyWard/LampGlobe.
+        The canal does not carry the lamp, it points at it, which is the entire lesson and also the
+        entire room.
       f2_relationship_bridge: >-
-        Create the destination relationship on Bridge and target the Stall. A bridge that knows no
-        destination is technically just an expensive opinion about air.
+        Define /City/PropertyWard/Bridge as an Xform, then author both links: destination
+        targeting the lamp globe and origin targeting the canal. A bridge that knows neither bank
+        is technically just an expensive opinion about air.
 
   - source: docs/stage-setting/usd-file-formats.md
     title: USD File Formats
@@ -645,8 +753,9 @@ lessons:
           def Xform "City" {
               string cityName = "Primventure"
 
-              def Scope "WardenVault" {
-                  uniform token purpose = "guide"
+              def Xform "Archive" {
+                  uniform token vaultClass = "records"
+                  int shelfCount = 12
               }
           }
       - kind: api
@@ -667,14 +776,29 @@ lessons:
           layer.Export("review.usda")        # binary to text
 
           print(stage.ExportToString(addSourceFileComment=False))
-      - kind: pitfall
-        heading: Where contestants lose the room
+      - kind: work_order
+        heading: The Archive holds no vault, and no one has named the encoding it is written in
         system: >-
-          The header is load-bearing. Omit it and the file becomes a very confident text document
-          about nothing.
+          Four extensions, two encodings, one delivery format. The Foundry asks. I merely stand
+          here.
         body: |
-          USDA is whitespace-tolerant but syntax-strict. The declaration order is specifier, type,
-          then quoted name, and stage metadata belongs in the parenthesized block at the top.
+          The Warden Foundry sits inside the Archive district you surveyed two rooms ago, where
+          /City/Archive already holds Stacks with shelfCount reading 12. Nothing is authored at
+          the Foundry itself. It needs a correct intake decision about encodings: which extension
+          is the readable text encoding, which one packages a scene with its assets for a handoff,
+          and what .usd signals. The Warden past it needs a prim in that district.
+
+          /City/Archive/WardenVault does not exist. There is no container for the Warden's record,
+          no note on it saying which encoding the layer uses, and no link from the vault to the
+          clock it archives at /City/PropertyWard/Clock. The encodings are unsettled in a
+          different way: three of the four names describe an encoding and one describes a
+          delivery decision.
+
+          State that .usda is the ASCII text encoding, .usdz is the uncompressed archive that ships
+          a scene with its assets, and .usd is deliberately either text or binary so a layer can
+          switch encodings without breaking the references naming it. Then define the vault as an
+          Xform, author a string formatNote reading usda on it, and target its archives
+          relationship at the clock. formatNote is a value on the prim, not the layer's encoding.
         points:
           - "Every USDA file must start with the #usda 1.0 header line."
           - "Prim names are quoted; type names are not."
@@ -685,6 +809,304 @@ lessons:
           USDA is text, USDC is binary, .usd is either, and USDZ packages a stage for delivery.
           Reading USDA fluently is how you verify what your authoring code actually wrote.
     apply:
+      f1_format_foundry: >-
+        No authoring here, only judgement. Be ready to say which extension is the readable text
+        encoding, which one packages a scene with its assets for handoff, and why .usd deliberately
+        refuses to tell you whether it is text or binary.
       f2_schema_warden: >-
-        Author it by hand. Define WardenVault as a Scope with purpose set to guide. The Warden
-        rejects vague forms, imprecise types, and, historically, contestants.
+        Define /City/Archive/WardenVault as an Xform, give it a string formatNote reading usda,
+        and point its archives relationship at the clock. Keep shelfCount reading 12 on the
+        stacks. The Warden rejects vague forms, untyped containers, and, historically, contestants.
+
+  - source: docs/stage-setting/prim-property-paths.md
+    title: Prim and Property Paths
+    objective: Read, build, and navigate the paths that locate prims and properties inside a scenegraph.
+    intro: >-
+      You have been typing paths since your first room, the way a tourist types an address into a
+      map without ever learning the city. This lesson is the part where the address becomes an
+      object you can build, split, and interrogate. The Archive Stacks are indexed by path, and the
+      Archive has never once forgiven a typo.
+    beats:
+      - kind: concept
+        heading: A path is the location of a prim or property
+        system: >-
+          Every prim in this city has exactly one address. Unlike the contestants, who keep
+          claiming several.
+        body: |
+          A path represents the location of a prim or a property within a scenegraph. Written as a
+          string, a prim path is a sequence of prim names separated by forward slashes, much like a
+          file path in a directory structure. The stage's pseudo-root, the starting point of the
+          whole hierarchy, is written as a single forward slash.
+
+          So /World/Geometry/Box names a prim called Box that is a child of Geometry, which is a
+          child of World. Reading the path from left to right walks you down the hierarchy, and
+          reading it from right to left tells you everything that contains the thing you named.
+        points:
+          - Each prim and property in a scene has a unique path, which is what distinguishes it from every other object.
+          - Paths are how you navigate the hierarchy, traversing the stage to reach a specific prim.
+          - Paths specify locations for authoring, telling a creation call where in the hierarchy the new prim belongs.
+          - "Paths also support querying and filtering, selecting prims by location with Sdf.PathExpression."
+      - kind: concept
+        heading: The punctuation says what kind of thing you named
+        system: >-
+          Slash, period, curly brace. Three marks of punctuation, and contestants still manage to
+          address a property as though it were a prim.
+        body: |
+          Path data is handled through the Sdf.Path class, which encodes prims, properties, and
+          variants in a single string vocabulary. Which separator you use decides which of those
+          three you are naming.
+
+          A slash separator indicates namespace, so "/geo/box" names a prim. A period after an
+          identifier introduces a property, so "/geo/box.weight" names a property on that prim
+          rather than the prim itself. Curly brackets indicate a variant, as in
+          "/geo/box{size=large}". Properties covered by this vocabulary include both attributes and
+          relationships, since both live in the same property namespace.
+        code: |
+          "/geo/box"                # a prim path: slashes walk the namespace
+          "/geo/box.weight"         # a property path: the period introduces a property
+          "/geo/box{size=large}"    # a variant path: curly brackets select a variant
+        points:
+          - "A slash separates names in the namespace and identifies a prim."
+          - "A period after an identifier introduces a property, whether that property is an attribute or a relationship."
+          - "Curly brackets select a variant, so a variant path names a location inside a variant rather than a plain prim."
+      - kind: api
+        heading: Building and navigating paths in Python
+        system: >-
+          You can retype the whole string every time. You can also build it once and let the object
+          do the arithmetic. One of these approaches survives a rename.
+        body: |
+          A path does not have to be a string literal you retype. Sdf.Path is a value you construct
+          and then extend: AppendChild takes a parent path and returns the path of a child by that
+          name, which lets you build a hierarchy of paths from a single root.
+
+          Once you hold a path, the class answers questions about it. IsPrimPath reports whether the
+          path names a prim, and GetParentPath returns the path of whatever contains it. On the
+          other side, Usd.Prim.GetPath returns a prim's path as an Sdf.Path object, and
+          Usd.Stage.GetPrimAtPath retrieves the prim at a given path from the stage.
+
+          GetPrimAtPath returns either a valid or an invalid prim, so always check validity before
+          using the result. Usd.Object.IsValid answers that question: valid means the prim exists on
+          the stage, and invalid means either the prim does not exist or the path itself is not a
+          usable address.
+        code: |
+          from pxr import Sdf, Usd, UsdGeom
+
+          world_path = Sdf.Path("/World")
+          geometry_path = world_path.AppendChild("Geometry")   # /World/Geometry
+          sphere_path = geometry_path.AppendChild("Sphere")    # /World/Geometry/Sphere
+
+          stage.DefinePrim(world_path)
+          stage.DefinePrim(geometry_path)
+          UsdGeom.Sphere.Define(stage, sphere_path)
+
+          sphere_path.IsPrimPath()          # True
+          sphere_path.GetParentPath()       # Sdf.Path('/World/Geometry')
+
+          prim = stage.GetPrimAtPath(geometry_path)
+          prim.IsValid()                    # check before you use it
+          prim.GetPath()                    # Sdf.Path('/World/Geometry')
+        points:
+          - "AppendChild builds a child path from a parent path, so one root path can produce an entire branch."
+          - "IsPrimPath and GetParentPath inspect and walk a path without touching the stage at all."
+          - "GetPrimAtPath can hand back an invalid prim, so pair it with IsValid before you author through it."
+      - kind: concept
+        heading: A property path identifies a location, not a property
+        system: >-
+          Naming a thing and creating a thing are different activities. This surprises people, which
+          says more about people than about paths.
+        body: |
+          AppendProperty builds the path of a property on a prim, producing something like
+          /World/Geom/Sphere.userProperties:tag. Building that path creates nothing. The property
+          path identifies a location, and the spec at that location still has to be authored.
+
+          Authoring is what CreateAttribute and CreateRelationship do, and both are called on the
+          prim that owns the property. GetPrimPath on a property path returns the path of that
+          owning prim, which is how you get from the property path back to the prim you author
+          through. Once the spec exists, GetAttributeAtPath and GetRelationshipAtPath fetch it from
+          the stage by path, and GetPropertyAtPath works for either kind.
+        code: |
+          from pxr import Sdf, Usd, UsdGeom
+
+          sphere = UsdGeom.Sphere.Define(stage, "/World/Geom/Sphere")
+
+          # A path to a property that does not exist yet.
+          attr_path = sphere.GetPath().AppendProperty("userProperties:tag")
+
+          owner = stage.GetPrimAtPath(attr_path.GetPrimPath())
+          owner.GetAttribute("userProperties:tag").IsDefined()   # False, nothing authored
+
+          attr = owner.CreateAttribute("userProperties:tag", Sdf.ValueTypeNames.String)
+          attr.Set("surveyed")
+          stage.GetAttributeAtPath(attr_path).Get()              # 'surveyed'
+
+          rel_path = sphere.GetPath().AppendProperty("my:ref")
+          rel = owner.CreateRelationship(rel_path.name)
+          rel.AddTarget("/World/Markers/MarkerA")
+        points:
+          - "AppendProperty builds a property path from a prim path; it does not author a property spec."
+          - "GetPrimPath strips a property path back to its owning prim, which is what CreateAttribute is called on."
+          - "IsDefined on the property reports whether anything has actually been authored at that location."
+      - kind: work_order
+        heading: The Archive district has no prims behind either of its addresses
+        system: >-
+          An invalid prim is not an error. It is a perfectly polite object that will do nothing you
+          ask and never mention why.
+        body: |
+          At the Archive Stacks, /City is an Xform and the Property Ward is built out with its
+          lamp, canal, and clock. The Archive district is not there at all. It needs both of its
+          prims and a count of its shelves: an
+          Xform at /City/Archive, an Xform at /City/Archive/Stacks beneath it, and an int
+          attribute named shelfCount set to 12 on the deeper prim.
+
+          Neither prim is authored. Asking the stage for either address returns an invalid prim
+          rather than raising, so nothing announces that the district is absent, and shelfCount has
+          no spec anywhere to hold a value. The child address is meant to be built rather than
+          retyped, because /City/Archive/Stacks is one path whose ancestors decide whether the
+          attribute lands inside the Archive or beside it.
+
+          Build Sdf.Path("/City/Archive"), extend it with AppendChild("Stacks"), define an Xform at
+          each path, then create shelfCount on the Stacks prim with Sdf.ValueTypeNames.Int and set
+          it to 12. The separators are the detail: AppendChild extends namespace while
+          AppendProperty introduces a property, and building a property path authors nothing, since
+          the spec is created on the prim that owns it.
+        points:
+          - "GetPrimAtPath on a path nobody authored returns an invalid prim instead of raising, so check IsValid first."
+          - "A prim path and a property path differ by one period, and the wrong separator addresses the wrong kind of object entirely."
+          - "AppendChild extends namespace and AppendProperty introduces a property, so mixing them builds an address for something you did not mean."
+      - kind: recap
+        heading: What you now know
+        body: |
+          A path uniquely identifies a prim or property and locates it within the scenegraph. Slashes
+          walk namespace, a period introduces a property, and curly brackets select a variant.
+          Sdf.Path turns those strings into values you can build with AppendChild and AppendProperty,
+          inspect with IsPrimPath and GetParentPath, and hand to the stage for authoring, querying,
+          and navigation.
+    apply:
+      f1_paths_survey: >-
+        Build the path to /City/Archive with Sdf.Path, then reach the child with AppendChild rather
+        than retyping the string. Define both as Xform prims, then author an int attribute
+        shelfCount on the Stacks prim set to 12. The Archive is indexed by address, and it does not
+        accept approximations.
+
+  - source: docs/stage-setting/usd-modules.md
+    title: OpenUSD Modules
+    objective: Identify the commonly used OpenUSD modules and know which one to reach for when authoring or reading scene description.
+    intro: >-
+      You have been importing these for six rooms without being asked to justify a single one of
+      them. The Module Desk would like that corrected. It is a short lesson, which the audience
+      always mistakes for an easy one, and the Desk always corrects them too.
+    beats:
+      - kind: concept
+        heading: Four core packages, two of which you actually need
+        system: >-
+          Half the repository is about drawing pictures. You are not drawing pictures. You are
+          filling in forms, and I have never been prouder.
+        body: |
+          The USD code repository is made up of four core packages: base, usd, imaging, and
+          usdImaging. To author and read USD data, you only need base and usd, which is where the
+          commonly used modules live.
+
+          The full API spans many modules with varying purposes: authoring, reading, and composing
+          USD data, imaging composed scenes, defining plugin interfaces for extending USD's
+          capabilities, and more. That breadth is why knowing which module owns which job matters
+          more than memorizing any single call.
+        points:
+          - "The four core packages are base, usd, imaging, and usdImaging."
+          - "Authoring and reading scene description requires only the base and usd packages."
+          - "The imaging packages exist for rendering composed scenes, which is a separate concern from authoring them."
+      - kind: concept
+        heading: Usd, Sdf, and Gf divide the work
+        system: >-
+          Three modules, three jobs, no overlap worth arguing about. Naturally, contestants argue.
+        body: |
+          When authoring or querying USD data, you will almost always use a few common modules. Usd
+          is the core client-facing module for authoring, composing, and reading USD. It provides
+          the interface for creating or opening a stage, plus the generic interfaces for interacting
+          with prims, properties, metadata, and composition arcs.
+
+          Sdf, the scene description foundation, provides the foundations for serializing scene
+          description to a reference text-based file format and implements scene description layers,
+          which store part of the scene description. In practice you will see Sdf most often for
+          managing prim and property paths and for creating layers.
+
+          Gf, the graphics foundation, contains the foundation classes and functions that contribute
+          graphics: linear algebra, basic mathematical operations, and basic geometry. It holds the
+          3D data types you use when getting and setting particular USD attributes.
+        points:
+          - "Usd owns stages, prims, properties, metadata, and composition arcs."
+          - "Sdf owns layers, paths, and the serialized form of scene description."
+          - "Gf owns the math and 3D data types that attribute values are expressed in."
+      - kind: api
+        heading: Importing from the pxr namespace
+        system: >-
+          One namespace, every module. It is the least confusing thing in this building and I resent
+          it slightly.
+        body: |
+          In Python, these modules are imported from the pxr namespace. A single import line brings
+          in as many as you need, which is why nearly every example in this curriculum opens the
+          same way.
+        code: |
+          # Import Usd, Sdf, and Gf libraries from Pixar
+          from pxr import Usd, Sdf, Gf
+
+          # Schema domains are modules too, imported the same way.
+          from pxr import UsdGeom, UsdShade, UsdPhysics
+      - kind: concept
+        heading: Schema modules are grouped by domain
+        system: >-
+          The domain tells you the module. Geometry lives with geometry. Revolutionary, I know.
+        body: |
+          Alongside the common modules, you will use schema modules. Schemas are grouped into schema
+          domains, and each domain has its own module, so which schema module you import depends on
+          the kind of scene description you are working with.
+
+          UsdGeom covers geometry data, UsdShade covers materials and shaders, and UsdPhysics covers
+          physics scene description. Each schema domain is covered in more depth in the lessons for
+          that domain, so the point here is only the mapping: identify the domain your data belongs
+          to and the module name follows from it.
+        points:
+          - "UsdGeom is the schema module for geometry data."
+          - "UsdShade is the schema module for materials and shaders."
+          - "UsdPhysics is the schema module for physics scene description."
+      - kind: work_order
+        heading: Six rooms of imports, and nothing has said which module owns what
+        system: >-
+          Reaching into the wrong module is not a crime. It is merely slow, and slow is expensive
+          on this floor.
+        body: |
+          The Module Desk is the last stop on the Records Clocktower and it changes nothing in the
+          city. Every room behind it opened with one line from pxr, and that line has covered
+          opening stages, the Sdf value types behind cityName and shelfCount, the Sdf paths behind
+          the Archive survey, and the schema classes for Sphere and Xform.
+
+          That mapping has never been stated. Because Usd, Sdf, and Gf arrive together, nothing so
+          far has separated them, so Sdf.ValueTypeNames.String reads as a Usd symbol simply
+          because it is handed to a call on a prim, and Sdf.Path reads the same way because the
+          stage is what consumes it. Away from the Desk the same gap shows up as time spent
+          hunting a symbol in the wrong module.
+
+          State the division. Usd is the client-facing module for stages, prims, properties,
+          metadata, and composition arcs. Sdf is the scene description foundation behind layers,
+          paths, and the serialized text form. Gf is the graphics foundation holding the linear
+          algebra and 3D types attribute values are expressed in. A schema module such as UsdGeom
+          is none of those three; it follows from the domain the data belongs to.
+        points:
+          - "Value types and paths come from Sdf, not Usd, even though you use them through Usd calls."
+          - "Vector and matrix types come from Gf, so an attribute value built from the wrong module will not match its declared type."
+          - "Typed prims come from a schema domain module rather than the core Usd module, so geometry means UsdGeom."
+          - "Everything is imported from pxr, so an import that names a package instead of the pxr namespace will not resolve."
+      - kind: recap
+        heading: What you now know
+        body: |
+          The repository's four core packages are base, usd, imaging, and usdImaging, and authoring
+          only needs the first two. Usd is the client-facing module for stages, prims, properties,
+          metadata, and composition. Sdf is the scene description foundation behind layers and
+          paths. Gf is the graphics foundation supplying the math types attribute values use. Schema
+          modules such as UsdGeom, UsdShade, and UsdPhysics are chosen by domain, and all of them
+          are imported from pxr.
+    apply:
+      f1_module_desk: >-
+        No terminal here either. The Desk wants you to name which module opens a stage and hands you
+        the generic prim interfaces, what Sdf is actually the foundation of, and where the 3D math
+        types you assign to attributes come from. You have imported all three repeatedly. Now say
+        why.

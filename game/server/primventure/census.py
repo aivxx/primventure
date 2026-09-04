@@ -1,10 +1,8 @@
-"""Prim Census: what the failed stage actually held.
+"""Failure snapshot: what the submitted stage actually held.
 
-The room card already publishes the target state, so restating it teaches
-nothing. Everything here reports the *composed* stage instead: the prims USD
-resolved, their specifiers and types, and the real value behind each failing
-check. That is the one view neither the checklist nor the USDA panel gives,
-and reading it is the same skill the certification asks for.
+Boss debriefs retain the failed checklist, and a hint quotes the one observed
+value behind the check that missed. Keeping the composed snapshot also leaves
+diagnosis separate from USD Check's target reference.
 """
 from __future__ import annotations
 
@@ -332,7 +330,13 @@ def observations(
                 CheckObservation(
                     rule=result.rule,
                     target="Cookbook question",
-                    observed="Your answer did not match the reading.",
+                    # The runner reports a blank field separately from a wrong one,
+                    # so the reading should not claim a mismatch that never happened.
+                    observed=(
+                        "You have not answered this question yet."
+                        if result.message.startswith("Not answered yet")
+                        else "Your answer did not match the reading."
+                    ),
                 )
             )
             continue

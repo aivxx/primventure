@@ -1,0 +1,597 @@
+lessons:
+  - source: docs/scene-description-blueprints/schemas.md
+    title: Schemas
+    objective: Distinguish IsA schemas from API schemas and author typed prims through schema classes and their property accessors.
+    intro: >-
+      Schema Square has spent two seasons trading crates labeled "probably geometry." Today we
+      introduce schemas, which tell a prim what it is and what properties come with the job. The
+      audience has been instructed not to applaud until something in this borough has a type name.
+    beats:
+      - kind: concept
+        heading: Schemas are the blueprints behind a prim
+        system: >-
+          A blueprint answers two questions: what is this thing, and what is it allowed to carry.
+          Contestants historically answer neither.
+        body: |
+          Schemas give meaning to prims. They answer what an element is and what capabilities it
+          has, and they define the data models used to encode and interchange 3D and non-3D
+          concepts through OpenUSD. A schema serves as a blueprint for authoring and retrieving
+          data such as attributes and relationships that govern the behavior of elements in a
+          scene.
+
+          Every prim implicitly carries the properties and fallback values of the typed schema
+          that tells the prim what it is. The Sphere schema declares its radius attribute as
+          double radius = 1, so every Sphere prim has a double-precision radius whose value is 1
+          by default, whether or not any layer says so.
+
+          Schemas are primarily data models with documented rules about how the data should be
+          interpreted. They do not necessarily include an implementation of behavior. The
+          UsdPhysics schemas, for example, do not ship a physics engine. Developers may provide
+          behaviors through the schema API, but that is not a requirement, and there is a trend
+          toward codeless schemas that focus on data modeling rather than behavior. Actual
+          behavior enforcement is left to other subsystems in the runtime ecosystem, which allows
+          flexibility and performance tuning per use case.
+        points:
+          - A schema documents how its data should be interpreted, so any USD-aware application reads the same prim the same way.
+          - A fallback value is the schema's answer for a property the scene never mentions.
+          - "OpenUSD uses two kinds of schema: IsA schemas and API schemas."
+      - kind: concept
+        heading: IsA schemas state what a prim is
+        system: >-
+          One identity per prim. The borough tried multiple identities and produced the fourth
+          floor.
+        body: |
+          IsA schemas, also called typed schemas or prim schemas, essentially tell a prim what it
+          is. Because of that, a prim can only subscribe to one IsA schema at a time. The
+          typeName metadata is what assigns an IsA schema to a prim.
+
+          IsA schemas derive from the core class UsdTyped, the base class for all typed schemas,
+          which is why they are also called typed schemas. They are either concrete or abstract.
+          A concrete schema can be instantiated as prims in a scene and provides both a name and
+          a typeName in its definition, as UsdGeomMesh and UsdGeomScope do. An abstract, or
+          non-concrete, schema provides a name but no typeName, which lets it serve as a base
+          class for a family of concrete schemas. UsdGeomPointBased is the base class for
+          geometric objects that contain points, such as UsdGeomMesh and UsdGeomBasisCurves.
+        points:
+          - typeName metadata is what grants a prim its IsA schema, and a prim holds at most one.
+          - A concrete schema declares a typeName and can be instantiated as a prim.
+          - An abstract schema declares no typeName and exists to be a base class for related concrete schemas.
+      - kind: concept
+        heading: API schemas add properties to prims that already have a type
+        system: >-
+          The suffix is API. This is the closest OpenUSD comes to labeling its own props, and I
+          respect the effort.
+        body: |
+          API schemas are similar to IsA schemas except that they do not specify a typeName,
+          which makes them non-concrete. They are typically named with the suffix API in their C++
+          or Python class name, such as UsdShadeConnectableAPI. Properties belonging to an API
+          schema are namespaced with the schema's base name and camelCased, so
+          UsdPhysics.RigidBodyAPI.CreateVelocityAttr() creates an attribute named
+          physics:velocity.
+
+          API schemas can be non-applied or applied, and applied schemas are further divided into
+          single-apply and multiple-apply. A single-apply API schema is applied to only a single
+          instance of a prim, while a multiple-apply API schema can be applied several times to
+          the same prim under different instance names.
+
+          Unlike IsA schemas, API schemas do not assign a typeName. They are list-edited in the
+          apiSchemas metadata and queried with the HasAPI method. They are assigned to
+          already-typed prims in order to annotate them with additional properties that govern
+          behaviors.
+        points:
+          - An API schema annotates a prim without replacing or supplying its type name.
+          - "An API schema's properties are namespaced and camelCased, which is why RigidBodyAPI authors physics:velocity."
+          - apiSchemas metadata records applied API schemas, and HasAPI answers whether one is present.
+      - kind: api
+        heading: Working with schemas in Python
+        system: >-
+          Define, then set. Two calls. I have watched contestants attempt them in the other order
+          and then blame the registry.
+        body: |
+          Each schema class exposes a Define method that authors the prim with the correct type
+          name and returns a typed object, along with accessors for the properties that schema
+          owns. UsdGeom defines schemas for geometric objects such as meshes, cameras, and
+          curves, plus schemas for transformations, visibility, and other common properties.
+          UsdLux defines schemas for light sources, where a type such as DiskLight brings its own
+          properties and LightAPI supplies shared ones like intensity. UsdPhysicsRigidBodyAPI
+          adds physics properties to a UsdGeomXformable object for simulation such as rigid body
+          dynamics.
+
+          The schema registry answers questions about registered schemas themselves rather than
+          about any particular prim. FindSchemaInfo retrieves the schema info for a registered
+          schema, and GetSchemaTypeName retrieves its type name.
+        code: |
+          from pxr import Usd, UsdGeom, UsdLux, UsdPhysics
+
+          stage = Usd.Stage.Open(STAGE_PATH)
+
+          # An IsA schema: Define authors the type name and returns the typed object.
+          stall = UsdGeom.Cube.Define(stage, "/City/BlueprintBorough/Stall")
+          stall.GetSizeAttr().Set(2.0)
+
+          sphere = UsdGeom.Sphere.Define(stage, "/World/Sphere")
+          sphere.GetRadiusAttr().Set(10)
+
+          # UsdLux: properties arrive from the light type and from LightAPI.
+          disk_light = UsdLux.DiskLight.Define(stage, "/World/Lights/DiskLight")
+          disk_light.GetSchemaAttributeNames()     # names the DiskLight schema owns
+          disk_light.GetRadiusAttr().Set(0.4)      # from the DiskLight typed schema
+          disk_light.GetIntensityAttr().Set(1000)  # from LightAPI
+
+          # An API schema: applied to a prim that already has a type.
+          cube_rb_api = UsdPhysics.RigidBodyAPI.Apply(stall.GetPrim())
+          cube_rb_api.GetKinematicEnabledAttr()
+          cube_rb_api.CreateVelocityAttr(5)
+
+          # The registry describes schemas, not prims.
+          Usd.SchemaRegistry.FindSchemaInfo("Cube")
+          Usd.SchemaRegistry.GetSchemaTypeName(UsdGeom.Cube)
+
+          stage.GetRootLayer().Save()
+      - kind: work_order
+        heading: Schema Square has no typed stall, so nothing declares a size
+        system: >-
+          A prim named Cube may be nothing of the kind. The type name is the credential, and the
+          former mayor's letterhead is not.
+        body: |
+          Schema Square is the first neighborhood of the Schema Borough, and it opens on the city
+          you carried up from the clocktower: /City, the Property Ward, the Archive and its
+          vault. /City/BlueprintBorough is where the borough's prims belong, and the stall is the
+          first of them. The square trades in typed goods, so the stall needs to be a Cube at
+          /City/BlueprintBorough/Stall, two units on a side.
+
+          Nothing is authored at that path, so there is no typeName there to read. A container
+          authored without one would be a legal prim carrying none of the Cube schema's
+          properties, because typeName metadata is what grants a prim its IsA schema. The prim's
+          name grants nothing: calling it Stall or Cube leaves the type unauthored either way.
+
+          Define the prim through the schema class. UsdGeom.Cube.Define authors the type name and
+          returns the typed object, and the size accessor that schema owns writes the value of 2.
+          The detail is that a Cube answers with a size before you write anything, since every
+          prim implicitly carries the fallback values of the schema telling it what it is, so
+          reading a plausible number back confirms the type rather than the value.
+        points:
+          - A prim subscribes to one IsA schema at a time, so a second type name replaces rather than adds.
+          - An abstract schema has no typeName and therefore cannot be instantiated as a prim.
+          - A schema property can return a value from its fallback even when no layer has authored one, so reading a number proves nothing about what you wrote.
+          - A schema may define data without implementing behavior, so authoring the properties is not the same as something acting on them.
+      - kind: recap
+        heading: What you now know
+        body: |
+          Schemas are the templates that define prims. IsA schemas assign a typeName and declare
+          what a prim is, with concrete schemas instantiable and abstract ones serving as base
+          classes. API schemas carry no typeName and are applied to already-typed prims to add
+          namespaced properties that govern behaviors, recorded in apiSchemas and queried with
+          HasAPI. Together they provide a flexible, extensible system for building scenes, and
+          each one is reached in Python through its own Define method and property accessors.
+    apply:
+      f2_market_stall: >-
+        Define the Stall with UsdGeom.Cube and author size 2 through the schema. Schema Square
+        accepts typed goods only, and the untyped inventory was confiscated by a boss with a
+        clipboard.
+
+  - source: docs/scene-description-blueprints/scope.md
+    title: Scope
+    objective: Use Scope prims as lightweight grouping containers that organize a hierarchy without contributing any transform.
+    intro: >-
+      Every borough eventually needs a yard, which is to say a place to put things that is not
+      itself a thing. Scope is that prim. It holds, it labels, it refuses to move, and it has
+      never once been accused of being interesting.
+    beats:
+      - kind: concept
+        heading: A Scope is a grouping prim
+        system: >-
+          An empty folder with civic ambitions. I have met contestants with less structure.
+        body: |
+          In OpenUSD, a Scope is a special type of prim used primarily as a grouping mechanism in
+          the scenegraph. It does not represent any geometry or renderable content itself and
+          acts instead as a container for organizing other prims. The useful comparison is an
+          empty folder on a computer: it holds nothing of its own and exists so that what it
+          holds can be found.
+
+          Understanding Scopes matters because they help organize and manage complexity in
+          large-scale 3D scenes. Scope prims create logical groupings of related prims, which is
+          particularly useful in scenes with numerous elements. A Scope might group everything
+          related to materials, or animation, or geometry. That organization simplifies scene
+          management and makes it easier for teams to navigate, modify, and render scenes.
+        points:
+          - A Scope contributes structure rather than renderable content.
+          - Grouping related prims under a Scope is what keeps a large scene navigable.
+          - UsdGeomScope is a grouping primitive, so it is the right choice when the prim's only job is to hold others.
+      - kind: concept
+        heading: A Scope cannot be transformed
+        system: >-
+          It does not move. This is the entire distinction, and it is also the entire reason the
+          crane lives in the next neighborhood.
+        body: |
+          A key feature of Scopes is that they cannot be transformed, and that constraint is what
+          promotes their use as lightweight organizational containers. UsdGeomScope is a grouping
+          primitive and does not have transformability.
+
+          The constraint does not interfere with anything beneath it. All transformable child
+          prims, such as geometry prims or Xforms, are evaluated correctly from within the Scope
+          prim and on down the hierarchy. So a Scope may sit anywhere in a hierarchy without
+          altering how its descendants are placed, which is precisely why it is safe to use for
+          partitioning.
+
+          That makes Scopes a good way to organize libraries with large numbers of entry points,
+          and it is considered best practice to group actors and environments under partitioning
+          Scopes. Grouping this way has a second benefit beyond navigation: a user can deactivate
+          all actors or all environments at once by deactivating the root Scope they sit under.
+        points:
+          - A Scope holds no transform, so placement is expressed by transformable prims instead.
+          - Child transforms still resolve correctly through a Scope, so inserting one changes organization and nothing else.
+          - Deactivating a partitioning Scope is a single call that takes its whole subtree with it.
+      - kind: api
+        heading: Defining and identifying Scopes in Python
+        system: >-
+          Define to author, IsA to confirm. The second call exists because contestants keep
+          asserting things about prims they never typed.
+        body: |
+          Two functions cover most work with Scopes. UsdGeom.Scope.Define defines a new Scope at
+          a specified path on a given stage. The generic prim.IsA check confirms that a prim's
+          type really is a Scope, which is what keeps a script from assuming.
+
+          Paths compose, so a Scope defined under a transformable root can then be handed its own
+          children by appending to its path. GetPath returns the Scope's path, and AppendPath or
+          AppendChild builds the child paths beneath it.
+        code: |
+          from pxr import Usd, UsdGeom, Gf
+
+          stage = Usd.Stage.Open(STAGE_PATH)
+
+          # A transformable container at the top.
+          world = UsdGeom.Xform.Define(stage, "/World")
+
+          # Two organizational Scopes, which are not transformable.
+          a_scope = UsdGeom.Scope.Define(stage, world.GetPath().AppendPath("A_Scope"))
+          b_scope = UsdGeom.Scope.Define(stage, world.GetPath().AppendPath("B_Scope"))
+
+          # Populate them with geometry, placed by the children themselves.
+          sphere = UsdGeom.Sphere.Define(stage, a_scope.GetPath().AppendPath("A_Sphere_0"))
+          UsdGeom.XformCommonAPI(sphere).SetTranslate(Gf.Vec3d(0, 0, 0))
+
+          cube = UsdGeom.Cube.Define(stage, b_scope.GetPath().AppendPath("B_Cube_0"))
+          UsdGeom.XformCommonAPI(cube).SetTranslate(Gf.Vec3d(2.5, -2.5, 0))
+
+          a_scope.GetPrim().IsA(UsdGeom.Scope)   # True
+          a_scope.GetPrim().SetActive(False)     # the whole A_Scope subtree steps out
+
+          stage.Save()
+      - kind: work_order
+        heading: The yard is missing, and so is the crate it exists to group
+        system: >-
+          The yard is not a crane. Attempting to move a Scope is how this neighborhood generates
+          most of its footage.
+        body: |
+          The yard belongs in Schema Square, beside the stall you just typed as a Cube. It takes
+          two prims rather than one: a Scope at /City/BlueprintBorough/Yard to do the holding,
+          and a Cube named Crate at /City/BlueprintBorough/Yard/Crate carrying size 1 as the
+          thing held. The container declares structure and the child declares everything anyone
+          can see or measure.
+
+          Neither prim exists yet, and the two jobs cannot be collapsed into one prim. A Scope is
+          a grouping primitive with no renderable content, so a Scope authored on its own leaves a
+          group with nothing grouped inside it and nothing for a renderer to draw. It has no
+          transformability either, so there is nothing on the yard itself to place, size, or
+          measure.
+
+          UsdGeom.Scope.Define authors the container at the Yard path, then UsdGeom.Cube.Define
+          authors the Crate at the path beneath it and its size accessor takes 1. The path is the
+          detail. Define takes the stage first and the path second, and the ancestors in that path
+          are what put the Crate inside the Yard, so a Cube authored one level too high is a
+          correctly typed, correctly sized prim sitting outside the yard entirely.
+        points:
+          - A Scope is not renderable, so a Scope alone leaves nothing for a renderer to draw.
+          - Define takes the stage first and the path second, and the path's ancestors matter because the Scope lands wherever the path says.
+          - Deactivating a Scope hides everything under it, which is powerful when intended and confusing when not.
+          - Confirm a type with prim.IsA rather than assuming from a prim's name.
+      - kind: recap
+        heading: What you now know
+        body: |
+          Scope prims organize and manage complex scenes. Their primary function is to serve as a
+          container for other prims, keeping clarity and structure in large projects. They carry
+          no transform, which is what keeps them lightweight, and their transformable descendants
+          still evaluate correctly from within the Scope on down. UsdGeom.Scope.Define authors
+          one and prim.IsA(UsdGeom.Scope) confirms it.
+    apply:
+      f2_scope_yard: >-
+        Define the Yard as a Scope, then define the Crate as a Cube inside it with size 1. The
+        yard groups, the crate is the only thing anyone can actually see, and the borough will be
+        checking both.
+
+  - source: docs/scene-description-blueprints/xform.md
+    title: Xform
+    objective: Define Xform prims that transform their children as a group, and read the op order that determines how their transformations combine.
+    intro: >-
+      Crane Row has a crane, and the crane is on the ground, because so far nobody in this
+      borough has authored a transformation. Xform is the prim that fixes that. It is also where
+      contestants learn that transformations happen in an order, and that the order is authored.
+    beats:
+      - kind: concept
+        heading: An Xform stores transformation data for its children
+        system: >-
+          It moves things. Specifically, it moves everything beneath it, which is either elegant
+          or a liability depending on where you parked.
+        body: |
+          In OpenUSD, an Xform is a type of prim that stores transformation data such as
+          translation, rotation, and scaling, which apply to its child prims. Xform stands for
+          transform, reflecting its role in transforming the space in which its children reside.
+          That makes Xforms a powerful tool for grouping and manipulating the spatial arrangement
+          of objects in a 3D scene.
+
+          Xform prims allow for hierarchical transformations, meaning a transformation applied to
+          a parent Xform affects all of its child prims. This is essential in complex scenes
+          where multiple objects need to move or scale together. Typical use cases include
+          animating characters or robotic arms, where different parts are children of an Xform
+          prim, and architectural visualization, where every item in a room might be rotated or
+          scaled as one.
+        points:
+          - A transformation on a parent Xform applies to everything beneath it in the hierarchy.
+          - Grouping prims under an Xform is how a set of objects is moved as a single unit.
+          - An Xform is the transformable counterpart to a Scope, which groups without moving anything.
+      - kind: concept
+        heading: UsdGeom, imageable prims, and transformability
+        system: >-
+          Two base classes and one concrete type. Read this beat and you will stop guessing which
+          prims can be moved.
+        body: |
+          UsdGeom defines the 3D graphics-related prim and property schemas that together form a
+          basis for interchanging geometry between digital content creation tools in a graphics
+          pipeline. Two facts about it explain most of this room.
+
+          First, all classes in UsdGeom inherit from UsdGeomImageable, whose intent is to capture
+          any prim type that might want to be rendered or visualized. Second, all geometry prims
+          are directly transformable, and UsdGeomXformable is the schema that encapsulates a prim
+          that is transformable.
+
+          UsdGeomXform itself is a concrete prim schema for a transform. It is transformable and
+          it can transform other child prims as a group. So an Xform is not the only prim that
+          can hold a transformation, since geometry prims are transformable too. It is the prim
+          whose entire purpose is holding one on behalf of its children.
+        points:
+          - UsdGeomXformable is the schema behind any prim that can be transformed.
+          - A geometry prim is directly transformable, so it can carry its own local placement.
+          - UsdGeomXform is concrete, which is why it can be instantiated as a prim in the scene.
+      - kind: api
+        heading: Defining an Xform and adding transform ops
+        system: >-
+          The op is a thing you add, not a value you set. Contestants who miss that end up with a
+          crane and a strong opinion about nothing.
+        body: |
+          UsdGeom.Xform.Define defines a new Xform prim at a specified path on a given stage. A
+          transformation is then authored by adding a transform operation to that prim.
+          AddXformOp adds a new transform operation, such as a translation or a rotation, and the
+          typed helpers do the same for one specific kind of operation, so AddTranslateOp adds a
+          translation. Each call returns the op, and setting a value on that op is what records
+          the transformation.
+
+          GetXformOpOrderAttr retrieves the order of transformation operations. That order is
+          crucial for understanding how multiple transformations are combined, because different
+          orders can yield different results. Reading the xformOpOrder attribute is therefore the
+          way to see what a prim's transformation actually is, rather than inferring it from the
+          individual ops.
+        code: |
+          from pxr import Gf, Usd, UsdGeom
+
+          stage = Usd.Stage.Open(STAGE_PATH)
+
+          # Define a new Xform prim, then author a transformation on it.
+          crane = UsdGeom.Xform.Define(stage, "/City/BlueprintBorough/Crane")
+          translate = crane.AddTranslateOp()
+          translate.Set(Gf.Vec3d(0, 12, 0))
+
+          # The op order records which operations combine, and in what sequence.
+          print(UsdGeom.Xformable(crane).GetXformOpOrderAttr().Get())
+
+          stage.Save()
+          print(stage.ExportToString(addSourceFileComment=False))
+      - kind: concept
+        heading: Why the order of operations matters
+        system: >-
+          Rotate then move, or move then rotate. The borough has made this mistake at scale and
+          the results are visible from the fourth floor.
+        body: |
+          An Xform prim's transformation is not a single value but a sequence of operations
+          combined in the order the prim records. Different orders can yield different results,
+          which is why the order is authored data rather than a convention. Scaling before
+          rotating is not the same transformation as rotating before scaling, and translating
+          before rotating places an object somewhere other than rotating before translating.
+
+          This is also why the order is exposed as an attribute. GetXformOpOrderAttr is how a
+          reader learns which ops exist on the prim and the sequence they are combined in, and
+          it is the first thing to inspect when a prim ends up somewhere unexpected. Adding ops
+          is an authoring decision with a consequence you can read back.
+        points:
+          - A prim's transformation is the combination of its ops in the recorded order.
+          - Reordering the same set of operations can change where a prim ends up.
+          - Inspect the op order before concluding that an individual op holds the wrong value.
+      - kind: work_order
+        heading: The crane has no prim on Crane Row and no translation on it
+        system: >-
+          Adding the op twice is my favorite outcome here. Nothing errors and the crane arrives at
+          a location nobody requested.
+        body: |
+          Crane Row is the next neighborhood along from the yard, and the crane belongs at
+          /City/BlueprintBorough/Crane. It has to be an Xform, so that whatever hangs beneath it
+          moves with it, and it has to stand twelve units above the street, which comes down to
+          one attribute on the prim: xformOp:translate holding (0, 12, 0).
+
+          Nothing is authored at that path, so nothing on the row holds a transformation. An
+          Xform is the prim whose purpose is holding a transformation on behalf of its children,
+          and with no ops on it the crane's op order is empty and its placement is whatever its
+          ancestors contribute, which on this row is street level.
+
+          UsdGeom.Xform.Define authors the prim, AddTranslateOp adds the operation and returns it,
+          and setting a Gf.Vec3d of (0, 12, 0) on what it returns is what records the
+          transformation. Both halves are needed: the op alone leaves an entry in xformOpOrder
+          with no value behind it, and adding a second op of the same kind extends that order
+          instead of overwriting the first.
+        points:
+          - AddTranslateOp returns the op, so the value is set on what it returns.
+          - Adding a second op of the same kind extends the op order instead of overwriting it.
+          - A Scope cannot be transformed, so an op belongs on an Xform or another transformable prim.
+      - kind: recap
+        heading: What you now know
+        body: |
+          Xform prims are essential for defining and managing spatial transformations in a scene.
+          An Xform stores translation, rotation, and scaling that apply to its child prims, so
+          transformations are hierarchical and a parent moves everything beneath it.
+          UsdGeom.Xform.Define authors one, AddXformOp and its typed helpers add the operations,
+          and GetXformOpOrderAttr reports the order in which those operations combine, which is
+          what determines the result.
+    apply:
+      f2_xform_crane: >-
+        Define the Crane as an Xform, then add a translate op and set it to (0, 12, 0). One op,
+        one value, one crane finally above street level.
+
+  - source: docs/scene-description-blueprints/xformcommonapi.md
+    title: XformCommonAPI
+    objective: Author and retrieve a standard translate, rotate, scale, and pivot through XformCommonAPI instead of assembling an arbitrary op stack by hand.
+    intro: >-
+      The crane taught you that transform ops are a sequence you author. The Lift is where you
+      learn that most of the time you should not be authoring that sequence at all. One API, a
+      fixed set of operations, a fixed order, and considerably fewer arguments with the export
+      department.
+    beats:
+      - kind: concept
+        heading: A common set of transformations, interchange first
+        system: >-
+          It is called common because everyone agreed on it. That happens roughly once per
+          schema domain and I try to make an occasion of it.
+        body: |
+          XformCommonAPI is a non-applied API schema. It facilitates the authoring and retrieval
+          of a common set of operations with a single translation, rotation, scale, and pivot,
+          which is generally compatible with import into and export out of many tools. Its
+          purpose is to simplify the interchange of those transformations.
+
+          The API provides methods to get and set these transformations at specific times. A
+          transformation vector can be retrieved at any given frame or time code, which gives
+          precise control over the process. Being non-applied means it does not need to be added
+          to a prim's apiSchemas to be used; it is a wrapper around a compatible prim's
+          transformation data.
+        points:
+          - The standard set is a single translation, a single rotation, a single scale, and a pivot.
+          - Compatibility with many tools is the reason the set is deliberately narrow.
+          - Values can be read and written at a specific time code as well as at the default.
+      - kind: concept
+        heading: Why the constraint is the feature
+        system: >-
+          Two rotations on one planet is a legitimate technique and also how a simple question
+          becomes a research project.
+        body: |
+          There is another way to author and retrieve translations, through the UsdGeomXformable
+          function. Xformable prims support arbitrary sequences of transformations, which gives
+          power users a great deal of flexibility. A user could place two rotations on a Planet
+          prim in order to control revolution and rotation around two different pivots on the
+          same prim.
+
+          That flexibility is real, but it complicates simple queries such as asking what an
+          object's position is at time 101.0, because answering requires interpreting the whole
+          authored sequence. XformCommonAPI resolves that by limiting the set of allowed basic
+          operations and by specifying the order in which they are applied. The order is not a
+          decision the author makes op by op; it is part of the API's contract, which is exactly
+          what makes a value authored in one tool mean the same thing when another tool reads it.
+
+          When an arbitrary op order does exist and needs to be evaluated, a transformation
+          matrix can still be obtained from the xformable prim with the
+          UsdGeomXformable::GetLocalTransformation method, which works with any xformOp order.
+        points:
+          - An arbitrary op sequence is powerful and makes straightforward position queries harder to answer.
+          - XformCommonAPI fixes both which operations are allowed and the order they are applied in.
+          - GetLocalTransformation returns a matrix from an xformable prim regardless of its op order.
+      - kind: api
+        heading: Checking compatibility, then setting the components
+        system: >-
+          The bool check is one line and it is the line that separates a transform from an
+          exception. Contestants skip it exactly once.
+        body: |
+          Wrapping a prim in UsdGeom.XformCommonAPI produces an object that evaluates as false
+          when the prim is not compatible, so the bool operator is how compatibility is verified
+          before anything is authored. From there the component setters do the work: SetTranslate
+          takes a translation, SetRotate takes a rotation along with a rotation order such as
+          UsdGeom.XformCommonAPI.RotationOrderXYZ, and SetScale takes a scale.
+
+          Because it is a wrapper, the transformations it sets are ordinary transform operations
+          on the prim, so the authored xformOpOrder can still be inspected afterward through
+          UsdGeom.Xformable. Even though these are attributes, it is best to go through
+          XformCommonAPI when editing transformation values, and it is a good way to bootstrap
+          setting up new transformations.
+        code: |
+          from pxr import Gf, Usd, UsdGeom
+
+          stage = Usd.Stage.Open(STAGE_PATH)
+          lift = UsdGeom.Xform.Define(stage, "/City/BlueprintBorough/Lift")
+
+          # Verify the prim is compatible before authoring anything.
+          if not (xform_api := UsdGeom.XformCommonAPI(lift)):
+              raise Exception("Prim not compatible with XformCommonAPI")
+
+          xform_api.SetTranslate(Gf.Vec3d(4, 0, 0))
+          xform_api.SetScale(Gf.Vec3f(2, 2, 2))
+          xform_api.SetRotate(Gf.Vec3f(0, 0, 0), UsdGeom.XformCommonAPI.RotationOrderXYZ)
+
+          # The API authored ordinary transform ops, in the order it guarantees.
+          print(UsdGeom.Xformable(lift).GetXformOpOrderAttr().Get())
+
+          stage.Save()
+      - kind: concept
+        heading: Children inherit a parent's components
+        system: >-
+          The child under the parent moves with it. The child parked elsewhere does not, and then
+          writes in asking why.
+        body: |
+          Because XformCommonAPI authors transformations on the prim itself, everything about
+          hierarchical inheritance still applies. Translating, rotating, and scaling a parent
+          Xform through the API moves every child beneath it, while a prim under a separate
+          hierarchy inherits none of it.
+
+          The practical consequence is that a child's own translation set through the API is a
+          local placement layered on top of whatever its ancestors contribute. Two children given
+          the identical local translation end up in different places when one sits under a
+          transformed parent and the other does not.
+        points:
+          - A child under a transformed parent receives the parent's transform plus its own local placement.
+          - A prim in a separate hierarchy receives only its own local placement.
+          - The same local value produces different world placement depending on the ancestors above it.
+      - kind: work_order
+        heading: The lift has no translation, no scale, and nothing confirming the API accepts it
+        system: >-
+          Not every prim accepts this API. The ones that do not will tell you, provided you asked.
+        body: |
+          The Lift belongs on Crane Row, beside the crane you raised with a single translate op.
+          It needs to be an Xform at /City/BlueprintBorough/Lift standing four units along and
+          scaled to twice its size, which is two ordinary attributes on the prim,
+          xformOp:translate holding (4, 0, 0) and xformOp:scale holding (2, 2, 2). Those attribute
+          names are the giveaway: XformCommonAPI is a wrapper, so its setters author the same
+          transform operations you would otherwise stack yourself.
+
+          Nothing is authored there yet, neither the prim nor either component. Stacking those two
+          ops by hand would put the same numbers in the layer while giving up the fixed operation
+          set and the specified order the API guarantees, which is what makes a value authored
+          here mean the same thing to the next tool that opens it.
+
+          Define the Lift as an Xform, wrap it in UsdGeom.XformCommonAPI, evaluate the wrapper as
+          a bool, then call SetTranslate with (4, 0, 0) and SetScale with (2, 2, 2). That boolean
+          is the detail. It is the only compatibility test the API offers, and it comes back false
+          for a prim with no transformability, such as a Scope.
+        points:
+          - Evaluate the wrapper as a bool before authoring, since that is the compatibility test the API provides.
+          - Prefer the API's setters over editing transformation attributes by hand when the standard components are enough.
+          - The set of operations is deliberately limited, so an arbitrary sequence of ops is a different tool for a different job.
+          - A prim that cannot be transformed at all, such as a Scope, is not a candidate for these setters.
+      - kind: recap
+        heading: What you now know
+        body: |
+          XformCommonAPI provides the preferred way for authoring and retrieving a standard set
+          of component transformations: scale, rotation, scale-rotate pivot, and translation. It
+          works by limiting the set of allowed basic operations and by specifying the order in
+          which they are applied, which is what makes those values interchangeable across tools
+          and simple queries answerable. Verify compatibility with the bool operator, author with
+          SetTranslate, SetRotate, and SetScale, and fall back to an arbitrary xformOp sequence
+          with GetLocalTransformation only when the standard components are genuinely not enough.
+    apply:
+      f2_common_lift: >-
+        Define the Lift as an Xform, then use UsdGeom.XformCommonAPI to set its translation to
+        (4, 0, 0) and its scale to (2, 2, 2). Two setters, one guaranteed order, and no argument
+        with the export department.

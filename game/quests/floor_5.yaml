@@ -232,15 +232,13 @@ quests:
       # This boss opens your accumulated city. Author every graded opinion below.
       # 1. Define /World/CargoCrate with type Xform.
       # 2. Author a payload on /World/CargoCrate to asset sm_bldgF.usd.
-      # 3. Set /World/CargoCrate metadata documentation to 'Loaded on demand.'.
-      # 4. Set /World/CargoCrate metadata documentation to 'Harbor Master: Keep the Payload Deferred cleared.'.
+      # 3. Set /World/CargoCrate metadata documentation to 'Harbor Master: Keep the Payload Deferred cleared.'.
       stage.GetRootLayer().Save()
     language: python
     validator:
       assertions:
       - prim_type: {path: /World/CargoCrate, value: Xform}
       - has_payload: {path: /World/CargoCrate, asset: sm_bldgF.usd}
-      - metadata_equals: {path: /World/CargoCrate, key: documentation, value: Loaded on demand.}
       - metadata_equals: {path: /World/CargoCrate, key: documentation, value: 'Harbor Master: Keep the Payload Deferred
             cleared.'}
     cookbook: docs/creating-composition-arcs/references-payloads/what-are-payloads.md
@@ -437,9 +435,8 @@ quests:
     cookbook: docs/creating-composition-arcs/strength-ordering/tracing-through-liverps.md
     xp: 500
     reward:
-      opinion_points: 3
+      opinion_points: 4
       achievement: "Floor clear! You traced LIVERPS on a live city sign. Weaker arcs request a mediator."
-      inventory: {prim_censuses: 1}
     world_target: /City/ArcHighlands/LabyrinthSign
     recipes: [LIVERPS Strength Ordering, Composition]
     questions:

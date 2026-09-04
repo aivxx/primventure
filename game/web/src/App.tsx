@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import Editor from "@monaco-editor/react";
 import {
   ArrowRight, Backpack, Boxes, BookOpen, Building2, CheckCircle2, ChevronLeft,
-  ChevronRight, Circle, CircleDollarSign, Clapperboard, Code2, FlaskConical, ListTree,
+  ChevronRight, Circle, CircleDollarSign, Clapperboard, Code2, FileCheck2, FlaskConical,
   Gem, HelpCircle, Lightbulb, ListChecks, LockKeyhole, Play, RefreshCw, Shield,
   ShoppingCart, Skull, Sparkles, Swords, TerminalSquare, Trash2, Trophy, Tv, X,
   XCircle, Zap,
@@ -12,7 +12,7 @@ import * as THREE from "three";
 type Language = "python" | "usda" | "none";
 type Question = { prompt: string; choices?: string[]; answer?: number; answer_key?: string };
 type LessonBeat = {
-  kind: "concept" | "api" | "pitfall" | "recap";
+  kind: "concept" | "api" | "work_order" | "recap";
   heading: string; system?: string; body?: string; points?: string[]; code?: string;
 };
 type Lesson = {
@@ -29,12 +29,14 @@ type Quest = {
   home_floor?: boolean; boss_fee?: number; boss_fee_kind?: string;
   boss_debt?: number; boss_debt_on_miss?: number; boss_clear_xp?: number;
   boss_debrief_required?: boolean;
-  free_hint?: boolean; free_census?: boolean;
-  census_armed?: boolean; census_paid?: boolean;
+  free_hint?: boolean; free_check?: boolean;
+  check_armed?: boolean; check_paid?: boolean;
 };
 type ShopItem = {
   name: string; description: string; cost: number; repeatable?: boolean;
   kind?: "consumable" | "upgrade";
+  caps?: Record<string, number>;
+  full?: boolean;
 };
 type ClassPath = {
   id: string; title: string; blurb: string; kit: string; perks: string[];
@@ -47,17 +49,16 @@ type ClassBenefits = {
   recipe_drip_cap: number;
   claims: Record<string, boolean>;
 };
-type CurioOffer = { name: string; trophy_cost: number; inventory: Record<string, number> };
-type CurioDesk = { unstamped: number; held: number; offers: Record<string, CurioOffer> };
+type TrophyWallet = { unstamped: number; held: number; op_cost: number };
 type PlayerState = {
   contestant: string; title: string; level: number; xp: number; next_level_xp: number;
   opinion_points: number; completed_quests: string[]; stats: Record<string, number>;
   inventory: Record<string, number>; upgrades: string[]; recipes: string[];
   achievements: string[]; specialization?: string; shop: Record<string, ShopItem>;
-  class_benefits?: ClassBenefits; stamped_items?: Record<string, number>; curio?: CurioDesk;
+  class_benefits?: ClassBenefits; stamped_items?: Record<string, number>; trophies?: TrophyWallet;
   boss_debts?: Record<string, number>;
 };
-type CurioResponse = { stamped: Record<string, number>; granted: Record<string, number>; state: PlayerState };
+type TrophyCashIn = { stamped: Record<string, number>; granted: Record<string, number>; state: PlayerState };
 type Recipe = { id: string; label: string; category: string; unlocked: boolean; affinity?: boolean };
 type RunResult = {
   success: boolean; output: string; system_message: string;
@@ -66,28 +67,14 @@ type RunResult = {
 };
 type USDAView = { before_usda: string; after_usda: string };
 type Toast = { kind: "success" | "error" | "info"; title: string; message: string };
-type CensusNode = {
-  path: string; specifier: string; type_name: string; kind: string;
-  properties: string[]; extra_properties: number; flags: string[];
-};
-type CheckObservation = { rule: string; target: string; observed: string };
-type Census = {
-  stage: {
-    default_prim?: string; up_axis?: string; meters_per_unit?: number;
-    sublayers?: string[]; time_range?: number[];
-  };
-  prims: CensusNode[];
-  observations: CheckObservation[];
-  truncated: boolean;
-};
 type AssistResult = {
-  kind: "hint" | "census";
+  kind: "hint" | "usd-check";
   title: string;
   message?: string;
-  census?: Census;
+  usda?: string;
 };
 type HintResponse = { hint: string; state: PlayerState };
-type CensusResponse = { census: Census; state: PlayerState };
+type UsdCheckResponse = { usda: string; state: PlayerState };
 type DebriefResponse = { checks: string[]; message: string; state: PlayerState };
 
 const CLASS_PATHS: ClassPath[] = [
@@ -95,13 +82,12 @@ const CLASS_PATHS: ClassPath[] = [
     id: "Compositor",
     title: "Compositor",
     blurb: "Layers, composition arcs, and competing opinions resolving into one stage.",
-    kit: "Declare and receive 1 Prim Census.",
+    kit: "Declare and receive one free USD Check on each home floor.",
     perks: [
       "Home: Opinion Quarter and Composition Highlands.",
-      "Census restocks cost 1 OP.",
       "City bosses +1 OP, floor bosses +2 OP on home floors.",
       "Home-floor boss misses charge half XP.",
-      "One free census after a fail per home floor, even at zero stock.",
+      "One free USD Check after a fail per home floor.",
       "Affinity recipes pay +1 OP, up to 5 for the crawl.",
     ],
   },
@@ -112,7 +98,7 @@ const CLASS_PATHS: ClassPath[] = [
     kit: "Declare and receive 1 Hint Token.",
     perks: [
       "Home: Hierarchy Foundry and Prototype Wilds.",
-      "Hint restocks grant 3 tokens instead of 2.",
+      "Assist restocks fill Hint Tokens to 3.",
       "City bosses +1 OP, floor bosses +2 OP on home floors.",
       "Home-floor boss misses charge half XP.",
       "One free Hint per home floor, even at zero stock.",
@@ -123,10 +109,10 @@ const CLASS_PATHS: ClassPath[] = [
     id: "Exchanger",
     title: "Exchanger",
     blurb: "Moving data between OpenUSD and other tools with honest units and validation.",
-    kit: "Declare and receive 1 Hint Token and 1 Prim Census.",
+    kit: "Declare and receive 1 Hint Token.",
     perks: [
       "Home: Customs Terminal.",
-      "Hint and census restocks both cost 1 OP.",
+      "Assist restocks cost 1 OP.",
       "Neighborhood bosses +1 OP, city bosses +2 OP on Customs Terminal.",
       "Home-floor boss misses charge half XP.",
       "The first Customs Terminal boss miss costs 0 XP.",
@@ -222,12 +208,12 @@ const GUIDE_STEPS: Array<{ target: GuideTarget; title: string; body: string }> =
   {
     target: "consumables",
     title: "Spend it on consumables",
-    body: "Hint Tokens buy you a clue for the room you are stuck on, even before a run. A Prim Census works only after a failed run: it lists the prims USD actually composed — paths, specifiers, types, kinds — and the real value behind each failing check, so you can see that you authored /City/NamePlate or that cityName is still unset. The checklist tells you the target; the census tells you your stage. Click one here to use it, and hit SAFEROOM to buy more once a boss has paid you.",
+    body: "Hint Tokens buy a code-level clue, even before a run. After a failed authoring room, a USD Check shows a focused USDA reference containing the opinions that room grades. A paid Check stays free to reread until the next run. One OP in the Saferoom fills both to capacity.",
   },
   {
     target: "keyitems",
     title: "Key Items are your transcript",
-    body: "Clearing an ordinary room leaves a souvenir here: a Copper Scene Key for your first prim, an Offset Wrench for layer offsets. Each one names an OpenUSD concept you authored. The Saferoom's Curio Desk trades three of them for Hint Tokens or four for Prim Censuses, and it stamps a trophy rather than taking it, so cashing one in never erases the record.",
+    body: "Clearing an ordinary room leaves a souvenir here: a Copper Scene Key for your first prim, an Offset Wrench for layer offsets. Each one names an OpenUSD concept you authored. Three unstamped trophies cash in for 1 Opinion Point. The store stamps a trophy rather than taking it, so the backpack stays a transcript of the rooms you cleared.",
   },
   {
     target: "class",
@@ -237,7 +223,7 @@ const GUIDE_STEPS: Array<{ target: GuideTarget; title: string; body: string }> =
   {
     target: "saferoom",
     title: "Restock in the Saferoom",
-    body: "This is where Opinion Points turn into supplies: more Hint Tokens and Prim Censuses, plus permanent upgrades. Further down, the Curio Desk sells the same consumables for Key Items instead of points. Nothing sold here clears a room for you.",
+    body: "This is the consumables store. One Opinion Point fills Hint Tokens and USD Checks to capacity. Three unstamped Key Items cash in for 1 OP.",
   },
   {
     target: "recipes",
@@ -565,10 +551,19 @@ function Landing({ onStart, hasProgress, nextQuest, quests, floors }: {
   </div>;
 }
 
-function GuideDock({ step, onBack, onNext, onClose }: {
-  step: number; onBack: () => void; onNext: () => void; onClose: () => void;
+function GuideDock({ step, onBack, onNext, onClose, briefingRoom }: {
+  step: number; onBack: () => void; onNext: () => void; onClose: () => void; briefingRoom: boolean;
 }) {
-  const current = GUIDE_STEPS[step];
+  const step_ = GUIDE_STEPS[step];
+  // The tour usually opens on the first room, which is a briefing, so the
+  // editor step would otherwise describe a terminal that is not on screen.
+  const current = briefingRoom && step_.target === "editor"
+    ? {
+        ...step_,
+        title: "Answer the briefing",
+        body: "Some rooms check that you understood the lesson instead of asking you to author a stage. Those show a briefing desk here rather than a code terminal. Rooms that do want code put real Python here, with a blank line under each instruction and the closing Save() already supplied.",
+      }
+    : step_;
   const last = step === GUIDE_STEPS.length - 1;
   return <div className="guide-dock">
     <div className="guide-head">
@@ -873,33 +868,10 @@ function ScenePreview({ revision, panelRef, spotlit }: {
   </section>;
 }
 
-function CensusReadout({ census }: { census: Census }) {
-  const { stage, prims, observations, truncated } = census;
-  const facts = [
-    stage.default_prim ? `defaultPrim ${stage.default_prim}` : "no defaultPrim",
-    stage.up_axis ? `upAxis ${stage.up_axis}` : "",
-    stage.meters_per_unit ? `metersPerUnit ${stage.meters_per_unit}` : "",
-    stage.sublayers?.length ? `sublayers: ${stage.sublayers.join(", ")}` : "no sublayers",
-    stage.time_range ? `timeCode ${stage.time_range[0]}–${stage.time_range[1]}` : "",
-  ].filter(Boolean);
-  return <div className="census">
-    {observations.length > 0 && <ul className="census-findings">{observations.map((item) => <li key={`${item.rule}:${item.target}:${item.observed}`}>
-      <em>{item.target}</em>
-      <span>{item.observed}</span>
-    </li>)}</ul>}
-    <div className="census-stage">{facts.join(" · ")}</div>
-    {prims.length === 0 && <div className="census-stage">Your stage composed no prims at all.</div>}
-    <ul className="census-tree">{prims.map((prim) => {
-      // Depth is the path itself, so the tree reads without a nested walk.
-      const depth = Math.max(prim.path.split("/").length - 2, 0);
-      return <li key={prim.path} style={{ paddingLeft: `${depth * 9}px` }}>
-        <b>{prim.specifier || "?"} {prim.type_name || "(untyped)"}</b>
-        <span>{prim.path}</span>
-        {(prim.kind || prim.flags.length > 0) && <small>{[prim.kind && `kind ${prim.kind}`, ...prim.flags].filter(Boolean).join(" · ")}</small>}
-        {prim.properties.length > 0 && <i>{prim.properties.join(", ")}{prim.extra_properties > 0 ? ` +${prim.extra_properties} more` : ""}</i>}
-      </li>;
-    })}</ul>
-    {truncated && <div className="census-stage">Stage larger than this readout; first {prims.length} prims shown.</div>}
+function UsdCheckReadout({ usda }: { usda: string }) {
+  return <div className="usd-check">
+    <small>FOCUSED REFERENCE · GRADED OPINIONS ONLY</small>
+    <pre>{usda}</pre>
   </div>;
 }
 
@@ -915,9 +887,9 @@ export default function App() {
     return tab === "skills" || tab === "kiosk" ? tab : "map";
   });
   const [running, setRunning] = useState(false);
-  const [assistBusy, setAssistBusy] = useState<"hint" | "census" | null>(null);
+  const [assistBusy, setAssistBusy] = useState<"hint" | "usd-check" | null>(null);
   const [assistResult, setAssistResult] = useState<AssistResult | null>(null);
-  const [pendingSpend, setPendingSpend] = useState<"hint_tokens" | "prim_censuses" | null>(null);
+  const [pendingSpend, setPendingSpend] = useState<"hint_tokens" | "usd_check" | null>(null);
   const [pendingReset, setPendingReset] = useState<ResetScope | null>(null);
   const [pendingBossRun, setPendingBossRun] = useState(false);
   const [bossDebrief, setBossDebrief] = useState<{ checks: string[]; message: string } | null>(null);
@@ -1240,6 +1212,9 @@ export default function App() {
   const liveBossFight = Boolean(
     activeQuest?.kind.endsWith("boss") && !activeQuest.completed && !playbackScene && !reviewPending,
   );
+  // A briefing room grades an answer rather than a stage, so it has no starter to
+  // edit. Showing it an empty code editor reads as a broken terminal.
+  const briefingRoom = activeQuest?.language === "none";
   const bossFee = activeQuest?.boss_fee ?? Math.min(25, Math.max(0, state.xp - xpFloor));
   const bossDebt = activeQuest?.boss_debt ?? 0;
   const bossDebtOnMiss = activeQuest?.boss_debt_on_miss ?? 0;
@@ -1352,19 +1327,19 @@ export default function App() {
     }
   };
 
-  const readCensus = async () => {
+  const runUsdCheck = async () => {
     if (!activeQuest || assistBusy) return;
-    setAssistBusy("census");
+    setAssistBusy("usd-check");
     try {
-      const result = await api<CensusResponse>(`/quests/${activeQuest.id}/census`, { method: "POST" });
+      const result = await api<UsdCheckResponse>(`/quests/${activeQuest.id}/usd-check`, { method: "POST" });
       setState(result.state);
-      setAssistResult({ kind: "census", title: "PRIM CENSUS", census: result.census });
+      setAssistResult({ kind: "usd-check", title: "USD CHECK", usda: result.usda });
       await refresh();
     } catch (error) {
       setToast({
         kind: "error",
-        title: "CENSUS DENIED",
-        message: error instanceof Error ? error.message : "The registrar kept the ledger shut.",
+        title: "USD CHECK DENIED",
+        message: error instanceof Error ? error.message : "The reference layer could not be generated.",
       });
     } finally {
       setAssistBusy(null);
@@ -1442,22 +1417,19 @@ export default function App() {
     try {
       const next = await api<PlayerState>(`/shop/${id}`, { method: "POST" });
       setState(next);
-      const restock = next.shop[id]?.kind === "consumable";
       setToast({
         kind: "success",
-        title: restock ? "CONSUMABLE RESTOCKED" : "UPGRADE INSTALLED",
-        message: restock
-          ? "Delivered to Consumables on the left rail. Saferoom restocks are final."
-          : "No refunds after the screaming starts.",
+        title: "CONSUMABLE RESTOCKED",
+        message: "Delivered to Consumables on the left rail. Store restocks are final.",
       });
     } catch (error) {
-      setToast({ kind: "error", title: "PURCHASE DENIED", message: error instanceof Error ? error.message : "The kiosk ate your points." });
+      setToast({ kind: "error", title: "PURCHASE DENIED", message: error instanceof Error ? error.message : "The store ate your points." });
     }
   };
 
-  const tradeTrophies = async (id: string) => {
+  const cashInTrophies = async () => {
     try {
-      const result = await api<CurioResponse>(`/curio/${id}`, { method: "POST" });
+      const result = await api<TrophyCashIn>("/trophies/cash-in", { method: "POST" });
       setState(result.state);
       const stampedNames = Object.entries(result.stamped)
         .map(([name, count]) => `${name.replaceAll("_", " ")}${count > 1 ? ` ×${count}` : ""}`)
@@ -1465,36 +1437,42 @@ export default function App() {
       setToast({
         kind: "success",
         title: "TROPHIES STAMPED",
-        message: `The desk stamped ${stampedNames} and restocked Consumables. You keep the trophies; only their trade value is gone.`,
+        message: `Stamped ${stampedNames} for 1 Opinion Point. You keep the trophies; only their trade value is gone.`,
       });
     } catch (error) {
       setToast({
         kind: "error",
-        title: "DESK DECLINED",
-        message: error instanceof Error ? error.message : "The appraiser went to lunch.",
+        title: "CASH-IN REFUSED",
+        message: error instanceof Error ? error.message : "Need three unstamped Key Items.",
       });
     }
   };
 
   const inventory = Object.entries(state.inventory);
   const hintTokens = state.inventory.hint_tokens || 0;
-  const primCensuses = state.inventory.prim_censuses || 0;
-  const consumables = [
-    { id: "hint_tokens" as const, quantity: hintTokens, cost: state.shop?.hint_refill?.cost },
-    { id: "prim_censuses" as const, quantity: primCensuses, cost: state.shop?.prim_census?.cost },
-  ];
-  const keyItems = inventory.filter(([name]) => name !== "hint_tokens" && name !== "prim_censuses");
+  const usdChecks = state.inventory.usd_checks || 0;
+  const checkArmed = Boolean(activeQuest?.check_armed);
+  const checkPaid = Boolean(activeQuest?.check_paid);
+  const freeCheck = Boolean(activeQuest?.free_check && checkArmed);
+  const keyItems = inventory.filter(([name]) => name !== "hint_tokens" && name !== "usd_checks" && name !== "prim_censuses");
   const stampedItems = state.stamped_items || {};
   const trophiesHeld = keyItems.reduce((total, [, quantity]) => total + quantity, 0);
-  const trophiesUnstamped = state.curio?.unstamped
+  const trophyOpCost = state.trophies?.op_cost ?? 3;
+  const trophiesUnstamped = state.trophies?.unstamped
     ?? keyItems.reduce((total, [name, quantity]) => total + Math.max(quantity - (stampedItems[name] || 0), 0), 0);
-  const curioOffers = Object.entries(state.curio?.offers || {});
-  const shopSections = [
-    { id: "consumable" as const, heading: "CONSUMABLES // RESTOCK HERE", items: Object.entries(state.shop || {}).filter(([, item]) => item.kind === "consumable") },
-    { id: "upgrade" as const, heading: "UPGRADES // PERMANENT AND COSMETIC", items: Object.entries(state.shop || {}).filter(([, item]) => item.kind !== "consumable") },
-  ];
+  const shopItems = Object.entries(state.shop || {}).filter(([, item]) => item.kind !== "upgrade");
   const status = activeQuest ? questStatus(activeQuest) : "locked";
   const visibleUsda = usdaMode === "before" ? usdaView.before_usda : usdaView.after_usda;
+  const questionFields = activeQuest?.questions?.map((question, index) => (
+    <label className="boss-question" key={question.prompt}>{question.prompt}
+      {question.choices?.length
+        ? <select value={String(answers[index] ?? "")} onChange={(event) => setAnswers((current) => current.map((answer, i) => i === index ? Number(event.target.value) : answer))}>
+            <option value="">Choose…</option>{question.choices.map((choice, choiceIndex) => <option value={choiceIndex} key={choice}>{choice}</option>)}
+          </select>
+        : <input value={String(answers[index] ?? "")} onChange={(event) => setAnswers((current) => current.map((answer, i) => i === index ? event.target.value : answer))} placeholder="Explain your reasoning…" />}
+    </label>
+  ));
+  const answeredCount = activeQuest?.questions?.filter((_, index) => answers[index] !== "" && answers[index] !== undefined).length ?? 0;
 
   if (showLanding) {
     return <div className="app-shell">
@@ -1550,86 +1528,70 @@ export default function App() {
         </section>
         <section className={`inventory panel ${spotlight === "consumables" ? "spotlight" : ""}`} ref={consumablesRef}>
           <div className="panel-heading"><span><FlaskConical size={15} /> CONSUMABLES</span><button className="restock-link" onClick={() => setActiveTab("kiosk")}>SAFEROOM</button></div>
-          {consumables.map(({ id, quantity, cost }) => {
-            const isHint = id === "hint_tokens";
-            const censusArmed = Boolean(activeQuest?.census_armed);
-            // A census already paid for on this fail stays readable for free.
-            const censusPaid = Boolean(activeQuest?.census_paid);
-            const classFree = Boolean(isHint ? activeQuest?.free_hint : activeQuest?.free_census && censusArmed);
-            const settled = !isHint && censusPaid;
-            const unavailable = (!classFree && !settled && quantity < 1) || assistBusy !== null || (!isHint && !censusArmed);
-            const label = isHint ? "Hint Token" : "Prim Census";
-            const short = isHint ? "Hint" : "Census";
-            const detail = settled
-              ? "PAID FOR THIS RUN · tap to re-read"
-              : classFree
-              ? "CLASS PERK · this use is free"
-              : quantity < 1
-              ? `Out of stock · ${cost ?? "?"} OP in Saferoom`
-              : isHint
-                ? "Tap to use · clue for this room"
-                : censusArmed
-                  ? "Tap to use · lists the prims your stage actually composed"
-                  : activeQuest?.completed
-                    ? "Cleared rooms do not consume a census"
-                    : "Fail this room first · then it reports your real stage";
-            const icon = (isHint && assistBusy === "hint") || (!isHint && assistBusy === "census")
-              ? <RefreshCw className="spin" />
-              : isHint ? <Lightbulb size={17} /> : <ListTree size={17} />;
-            // Re-reading a census already paid for costs nothing, so it skips
-            // the confirm step that exists to guard an irreversible spend.
-            if (settled) {
-              return <button
-                className="inventory-item usable"
-                key={id}
-                disabled={assistBusy !== null}
-                onClick={() => void readCensus()}
-                title={detail}
-              >
-                <span className="item-icon epic">{icon}</span>
-                <div><strong>{label}</strong><small>{detail}</small></div>
-                <b>{quantity} LEFT</b>
-              </button>;
-            }
-            // Spending is irreversible, so the first click only arms the item.
-            if (pendingSpend === id) {
-              return <div className={`inventory-item confirming ${classFree ? "class-free" : ""}`} key={id}>
-                <span className={`item-icon ${isHint ? "rare" : "epic"}`}>{icon}</span>
-                <div><strong>{classFree ? `Use free ${short}?` : `Spend 1 ${short}?`}</strong><small>{classFree ? "Class perk. Inventory stays put." : `${quantity - 1} would be left`}</small></div>
+          {pendingSpend === "hint_tokens"
+            ? <div className={`inventory-item confirming ${activeQuest?.free_hint ? "class-free" : ""}`}>
+                <span className="item-icon rare"><Lightbulb size={17} /></span>
+                <div><strong>{activeQuest?.free_hint ? "Use free Hint?" : "Spend 1 Hint?"}</strong><small>{activeQuest?.free_hint ? "Class perk. Inventory stays put." : `${hintTokens - 1} would be left`}</small></div>
                 <div className="confirm-actions">
-                  <button className="yes" onClick={() => { setPendingSpend(null); (isHint ? useHint : readCensus)(); }}>{classFree ? "USE FREE" : "SPEND"}</button>
-                  <button className="no" onClick={() => setPendingSpend(null)} aria-label={`Keep the ${label}`}><X size={13} /></button>
+                  <button className="yes" onClick={() => { setPendingSpend(null); void useHint(); }}>{activeQuest?.free_hint ? "USE FREE" : "SPEND"}</button>
+                  <button className="no" onClick={() => setPendingSpend(null)} aria-label="Keep the Hint Token"><X size={13} /></button>
                 </div>
-              </div>;
-            }
-            return <button
-              className={`inventory-item usable ${classFree ? "class-free" : ""}`}
-              key={id}
-              disabled={unavailable}
-              onClick={() => setPendingSpend(id)}
-              title={detail}
-            >
-              <span className={`item-icon ${isHint ? "rare" : "epic"}`}>{icon}</span>
-              <div><strong>{label}</strong><small>{detail}</small></div>
-              <b>{quantity} LEFT</b>
-            </button>;
-          })}
-          {consumables.some((item) => item.quantity < 1) && <p className="currency-note">
-            Restocking costs Opinion Points, and boss rooms are what pay them out. You have <b>{state.opinion_points} OP</b>.
-          </p>}
+              </div>
+            : <button
+                className={`inventory-item usable ${activeQuest?.free_hint ? "class-free" : ""}`}
+                disabled={(!activeQuest?.free_hint && hintTokens < 1) || assistBusy !== null}
+                onClick={() => setPendingSpend("hint_tokens")}
+              >
+                <span className="item-icon rare">{assistBusy === "hint" ? <RefreshCw className="spin" /> : <Lightbulb size={17} />}</span>
+                <div><strong>Hint Token</strong><small>{activeQuest?.free_hint ? "CLASS PERK · this use is free" : hintTokens ? "Tap to use · code-level clue for this room" : `Out of stock · ${state.shop?.hint_refill?.cost ?? "?"} OP in Saferoom`}</small></div>
+                <b>{hintTokens} LEFT</b>
+              </button>}
+          {pendingSpend === "usd_check"
+            ? <div className={`inventory-item confirming ${freeCheck ? "class-free" : ""}`}>
+                <span className="item-icon epic"><FileCheck2 size={17} /></span>
+                <div><strong>{freeCheck ? "Use free USD Check?" : "Spend 1 USD Check?"}</strong><small>{freeCheck ? "Compositor home-floor perk." : `${usdChecks - 1} would be left`}</small></div>
+                <div className="confirm-actions">
+                  <button className="yes" onClick={() => { setPendingSpend(null); void runUsdCheck(); }}>{freeCheck ? "USE FREE" : "SPEND"}</button>
+                  <button className="no" onClick={() => setPendingSpend(null)} aria-label="Cancel USD Check"><X size={13} /></button>
+                </div>
+              </div>
+            : <button
+                className={`inventory-item usable ${freeCheck ? "class-free" : ""}`}
+                disabled={!checkArmed || (!checkPaid && !freeCheck && usdChecks < 1) || assistBusy !== null}
+                onClick={() => checkPaid ? void runUsdCheck() : setPendingSpend("usd_check")}
+              >
+                <span className="item-icon epic">{assistBusy === "usd-check" ? <RefreshCw className="spin" /> : <FileCheck2 size={17} />}</span>
+                <div><strong>USD Check</strong><small>{checkPaid
+                  ? "PAID FOR THIS FAIL · tap to re-read"
+                  : freeCheck
+                    ? "CLASS PERK · this use is free"
+                    : checkArmed
+                      ? usdChecks > 0
+                        ? "Spend 1 Check · view the successful graded USDA"
+                        : `Out of stock · ${state.shop?.hint_refill?.cost ?? "?"} OP in Saferoom`
+                      : activeQuest?.completed
+                        ? "Cleared rooms already have an accepted USDA review"
+                        : activeQuest?.expects.length
+                          ? "Fail this room first · then compare target USDA"
+                          : "This briefing has no graded USDA"}</small></div>
+                <b>{checkPaid ? "REREAD" : freeCheck ? "FREE" : `${usdChecks} LEFT`}</b>
+              </button>}
+          <p className="currency-note">
+            A USD Check is enabled after 1 failed room run. Spend <b>1 USD Check</b> to see the finished USD scene.
+          </p>
           {assistResult && <div className={`assist-result ${assistResult.kind}`}>
             <button onClick={() => setAssistResult(null)} aria-label="Dismiss assistance"><X /></button>
             <span>{assistResult.title}</span>
-            {assistResult.census
-              ? <CensusReadout census={assistResult.census} />
+            {assistResult.usda
+              ? <UsdCheckReadout usda={assistResult.usda} />
               : <p>{assistResult.message}</p>}
           </div>}
         </section>
         <section className={`inventory panel key-items ${spotlight === "keyitems" ? "spotlight" : ""}`} ref={keyItemsRef}>
           <div className="panel-heading">
             <span><Backpack size={15} /> KEY ITEMS</span>
-            {trophiesUnstamped > 0
-              ? <button className="restock-link" onClick={() => setActiveTab("kiosk")}>CURIO DESK</button>
+            {trophiesUnstamped >= trophyOpCost
+              ? <button className="restock-link" onClick={() => setActiveTab("kiosk")}>CASH IN</button>
               : <em>{keyItems.length}</em>}
           </div>
           {keyItems.map(([name, quantity]) => {
@@ -1642,7 +1604,7 @@ export default function App() {
               <b>× {quantity}</b>
             </div>;
           })}
-          <p className="currency-note"><b>{trophiesUnstamped}</b> available to trade</p>
+          <p className="currency-note"><b>{trophiesUnstamped}</b> unstamped · {trophyOpCost} buy 1 OP</p>
         </section>
         <ScenePreview revision={revision} panelRef={feedRef} spotlit={spotlight === "feed"} />
       </aside>
@@ -1730,7 +1692,7 @@ export default function App() {
           </section>)}
         </div>}
         {activeTab === "kiosk" && <div className={`kiosk panel ${spotlight === "saferoom" ? "spotlight" : ""}`} ref={saferoomRef}>
-          <div className="section-hero"><span>SAFEROOM KIOSK // OPINIONS FINAL</span><h1>SPEND TO SURVIVE</h1><p>SYSTEM: Everything here costs Opinion Points, and Opinion Points come from clearing boss rooms. {nextPayingQuest ? `Your next payout is ${nextPayingQuest.title}, worth ${nextPayingQuest.opinion_points}.` : "You have cleared every paying room on this route."} Consumables land in the left rail. Upgrades never clear rooms for you.</p><small className="recipe-count">{state.opinion_points} OP BANKED</small></div>
+          <div className="section-hero"><span>CONSUMABLES STORE // OPINIONS FINAL</span><h1>RESTOCK TO SURVIVE</h1><p>SYSTEM: One Opinion Point fills Hint Tokens and USD Checks to capacity. Opinion Points come from clearing boss rooms. {nextPayingQuest ? `Your next payout is ${nextPayingQuest.title}, worth ${nextPayingQuest.opinion_points}.` : "You have cleared every paying room on this route."} Three unstamped Key Items cash in for 1 OP. Restocks land in the left rail.</p><small className="recipe-count">{state.opinion_points} OP BANKED</small></div>
           <div className={`class-choice ${spotlight === "class" ? "spotlight" : ""}`} ref={classRef}>
             <div className="class-explainer">
               <span>CLASS PATH // AVAILABLE AT LEVEL 2</span>
@@ -1754,39 +1716,32 @@ export default function App() {
             </article>;
             })}</div>
           </div>
-          {shopSections.map((section) => <div className="shop-section" key={section.id}>
-            <div className="shop-heading">{section.heading}</div>
-            <div className="shop-grid">{section.items.map(([id, item], index) => {
+          <div className="shop-section">
+            <div className="shop-heading">CONSUMABLES // RESTOCK WITH OP</div>
+            <div className="shop-grid">{shopItems.map(([id, item], index) => {
               const owned = state.upgrades.includes(id) && !item.repeatable;
-              return <article className={owned ? "owned" : ""} key={id}><div className="shop-number">0{index + 1}</div>{item.kind === "consumable" ? <FlaskConical size={34} /> : <Shield size={34} />}<h3>{item.name}</h3><p>{item.description}</p>
-                <button disabled={owned || state.opinion_points < item.cost} onClick={() => buyUpgrade(id)}>{owned ? "INSTALLED" : state.opinion_points < item.cost ? `NEED ${item.cost - state.opinion_points} MORE OP` : item.repeatable ? <><CircleDollarSign size={15} /> {item.cost} OP · RESTOCK</> : <><CircleDollarSign size={15} /> {item.cost} OP</>}</button>
+              const full = Boolean(item.full);
+              const short = state.opinion_points < item.cost;
+              return <article className={owned || full ? "owned" : ""} key={id}><div className="shop-number">0{index + 1}</div><FlaskConical size={34} /><h3>{item.name}</h3><p>{item.description}</p>
+                <button disabled={owned || full || short} onClick={() => buyUpgrade(id)}>{owned || full ? "AT CAPACITY" : short ? `NEED ${item.cost - state.opinion_points} MORE OP` : <><CircleDollarSign size={15} /> {item.cost} OP · RESTOCK</>}</button>
               </article>;
-            })}</div>
-          </div>)}
-          {curioOffers.length > 0 && <div className="shop-section curio-desk">
-            <div className="shop-heading">CURIO DESK // PAY IN KEY ITEMS, NOT OP</div>
-            <div className="shop-grid">{curioOffers.map(([id, offer], index) => {
-              const short = offer.trophy_cost - trophiesUnstamped;
-              const grant = Object.entries(offer.inventory)
-                .map(([item, count]) => item === "hint_tokens" ? `${count} Hint Token${count === 1 ? "" : "s"}` : `${count} Prim Census${count === 1 ? "" : "es"}`)
-                .join(" and ");
-              return <article key={id}>
-                <div className="shop-number">0{index + 1}</div><Backpack size={34} />
-                <h3>{offer.name}</h3>
-                <p>Hand over {offer.trophy_cost} unstamped Key Items for {grant}. The appraiser stamps each trophy and gives it back, so your record of cleared rooms stays whole.</p>
-                <button disabled={short > 0} onClick={() => tradeTrophies(id)}>
-                  {short > 0
-                    ? `NEED ${short} MORE UNSTAMPED`
-                    : <><Backpack size={15} /> {offer.trophy_cost} TROPHIES · TRADE</>}
+            })}
+              <article>
+                <div className="shop-number">0{shopItems.length + 1}</div><Trophy size={34} />
+                <h3>Opinion Point</h3>
+                <p>Stamp {trophyOpCost} unstamped Key Items for 1 Opinion Point. You keep the trophies; only their trade value is spent. Spend the OP here to fill Hints and USD Checks, or bank it.</p>
+                <button disabled={trophiesUnstamped < trophyOpCost} onClick={() => void cashInTrophies()}>
+                  {trophiesUnstamped < trophyOpCost
+                    ? `NEED ${trophyOpCost - trophiesUnstamped} MORE UNSTAMPED`
+                    : <><Trophy size={15} /> {trophyOpCost} TROPHIES · 1 OP</>}
                 </button>
-              </article>;
-            })}</div>
+              </article>
+            </div>
             <small className="fine-print">
               {trophiesUnstamped} of your {trophiesHeld} trophies are unstamped. Clearing an
-              ordinary room earns one; bosses pay Opinion Points instead. The desk trades for
-              supplies only, so it can never buy an upgrade or skip a room.
+              ordinary room earns one; bosses pay Opinion Points instead.
             </small>
-          </div>}
+          </div>
           <div className="shop-section danger-zone">
             <div className="shop-heading">CONDEMNED // NO REFUNDS, NO UNDO</div>
             <div className="shop-grid">
@@ -1814,18 +1769,43 @@ export default function App() {
         </div>}
         <section className={`authoring-dock code-panel panel ${spotlight === "editor" ? "spotlight" : ""}`} ref={editorRef}>
           <div className="editor-toolbar">
-            <span><TerminalSquare size={15} /> {playbackScene ? "PLAYBACK TERMINAL" : "ROOM TERMINAL"}</span>
-            <div><button className="active">{activeQuest?.language.toUpperCase() || "—"}</button></div>
+            <span><TerminalSquare size={15} /> {briefingRoom ? "BRIEFING DESK" : playbackScene ? "PLAYBACK TERMINAL" : "ROOM TERMINAL"}</span>
+            <div><button className="active">{briefingRoom ? "NO CODE" : activeQuest?.language.toUpperCase() || "—"}</button></div>
           </div>
-          <Editor
-            height="100%"
-            language={activeQuest?.language === "python" ? "python" : "plaintext"}
-            theme="vs-dark"
-            value={code}
-            onChange={(value) => setCode(value || "")}
-            onMount={(editor) => { focusEditor.current = () => editor.focus(); }}
-            options={{ readOnly: activeQuest?.language === "none" || reviewPending, minimap: { enabled: false }, fontSize: 13, lineHeight: 21, padding: { top: 16 }, scrollBeyondLastLine: false, tabSize: 4 }}
-          />
+          {briefingRoom
+            ? <div className="briefing-slate">
+                <header>
+                  <BookOpen size={16} />
+                  <div>
+                    <strong>This room has no code to write.</strong>
+                    <p>
+                      It checks that you understood the lesson, not that you authored a stage. Read
+                      the lesson, then answer {activeQuest?.questions?.length === 1 ? "the question" : `all ${activeQuest?.questions?.length} questions`} below
+                      and acknowledge the brief.
+                    </p>
+                  </div>
+                </header>
+                <div className="briefing-questions">{questionFields}</div>
+                <footer>
+                  {activeQuest?.questions?.length
+                    ? <span className={answeredCount === activeQuest.questions.length ? "ready" : ""}>
+                        {answeredCount} of {activeQuest.questions.length} answered
+                      </span>
+                    : <span className="ready">Nothing to answer. Acknowledge the brief to continue.</span>}
+                  {!lessonRead && <button className="slate-lesson" onClick={() => setLessonOpen(true)}>
+                    <BookOpen size={14} /> READ THE LESSON FIRST
+                  </button>}
+                </footer>
+              </div>
+            : <Editor
+                height="100%"
+                language={activeQuest?.language === "python" ? "python" : "plaintext"}
+                theme="vs-dark"
+                value={code}
+                onChange={(value) => setCode(value || "")}
+                onMount={(editor) => { focusEditor.current = () => editor.focus(); }}
+                options={{ readOnly: reviewPending, minimap: { enabled: false }, fontSize: 13, lineHeight: 21, padding: { top: 16 }, scrollBeyondLastLine: false, tabSize: 4 }}
+              />}
           <div className="run-slot" ref={runRef}>
             {bossDebrief
               ? <div className="boss-debrief">
@@ -1877,8 +1857,8 @@ export default function App() {
           <div className="objective"><ChevronRight size={16} /><span><small>NEIGHBORHOOD</small>{activeQuest?.neighborhood}</span></div>
           {activeQuest && <div className="learning-route">
             <span className={lessonRead ? "done" : ""}><b>1</b> LEARN</span><i />
-            <span className={reviewPending ? "done" : "current"}><b>2</b> AUTHOR</span><i />
-            <span className={reviewPending ? "done" : checks.length ? "current" : ""}><b>3</b> VALIDATE</span><i />
+            <span className={reviewPending ? "done" : "current"}><b>2</b> {briefingRoom ? "ANSWER" : "AUTHOR"}</span><i />
+            <span className={reviewPending ? "done" : checks.length ? "current" : ""}><b>3</b> {briefingRoom ? "CONFIRM" : "VALIDATE"}</span><i />
             <span className={reviewPending ? "current" : ""}><b>4</b> REVIEW</span>
           </div>}
           {playbackScene && <button className="resume-live card" onClick={resumeLiveBroadcast}>
@@ -1895,11 +1875,8 @@ export default function App() {
               </li>;
             })}</ol>
           </div>}
-          {activeQuest?.questions?.map((question, index) => <label className="boss-question" key={question.prompt}>{question.prompt}
-            {question.choices?.length ? <select value={String(answers[index] ?? "")} onChange={(event) => setAnswers((current) => current.map((answer, i) => i === index ? Number(event.target.value) : answer))}>
-              <option value="">Choose…</option>{question.choices.map((choice, choiceIndex) => <option value={choiceIndex} key={choice}>{choice}</option>)}
-            </select> : <input value={String(answers[index] ?? "")} onChange={(event) => setAnswers((current) => current.map((answer, i) => i === index ? event.target.value : answer))} placeholder="Explain your reasoning…" />}
-          </label>)}
+          {/* A briefing room shows these on its slate instead, where the terminal would be. */}
+          {!briefingRoom && questionFields}
         </section>
         <section className={`usda-panel panel ${reviewPending ? "review-required" : ""} ${spotlight === "usda" ? "spotlight" : ""}`} ref={usdaRef}>
           <div className="usda-heading">
@@ -1951,6 +1928,7 @@ export default function App() {
       onBack={() => setGuideStep((current) => Math.max(0, (current ?? 0) - 1))}
       onNext={() => setGuideStep((current) => Math.min(GUIDE_STEPS.length - 1, (current ?? 0) + 1))}
       onClose={closeGuide}
+      briefingRoom={briefingRoom}
     />}
     {lessonOpen && activeQuest && <div className="lesson-overlay" role="dialog" aria-label={`Lesson for ${activeQuest.title}`}>
       <button className="lesson-backdrop" onClick={() => setLessonOpen(false)} aria-label="Close lesson" />
@@ -1980,7 +1958,7 @@ export default function App() {
             {activeQuest.lesson.beats.map((beat, index) => <article className={`lesson-beat ${beat.kind}`} key={`${beat.kind}-${index}`}>
               <header>
                 <span className="beat-index">{String(index + 1).padStart(2, "0")}</span>
-                <div><span className={`beat-kind ${beat.kind}`}>{beat.kind}</span><h3>{beat.heading}</h3></div>
+                <div><span className={`beat-kind ${beat.kind}`}>{beat.kind.replaceAll("_", " ")}</span><h3>{beat.heading}</h3></div>
               </header>
               {beat.system && <SystemLine text={beat.system} tone="aside" />}
               {beat.body?.trim().split(/\n{2,}/).map((paragraph) => <p key={paragraph}>{paragraph}</p>)}

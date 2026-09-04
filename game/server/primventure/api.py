@@ -11,16 +11,18 @@ from fastapi.staticfiles import StaticFiles
 from .benefits import (
     CLASSES,
     class_payload,
-    compose_title,
     consume_free_assist,
     grant_starter_kit,
     priced_shop,
     recipe_is_affinity,
+    restock_assists,
 )
+from .hints import hint_for
 from .models import RunRequest
 from .runner import QuestRunner
 from .scene import world_scene
-from .trophies import desk, stamp, unstamped
+from .trophies import TROPHY_OP_COST, stamp, summary, unstamped
+from .usd_check import successful_usda
 from .store import (
     ROOT,
     WORLD_DIR,
@@ -41,45 +43,13 @@ EMPTY_CITY = (
 # Starting the server is the moment a player needs a city of their own.
 seed_world(WORLD_DIR)
 
-UPGRADES: dict[str, dict[str, Any]] = {
+SHOP: dict[str, dict[str, Any]] = {
     "hint_refill": {
-        "name": "Hint Token",
-        "description": "Restocks two Hint Tokens in Consumables. Points at the room's lesson, never the answer.",
+        "name": "Assist Restock",
+        "description": "Fills Hint Tokens and USD Checks to capacity.",
         "cost": 1,
-        "inventory": {"hint_tokens": 2},
         "repeatable": True,
         "kind": "consumable",
-    },
-    "prim_census": {
-        "name": "Prim Census",
-        "description": (
-            "Restocks two Prim Censuses. After a failed run, a census lists the prims "
-            "USD actually composed with their specifiers, types, and kinds, plus the "
-            "real value behind every failing check. Your stage, never the answer."
-        ),
-        "cost": 2,
-        "inventory": {"prim_censuses": 2},
-        "repeatable": True,
-        "kind": "consumable",
-    },
-    "deeper_hints": {
-        "name": "Contextual Menace",
-        "description": "Hints also name the relevant API. The answer still stays behind the curtain.",
-        "cost": 2,
-        "kind": "upgrade",
-    },
-    "boss_patience": {
-        "name": "Executive Delay",
-        "description": "The System pretends boss timers are longer. Timers remain flavor-only.",
-        "cost": 1,
-        "kind": "upgrade",
-    },
-    "title_licensed": {
-        "name": "Licensed Opinionator",
-        "description": "A cosmetic title of dubious regulatory standing.",
-        "cost": 3,
-        "title": "Licensed Opinionator",
-        "kind": "upgrade",
     },
 }
 
@@ -112,7 +82,7 @@ def get_state() -> dict[str, Any]:
     if state.specialization and not state.benefit_claims.get("starter_kit"):
         grant_starter_kit(state)
         saves.save(state)
-    shop = priced_shop(UPGRADES, state)
+    shop = priced_shop(SHOP, state)
     return {
         # Saved source reaches the client per room through quest_view, so it stays
         # out of the state payload every poll refetches.
@@ -120,7 +90,7 @@ def get_state() -> dict[str, Any]:
         "next_level_xp": state.level * 100,
         "shop": shop,
         "class_benefits": class_payload(state),
-        "curio": desk(shop, state),
+        "trophies": summary(state),
     }
 
 
@@ -206,21 +176,7 @@ def buy_hint(quest_id: str) -> dict[str, Any]:
             raise HTTPException(status_code=409, detail="No hint tokens remain.")
         state.inventory["hint_tokens"] -= 1
         saves.save(state)
-    concepts = sorted(
-        {
-            str(rule.get("rule") or rule.get("type") or next(iter(rule), "stage"))
-            for rule in quest.validator.get("assertions", [])
-        }
-    )
-    depth = (
-        " Inspect the authored layer before inspecting the composed prim."
-        if "deeper_hints" in state.upgrades
-        else ""
-    )
-    return {
-        "hint": f"Review {', '.join(concepts)} in {quest.cookbook}.{depth}",
-        "state": get_state(),
-    }
+    return {"hint": hint_for(quest, state), "state": get_state()}
 
 
 @app.post("/api/quests/{quest_id}/debrief")
@@ -246,15 +202,15 @@ def review_boss_debrief(quest_id: str) -> dict[str, Any]:
     return {
         "checks": checks,
         "message": (
-            "These are the requirements that failed. A Prim Census can inspect "
-            "the values your stage actually composed."
+            "These are the requirements that failed. USD Check can show the "
+            "focused USDA those graded opinions should produce."
         ),
         "state": get_state(),
     }
 
 
-@app.post("/api/quests/{quest_id}/census")
-def read_prim_census(quest_id: str) -> dict[str, Any]:
+@app.post("/api/quests/{quest_id}/usd-check")
+def run_usd_check(quest_id: str) -> dict[str, Any]:
     quests.refresh()
     try:
         quest = quests.get(quest_id)
@@ -265,81 +221,74 @@ def read_prim_census(quest_id: str) -> dict[str, Any]:
     if quest.id in state.completed_quests:
         raise HTTPException(
             status_code=409,
-            detail="Cleared rooms do not consume a Prim Census.",
+            detail="Cleared rooms already have their accepted USDA review.",
         )
     if fail is None or fail.quest_id != quest.id:
         raise HTTPException(
             status_code=409,
-            detail="Fail this room once before reading a Prim Census.",
+            detail="Fail this room once before running USD Check.",
         )
-    if not fail.has_stage:
+    if not quest.validator.get("assertions"):
         raise HTTPException(
             status_code=409,
-            detail=(
-                "That run never authored a stage USD could open, so there is nothing to "
-                "census. The error in the run output is the finding."
-            ),
+            detail="This briefing has no graded USDA to check.",
         )
     if not fail.paid:
-        if not consume_free_assist(state, quest, "census"):
-            if state.inventory.get("prim_censuses", 0) < 1:
-                raise HTTPException(status_code=409, detail="No Prim Censuses remain.")
-            state.inventory["prim_censuses"] -= 1
+        if not consume_free_assist(state, quest, "check"):
+            if state.inventory.get("usd_checks", 0) < 1:
+                raise HTTPException(
+                    status_code=409,
+                    detail="No USD Checks remain. Restock in the Saferoom.",
+                )
+            state.inventory["usd_checks"] = state.inventory.get("usd_checks", 0) - 1
         fail.paid = True
         state.last_fail = fail
         saves.save(state)
     return {
-        "census": {
-            "stage": fail.stage,
-            "prims": [node.model_dump() for node in fail.prims],
-            "observations": [reading.model_dump() for reading in fail.observations],
-            "truncated": fail.truncated,
-        },
+        "usda": successful_usda(quest),
         "state": get_state(),
     }
 
 
-@app.post("/api/shop/{upgrade_id}")
-def buy_upgrade(upgrade_id: str) -> dict[str, Any]:
-    upgrade = UPGRADES.get(upgrade_id)
-    if upgrade is None:
-        raise HTTPException(status_code=404, detail="The kiosk denies stocking that upgrade.")
+@app.post("/api/shop/{item_id}")
+def buy_item(item_id: str) -> dict[str, Any]:
+    if item_id not in SHOP:
+        raise HTTPException(status_code=404, detail="The store does not stock that.")
     state = saves.load()
-    offer = priced_shop(UPGRADES, state)[upgrade_id]
-    if upgrade_id in state.upgrades and not offer.get("repeatable"):
-        raise HTTPException(status_code=409, detail="Upgrade already installed.")
+    offer = priced_shop(SHOP, state)[item_id]
+    if item_id in state.upgrades and not offer.get("repeatable"):
+        raise HTTPException(status_code=409, detail="Already in stock.")
     if state.opinion_points < offer["cost"]:
         raise HTTPException(status_code=409, detail="Insufficient Opinion Points.")
+    if item_id == "hint_refill":
+        if not restock_assists(state):
+            raise HTTPException(status_code=409, detail="Consumables are already at capacity.")
+        state.opinion_points -= offer["cost"]
+        saves.save(state)
+        return get_state()
     state.opinion_points -= offer["cost"]
-    if upgrade_id not in state.upgrades:
-        state.upgrades.append(upgrade_id)
+    if item_id not in state.upgrades:
+        state.upgrades.append(item_id)
     for item, count in offer.get("inventory", {}).items():
         state.inventory[item] = state.inventory.get(item, 0) + int(count)
-    if "title" in offer:
-        compose_title(state)
     saves.save(state)
     return get_state()
 
 
-@app.post("/api/curio/{offer_id}")
-def trade_trophies(offer_id: str) -> dict[str, Any]:
-    """Pay for a consumable bundle in Key Items instead of Opinion Points."""
+@app.post("/api/trophies/cash-in")
+def cash_in_trophies() -> dict[str, Any]:
+    """Stamp three Key Items for one Opinion Point. The trophies stay in the bag."""
     state = saves.load()
-    offer = desk(priced_shop(UPGRADES, state), state)["offers"].get(offer_id)
-    if offer is None:
-        raise HTTPException(status_code=404, detail="The Curio Desk does not appraise that.")
-    cost = offer["trophy_cost"]
     available = unstamped(state)
-    if available < cost:
+    if available < TROPHY_OP_COST:
         raise HTTPException(
             status_code=409,
-            detail=f"The desk wants {cost} unstamped Key Items and counts {available}.",
+            detail=f"Cashing in costs {TROPHY_OP_COST} unstamped Key Items and you have {available}.",
         )
-    stamped = stamp(state, cost)
-    for item, count in offer["inventory"].items():
-        state.inventory[item] = state.inventory.get(item, 0) + int(count)
+    stamped = stamp(state, TROPHY_OP_COST)
+    state.opinion_points += 1
     saves.save(state)
-    return {"stamped": stamped, "granted": offer["inventory"], "state": get_state()}
+    return {"stamped": stamped, "granted": {"opinion_points": 1}, "state": get_state()}
 
 
 @app.post("/api/specialization/{specialization}")

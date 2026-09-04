@@ -7,11 +7,11 @@ quests:
     floor_name: Schema Borough
     neighborhood: Schema Square
     kind: room
-    prerequisites: [f1_clockwork_crossing]
-    level_required: 4
+    prerequisites: [f1_civic_record]
+    level_required: 7
     exam_tasks: [use_usdgeom_schema, author_extent]
     stats: {craft: 2, insight: 2}
-    brief: "SYSTEM: Schema Borough trades only in typed goods. Build to schema."
+    brief: "SYSTEM: Schema Borough trades only in typed goods. A type name is a promise about which properties a prim carries. Build to schema."
     starter: |
       from pxr import Usd, UsdGeom
       stage = Usd.Stage.Open(STAGE_PATH)
@@ -22,11 +22,105 @@ quests:
       assertions:
         - prim_type: {path: /City/BlueprintBorough/Stall, value: Cube}
         - attribute_equals: {path: /City/BlueprintBorough/Stall.size, value: 2.0}
-    cookbook: docs/scene-description-blueprints/index.md
+    cookbook: docs/scene-description-blueprints/schemas.md
     xp: 120
     reward: Schema Mason's Rule
     world_target: /City/BlueprintBorough/Stall
     recipes: [UsdGeom.Cube.Define, UsdGeom.Cube.CreateSizeAttr]
+
+  - id: f2_scope_yard
+    title: Group the Yard Under a Scope
+    floor: 2
+    floor_name: Schema Borough
+    neighborhood: Schema Square
+    kind: room
+    prerequisites: [f2_market_stall]
+    level_required: 7
+    exam_tasks: [define_scope, organize_hierarchy]
+    stats: {craft: 2, lore: 2}
+    brief: "SYSTEM: Some containers exist only to hold others. A Scope groups without carrying a transform, which is exactly what a yard needs."
+    starter: |
+      from pxr import Usd, UsdGeom
+      stage = Usd.Stage.Open(STAGE_PATH)
+      # 1. Define a Scope at /City/BlueprintBorough/Yard.
+      # 2. Define a Cube at /City/BlueprintBorough/Yard/Crate and set its size to 1.
+      stage.GetRootLayer().Save()
+    language: python
+    validator:
+      assertions:
+        - prim_type: {path: /City/BlueprintBorough/Yard, value: Scope}
+        - prim_type: {path: /City/BlueprintBorough/Yard/Crate, value: Cube}
+        - attribute_equals: {path: /City/BlueprintBorough/Yard/Crate.size, value: 1.0}
+    cookbook: docs/scene-description-blueprints/scope.md
+    xp: 120
+    reward: Yard Foreman's Whistle
+    world_target: /City/BlueprintBorough/Yard
+    recipes: [UsdGeom.Scope.Define]
+
+  - id: f2_xform_crane
+    title: Raise the Crane With a Transform Op
+    floor: 2
+    floor_name: Schema Borough
+    neighborhood: Crane Row
+    kind: room
+    prerequisites: [f2_scope_yard]
+    level_required: 8
+    exam_tasks: [define_xform, add_transform_op]
+    stats: {craft: 3, insight: 2}
+    brief: "SYSTEM: A Scope groups. An Xform groups and moves. The crane is on the ground because nobody has said otherwise."
+    starter: |
+      from pxr import Gf, Usd, UsdGeom
+      stage = Usd.Stage.Open(STAGE_PATH)
+      # 1. Define an Xform at /City/BlueprintBorough/Crane.
+      # 2. Add a translate op on it and set it to (0, 12, 0).
+      #    AddTranslateOp() returns the op, and its Set() takes a Gf.Vec3d.
+      stage.GetRootLayer().Save()
+    language: python
+    validator:
+      assertions:
+        - prim_type: {path: /City/BlueprintBorough/Crane, value: Xform}
+        - attribute_equals:
+            path: "/City/BlueprintBorough/Crane.xformOp:translate"
+            value: [0.0, 12.0, 0.0]
+    cookbook: docs/scene-description-blueprints/xform.md
+    xp: 130
+    reward: Crane Operator's Key
+    world_target: /City/BlueprintBorough/Crane
+    recipes: [UsdGeom.Xform.Define, UsdGeom.Xformable.AddTranslateOp]
+
+  - id: f2_common_lift
+    title: Set the Lift With XformCommonAPI
+    floor: 2
+    floor_name: Schema Borough
+    neighborhood: Crane Row
+    kind: room
+    prerequisites: [f2_xform_crane]
+    level_required: 8
+    exam_tasks: [use_xformcommonapi]
+    stats: {craft: 3, insight: 3}
+    brief: "SYSTEM: Stacking ops by hand is how transform order becomes an argument. XformCommonAPI settles it for the common case."
+    starter: |
+      from pxr import Gf, Usd, UsdGeom
+      stage = Usd.Stage.Open(STAGE_PATH)
+      # 1. Define an Xform at /City/BlueprintBorough/Lift.
+      # 2. Wrap it in UsdGeom.XformCommonAPI and use it to set the translation
+      #    to (4, 0, 0) and the scale to (2, 2, 2).
+      stage.GetRootLayer().Save()
+    language: python
+    validator:
+      assertions:
+        - prim_type: {path: /City/BlueprintBorough/Lift, value: Xform}
+        - attribute_equals:
+            path: "/City/BlueprintBorough/Lift.xformOp:translate"
+            value: [4.0, 0.0, 0.0]
+        - attribute_equals:
+            path: "/City/BlueprintBorough/Lift.xformOp:scale"
+            value: [2.0, 2.0, 2.0]
+    cookbook: docs/scene-description-blueprints/xformcommonapi.md
+    xp: 140
+    reward: Common Lift Lever
+    world_target: /City/BlueprintBorough/Lift
+    recipes: [UsdGeom.XformCommonAPI, UsdGeom.XformCommonAPI.SetTranslate, UsdGeom.XformCommonAPI.SetScale]
 
   - id: f2_street_lamp
     title: Light Lumen Row With a UsdLux Sphere Light
@@ -34,8 +128,8 @@ quests:
     floor_name: Schema Borough
     neighborhood: Lumen Row
     kind: room
-    prerequisites: [f2_market_stall]
-    level_required: 4
+    prerequisites: [f2_common_lift]
+    level_required: 8
     exam_tasks: [define_typed_prim, author_namespaced_input]
     stats: {craft: 2, insight: 2}
     brief: "SYSTEM: Lumen Row is dark and the Borough trades only in typed goods. Author a light that says so."
@@ -56,82 +150,54 @@ quests:
     world_target: /City/BlueprintBorough/StreetLamp
     recipes: [UsdLux.SphereLight.Define, UsdLux.LightAPI.GetIntensityAttr]
 
-  - id: f2_relationship_bridge
-    title: "Bridge Warden: Relationships and Targets"
+  - id: f2_blueprint_marshal
+    title: "Blueprint Marshal: Every Prim Typed to Its Job"
     floor: 2
     floor_name: Schema Borough
-    neighborhood: Binding Canal
-    kind: neighborhood_boss
-    prerequisites: [f2_street_lamp]
-    level_required: 5
-    exam_tasks: [create_relationship, target_prim]
-    stats: {insight: 2, resolve: 2}
-    brief: "SYSTEM: The bridge exists, but knows no destination. Author the connection."
-    starter: |
-      from pathlib import Path
-      from pxr import Gf, Kind, Sdf, Usd, UsdGeom, UsdLux, UsdShade
-
-      stage = Usd.Stage.Open(STAGE_PATH)
-      # This boss opens your accumulated city. Author every graded opinion below.
-      # 1. Define /City/BlueprintBorough/Bridge with type Xform.
-      # 2. Create /City/BlueprintBorough/Bridge.destination targeting exactly ['/City/BlueprintBorough/Stall'].
-      # 3. Set /City/BlueprintBorough/Bridge metadata documentation to 'Bridge Warden: Relationships and Targets cleared.'.
-      stage.GetRootLayer().Save()
-    language: python
-    validator:
-      assertions:
-      - prim_type: {path: /City/BlueprintBorough/Bridge, value: Xform}
-      - relationship_targets:
-          path: /City/BlueprintBorough/Bridge.destination
-          targets: [/City/BlueprintBorough/Stall]
-      - metadata_equals: {path: /City/BlueprintBorough/Bridge, key: documentation, value: 'Bridge Warden: Relationships and Targets
-            cleared.'}
-    cookbook: docs/stage-setting/properties/relationships.md
-    xp: 150
-    reward: Silver Binding Cable
-    world_target: /City/BlueprintBorough/Bridge
-    recipes: [Usd.Prim.CreateRelationship, Usd.Relationship.SetTargets]
-
-  - id: f2_schema_warden
-    title: "Schema Warden: USDA Text and API Schemas"
-    floor: 2
-    floor_name: Schema Borough
-    neighborhood: Warden Foundry
+    neighborhood: Lumen Row
     kind: floor_boss
-    prerequisites: [f2_relationship_bridge]
-    level_required: 6
-    exam_tasks: [author_usda, apply_api_schema]
-    stats: {craft: 3, resolve: 2}
-    brief: "SYSTEM: The Warden rejects vague forms. Declare type, purpose, and visibility."
+    prerequisites: [f2_street_lamp]
+    level_required: 9
+    exam_tasks: [use_usdgeom_schema, define_scope, define_xform, use_xformcommonapi]
+    stats: {craft: 3, insight: 3, resolve: 2}
+    brief: "SYSTEM: Floor boss. The Marshal reads the borough as one manifest. Geometry, grouping, transform, and light, each declared by the schema that owns it."
     starter: |
       from pathlib import Path
       from pxr import Gf, Kind, Sdf, Usd, UsdGeom, UsdLux, UsdShade
 
       stage = Usd.Stage.Open(STAGE_PATH)
       # This boss opens your accumulated city. Author every graded opinion below.
-      # 1. Define /City/BlueprintBorough/WardenVault with type Scope.
-      # 2. Set /City/BlueprintBorough/WardenVault.purpose to 'guide'.
-      # 3. Set /City/BlueprintBorough/WardenVault metadata documentation to 'Schema Warden: USDA Text and API Schemas cleared.'.
-      # 4. Set stage up axis to Y.
-      # 5. Set stage startTimeCode to 1.
-      # 6. Set stage endTimeCode to 48.
-      # 7. Keep /City/BlueprintBorough/Bridge.destination targeting /City/BlueprintBorough/Stall.
+      # 1. Define /City/BlueprintBorough with type Xform.
+      # 2. Define /City/BlueprintBorough/Stall with type Cube.
+      # 3. Set /City/BlueprintBorough/Stall.size to 2.
+      # 4. Define /City/BlueprintBorough/Yard with type Scope.
+      # 5. Define /City/BlueprintBorough/Crane with type Xform.
+      # 6. Set /City/BlueprintBorough/Crane.xformOp:translate to [0.0, 12.0, 0.0].
+      # 7. Define /City/BlueprintBorough/Lift with type Xform.
+      # 8. Set /City/BlueprintBorough/Lift.xformOp:scale to [2.0, 2.0, 2.0]
+      #    through XformCommonAPI.
+      # 9. Define /City/BlueprintBorough/StreetLamp with type SphereLight.
+      # 10. Set /City/BlueprintBorough/StreetLamp.inputs:intensity to 750.
       stage.GetRootLayer().Save()
     language: python
     validator:
       assertions:
-      - prim_type: {path: /City/BlueprintBorough/WardenVault, value: Scope}
-      - attribute_equals: {path: /City/BlueprintBorough/WardenVault.purpose, value: guide}
-      - metadata_equals: {path: /City/BlueprintBorough/WardenVault, key: documentation, value: 'Schema Warden: USDA Text and API
-            Schemas cleared.'}
-      - {up_axis: Y}
-      - {start_time: 1}
-      - {end_time: 48}
-      - relationship_targets:
-          path: /City/BlueprintBorough/Bridge.destination
-          targets: [/City/BlueprintBorough/Stall]
-    cookbook: docs/stage-setting/usd-file-formats.md
+      - prim_type: {path: /City/BlueprintBorough, value: Xform}
+      - prim_type: {path: /City/BlueprintBorough/Stall, value: Cube}
+      - attribute_equals: {path: /City/BlueprintBorough/Stall.size, value: 2.0}
+      - prim_type: {path: /City/BlueprintBorough/Yard, value: Scope}
+      - prim_type: {path: /City/BlueprintBorough/Crane, value: Xform}
+      - attribute_equals:
+          path: "/City/BlueprintBorough/Crane.xformOp:translate"
+          value: [0.0, 12.0, 0.0]
+      - prim_type: {path: /City/BlueprintBorough/Lift, value: Xform}
+      - attribute_equals:
+          path: "/City/BlueprintBorough/Lift.xformOp:scale"
+          value: [2.0, 2.0, 2.0]
+      - prim_type: {path: /City/BlueprintBorough/StreetLamp, value: SphereLight}
+      - attribute_equals: {path: "/City/BlueprintBorough/StreetLamp.inputs:intensity", value: 750.0}
+    cookbook: docs/scene-description-blueprints/lights.md
     xp: 200
-    reward: Blueprint Sigil
-    world_target: /City/BlueprintBorough/WardenVault
-    recipes: [USDA def specifier, typed schema declaration]
+    reward: Marshal's Manifest
+    world_target: /City/BlueprintBorough
+    recipes: [UsdGeom.Scope.Define, UsdGeom.Xform.Define, UsdGeom.XformCommonAPI, UsdLux.SphereLight.Define]

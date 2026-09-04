@@ -398,9 +398,8 @@ quests:
     cookbook: docs/asset-structure/model-hierarchy/model-hierarchy-considerations.md
     xp: 480
     reward:
-      opinion_points: 3
+      opinion_points: 4
       achievement: "Floor clear! The Zoning Golem now recites group, assembly, component in the approved order."
-      inventory: {prim_censuses: 1}
     world_target: /City/AssetFoundry
     recipes: [Model Hierarchy, Kind]
     questions:

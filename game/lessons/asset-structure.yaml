@@ -68,16 +68,28 @@ lessons:
           stage.SetDefaultPrim(world)
           assert stage.GetPrimAtPath("/World/Hull")
           stage.GetRootLayer().Save()
-      - kind: pitfall
-        heading: Encapsulation includes dependencies
+      - kind: work_order
+        heading: Root prims share no ancestor prim
         system: >-
           A mesh that arrives without its material files itself as evidence. Minimalism is the
           defense it never wins.
         body: |
-          A reference only brings in the namespace rooted at its target. A material, skeleton,
-          relationship target, or other dependency left outside the entry point is outside that
-          reference's scope. Targets to those external paths are ignored after composition, often
-          with warnings and visibly incomplete results.
+          In the Principles Ward a single Cube stands at /Hull with nothing above it. At the
+          Portfolio Promenade gate the shape repeats, with /City/CrownDistrict alone in its layer.
+          Both places park their scene description directly beneath the pseudo-root, which the
+          tree view draws as though it were an ancestor prim.
+
+          The pseudo-root carries no prim definition, so neither layer holds a prim an external arc
+          can target as a unit. /Hull is a root prim with no defined parent, and the stage records
+          no default prim. A reference brings in only the namespace rooted at its target, so a
+          material filed beside /Hull would sit outside that target and its bindings would resolve
+          to nothing.
+
+          The finished asset needs /World defined as an Xform, recorded as the stage default prim,
+          with /Hull living beneath it. Move the cube using Usd.NamespaceEditor so relationship
+          targets travel with it: queue the move with ReparentPrim, then call ApplyEdits before
+          saving. A traversal of the result must reach /World/Hull and find no /Hull, so the cube
+          has to move rather than be defined again at the new path.
         points:
           - Encapsulation depends on a defined common ancestor prim, a role the pseudo-root cannot fill.
           - Reparenting changes prim paths, so let NamespaceEditor perform the move and keep dependent targets intact.
@@ -168,16 +180,27 @@ lessons:
 
           UsdShade.Material.Define(stage, "/World/Looks/Paint")
           stage.GetRootLayer().Save()
-      - kind: pitfall
-        heading: Paths are part of the interface
+      - kind: work_order
+        heading: Materials sit outside the entry point
         system: >-
-          You may rename every corridor. The contestants already inside will call it a trap, and
-          for legal purposes they will be correct.
+          Geometry moved into the building. The materials stayed at the curb and are now claiming
+          residency by adverse possession.
         body: |
-          Reorganizing prims changes their paths. Although NamespaceEditor updates supported
-          relationship targets in the edited stage, downstream layers may already hold overrides,
-          references, or application data aimed at the old paths. Public hierarchy should
-          therefore be designed deliberately and changed cautiously.
+          The accumulated city carries the townhouse forward with /World standing as its entry
+          point and the hull encapsulated beneath it. The surfacing contribution never made it
+          inside: the material prims sit out at the layer root as /Looks.
+
+          A reference to /World therefore carries geometry and nothing else, because /Looks is not
+          a descendant of the target. The prims already inside /World are unpartitioned as well, so
+          a downstream user reading the namespace has no signal about which contributions belong to
+          modeling and which belong to surfacing.
+
+          The finished asset needs /World as an Xform and the stage default prim, /World/Looks
+          defined as a Scope, /World/Looks/Paint defined as the material inside it, and a
+          documentation string on /World. Scope is the deliberate choice for a partition because it
+          carries no transform operations. A traversal must reach /World/Looks/Paint and find no
+          /Looks, so the material has to end up under Looks with nothing left behind at the old
+          root path.
         points:
           - Keep Looks beneath the entry point so one reference to /World carries the materials along.
           - Classify prims with schema predicates such as IsA, since a prim name carries no type guarantee.
@@ -258,18 +281,26 @@ lessons:
 
           assert stage.GetPrimAtPath("/World/Hull")
           stage.GetRootLayer().Save()
-      - kind: pitfall
-        heading: Keep the layer stack bounded
+      - kind: work_order
+        heading: The root layer lists no sublayers
         system: >-
           If every publish adds another permanent sublayer, you have built sediment, not history.
         body: |
-          Computational workstreams may partition work across processes or machines, and hybrid
-          workstreams may layer synthesized motion over a hand-authored state. These are valid
-          uses when the resulting stack remains bounded and understandable.
+          At the Workstream Forges the townhouse is spread across three files. geometry.usda
+          defines /World and the Cube at /World/Hull. shading.usda holds one sparse override on
+          /World/Hull carrying a display name. The root layer meant to bind them lists nothing in
+          its subLayerPaths.
 
-          Every contributing layer costs time to resolve, open, and compose. A procedurally growing
-          stack makes a poor asset version history; versioning belongs in a dedicated publishing
-          or storage system.
+          Both workstream products exist on disk and contribute nothing. With no sublayers listed,
+          the composed stage has no /World/Hull at all, and the two departments hold separate files
+          with no layer stack stitching them into one asset.
+
+          The finished asset needs both paths in the root layer's subLayerPaths, shading.usda first
+          and geometry.usda second, then a save. subLayerPaths is ordered strongest to weakest, so
+          appending geometry first would make the defining layer stronger than the override meant
+          to win. Relative paths resolve against the layer that authors them, the root layer stays
+          stronger than both sublayers, and two layers are all this asset needs; every additional
+          one costs time to resolve, open, and compose.
         points:
           - Dynamic partitions may differ between evaluations, so consumers should depend on the composed contract and treat shard names as incidental.
           - Keep stacks shallow enough to inspect and maintain.
@@ -354,16 +385,27 @@ lessons:
           unloaded = Usd.Stage.Open("asset.usda", load=Usd.Stage.LoadNone)
           assert unloaded.GetDefaultPrim().GetPath() == world.GetPath()
           assert not unloaded.GetPrimAtPath("/World/Hull")
-      - kind: pitfall
-        heading: Keep implementation below the boundary
+      - kind: work_order
+        heading: The interface has no arc to its contents
         system: >-
           A thin shell containing duplicated geometry is a second warehouse with better branding.
           I have toured both.
         body: |
-          The interface should stay lean, publishing stable public paths while heavy contents live
-          behind the payload. Required controls belong above the boundary as well, since controls
-          buried inside the payload force consumers to load the asset before they can discover its
-          options.
+          The townhouse now ships as two files at the Workstream Forges. contents.usda holds the
+          bulk: it defines /World with the Cube at /World/Hull and records /World as its own
+          default prim. The interface layer, the file a consumer would reference, holds no arc onto
+          it.
+
+          Nothing composes, so /World/Hull is absent from the composed stage, and the interface
+          declares none of its own conventions: no default prim, no up axis. Copying the hull into
+          the interface would compose the same result and defeat the pattern, because a consumer
+          would then have to load the bulk to read the label.
+
+          The finished interface needs /World defined as an Xform with a payload targeting
+          contents.usda, /World recorded as the stage default prim, the stage up axis set to Y, and
+          a documentation string on /World. Because contents.usda exposes a default prim, the asset
+          path alone is enough and no prim path is required. The default prim and up axis are
+          opinions on the interface layer itself and are not adopted from the payloaded layer.
         points:
           - Downstream users should reference the supported interface and let it own the payload arc.
           - defaultPrim and upAxis are authored on the interface layer itself.
@@ -451,15 +493,26 @@ lessons:
           )
           accent.Set((1.0, 0.0, 0.0))
           stage.GetRootLayer().Save()
-      - kind: pitfall
-        heading: Choose the correct variability cost
+      - kind: work_order
+        heading: The entry point publishes no parameters
         system: >-
           Three million color variants is a prototype breeding program, and zoning has noticed.
         body: |
-          Primvars are usually lighter for a single property because varying their values across
-          instances leaves prototype sharing intact. Materials pay the cost of looking up those
-          values. Variant selections can coordinate richer changes but create distinct prototypes
-          for distinct composed results.
+          At the Parameter Loft the asset is a single prim: /World, defined as an Xform and already
+          recorded as the stage default prim. That is the whole stage. The entry point is well
+          formed and exposes no controls of any kind.
+
+          A downstream context that needs a different awning color therefore has no supported field
+          to author. Its remaining options are to reach into the asset's internal surfacing scopes,
+          which are implementation and may be reorganized at any time, or to guess at path
+          conventions that carry no stability promise.
+
+          The finished interface needs one primvar named accentColor on /World, typed Float3 with
+          constant interpolation, set to red through UsdGeom.PrimvarsAPI. The value is a single
+          Float3 rather than an array type, and constant interpolation means the one value covers
+          the whole prim instead of varying per face or vertex. A primvar is the lighter choice
+          for a single value because varying it across instances leaves prototype sharing intact,
+          while a descendant authoring the same name would override the entry point.
         points:
           - Publish supported parameters on the entry point where consumers expect to find them.
           - Use an array value type only when the parameter truly contains an array; accentColor here is Float3.
@@ -543,17 +596,27 @@ lessons:
 
           lofted.SetVariantSelection("brick")
           stage.GetRootLayer().Save()
-      - kind: pitfall
-        heading: Author inside the intended branch
+      - kind: work_order
+        heading: The finish switch lives only on Looks
         system: >-
-          Variant edit contexts are rooms within rooms. Check the sign before redecorating or the
-          stucco branch inherits a brick confession.
+          A variant edit context directs each finish into one branch. Confirm the selection before
+          authoring the material.
         body: |
-          SetVariantSelection called outside the public variant edit context authors a direct
-          selection on the lofted set. The conditional opinion that links the two sets appears only
-          when that call happens inside the edit context. Restoring the intended default afterward
-          matters too, since the last branch selected during construction otherwise remains the
-          public selection.
+          The accumulated city reaches the Parameter Loft with the paint variant set sitting on
+          /World/Looks, its brick and stucco branches owning the actual surfacing opinions. /World,
+          the entry point a consumer actually reaches, carries no variant set at all.
+
+          The only switch for the exterior finish is therefore on an internal scope. A downstream
+          context has to author its selection inside implementation, and the set is unavailable
+          whenever the contents payload is left unloaded, which is exactly when a tool wants to
+          read the asset's options.
+
+          The finished interface needs a matching paint set on /World carrying both variant names
+          with brick selected. Build it one branch at a time: select each public branch and, inside
+          that branch's edit context, author the matching selection on the Looks set, then restore
+          brick as the public selection. A selection authored outside the edit context becomes a
+          direct opinion instead of the conditional link, and the Looks set must be left with no
+          selection of its own, so only those nested opinions may set it.
         points:
           - Copying names without authoring nested selections creates an advertised set that controls nothing.
           - Variant names and spelling must match the internal set exactly.
@@ -636,15 +699,26 @@ lessons:
           assert model.GetKind() == Kind.Tokens.component
           assert model.GetAssetName() == "Townhouse"
           stage.GetRootLayer().Save()
-      - kind: pitfall
-        heading: Kind is authored metadata
+      - kind: work_order
+        heading: The house carries no model role
         system: >-
           Renaming an Xform "Component" is paperwork performed by interpretive dance.
         body: |
-          Classification comes from kind metadata authored through model metadata, and the
-          surrounding hierarchy must satisfy model rules before helpers such as IsModel recognize a
-          valid model. Defining an Xform and setting defaultPrim are separate contracts that leave
-          the model role open.
+          In the Model Heights the house stands complete: /City/AssetFoundry/House is defined as an
+          Xform and recorded as the stage default prim. Structurally that is already an asset entry
+          point, one defined root prim with a supported way in.
+
+          Nothing on the prim states what role it plays. Its schema type says it is transformable
+          and its path says House, and neither is metadata a tool can read for classification. With
+          no kind authored, the prim sits outside model hierarchy entirely, so model traversal and
+          asset discovery pass over it, and assetInfo holds no name that identifies the asset apart
+          from its path.
+
+          The house needs two pieces of metadata through Usd.ModelAPI: SetKind to
+          Kind.Tokens.component, and the asset name Townhouse. Use the registry token rather than a
+          bare string so every consumer reads the same inheritance. The asset name lives in the
+          assetInfo dictionary, separate from displayName and from the prim name, and the default
+          prim already standing on the house says nothing about its model role.
         points:
           - Use a standard Kind.Tokens value so every consumer can interpret the role.
           - Mark notable interior prims subcomponent, since the component boundary is a leaf of model hierarchy.
@@ -725,15 +799,27 @@ lessons:
           ).GetPrim()
           sign.GetReferences().AddReference("sign.usda")
           stage.GetRootLayer().Save()
-      - kind: pitfall
-        heading: Keep members independently publishable
+      - kind: work_order
+        heading: Components with no aggregate above them
         system: >-
           A block that owns every mesh, every material, and every regret has graduated from
           assembly to hoarding.
         body: |
-          Flattening component internals into the assembly breaks independent publishing and makes
-          updates difficult to propagate. Misclassifying the aggregate root as a component also
-          creates an invalid hierarchy when referenced component descendants appear beneath it.
+          The accumulated city reaches the Model Heights with the house registered as a component
+          and sign.usda published in the world's asset folder with its own entry point. No block
+          prim stands above either of them.
+
+          The district therefore holds loose component models and no aggregate that arranges them.
+          The sign is not on the stage at all, and the shortest way to make it appear is to copy
+          its meshes into the block layer, which ends the sign's independent publishing and stops
+          later changes to it from reaching this placement.
+
+          The finished block needs /City/AssetFoundry/SkylineBlock defined as an Xform with
+          assembly kind authored on it through Usd.ModelAPI, SignA defined beneath it carrying a
+          reference to sign.usda, and a documentation string on the block. The reference omits a
+          prim path, so sign.usda must expose a default prim to target. Assembly belongs on the
+          aggregate root, because a component root would turn its referenced component descendants
+          into an invalid hierarchy.
         points:
           - Leave gprims inside the component assets and bring them in by reference.
           - Author assembly kind on the aggregate root so its referenced components remain valid descendants.
@@ -812,15 +898,28 @@ lessons:
 
           assert stage.GetPrimAtPath("/World/North").IsGroup()
           stage.GetRootLayer().Save()
-      - kind: pitfall
-        heading: Two grouping systems, one prim
+      - kind: work_order
+        heading: The assembly has no intermediate partitions
         system: >-
           Scope is a schema type. Group is kind metadata. Calling both "folders" is how training
           manuals become haunted.
         body: |
-          A prim can be a Scope or Xform by schema type and independently carry group kind
-          metadata. Each is authored separately: the schema type governs transform semantics, while
-          the kind token governs the model role.
+          The street in the Model Heights opens with /World defined as an Xform, recorded as the
+          stage default prim, and already marked assembly. Nothing stands between that aggregate
+          root and the lots it is meant to arrange.
+
+          Every building would hang off /World as an undifferentiated sibling, and model hierarchy
+          would carry no statement that the north side and the south side of the street are
+          separate partitions. An untagged intermediate prim is the worse outcome: a component
+          placed beneath it would have an ancestor that is not a model, which model hierarchy rules
+          do not allow.
+
+          The finished street needs /World/North and /World/South defined as Xforms with
+          Kind.Tokens.group authored on each through Usd.ModelAPI, and the assembly kind on /World
+          left as it stands. The names North and South carry no kind on their own, so both tokens
+          have to be authored, and nothing changes visually. Xform is used here rather than Scope
+          because these partitions position their lots; schema type and kind remain independent
+          choices.
         points:
           - Author the model role with Usd.ModelAPI.SetKind; prim names such as North or Group carry no kind.
           - Tag sparingly so kind remains a shallow model-level structure.
@@ -905,19 +1004,29 @@ lessons:
           assert block.IsGroup() and block.IsModel()
           assert house.IsComponent()
           stage.GetRootLayer().Save()
-      - kind: pitfall
-        heading: Extend kind only with restraint
+      - kind: work_order
+        heading: Kind metadata is stacked in the wrong order
         system: >-
           Custom zoning categories sound impressive until a client lacks your plugin and
           interprets "a_metropolitan" as a spelling incident.
         body: |
-          The Kind registry can be extended through plugin metadata, but custom kinds reduce
-          portability because every consumer must understand their inheritance. Invalid or missing
-          plugin definitions can break model hierarchy interpretation.
+          In Hierarchy Hall the accumulated city already holds all three prims:
+          /City/AssetFoundry as the district, /City/AssetFoundry/SkylineBlock as the aggregate, and
+          /City/AssetFoundry/House as the building. Their kind metadata is inverted relative to the
+          approved order.
 
-          Internal taxonomies usually belong in custom properties, user properties, or schemas
-          rather than kind. If extensions are unavoidable, names such as c_ and a_ can preserve a
-          visible connection to component and assembly semantics.
+          Component over assembly over group is invalid, not merely untidy. A component is the leaf
+          of model hierarchy and cannot contain model descendants, and every ancestor of a
+          component must be a group or a group subkind. Composition reads kind for members of this
+          hierarchy, so the current arrangement leaves model traversal and pruning unusable while
+          the geometry looks unchanged.
+
+          The corrected district needs group on /City/AssetFoundry, assembly on
+          /City/AssetFoundry/SkylineBlock, and component on /City/AssetFoundry/House, each authored
+          through Usd.ModelAPI, plus a documentation string on the district. Assembly is valid
+          above a component because it derives from group. Authoring writes whatever token it is
+          handed, so a misspelled or unregistered name composes quietly with no inheritance behind
+          it.
         points:
           - Author a concrete token such as group, assembly, or component.
           - Reserve kind for model roles and express other taxonomies in properties or schemas.
@@ -1023,23 +1132,30 @@ lessons:
           throne.GetReferences().AddReference("sign.usda")
           throne.SetInstanceable(True)
           stage.GetRootLayer().Save()
-      - kind: pitfall
-        heading: Each contract is authored separately
+      - kind: work_order
+        heading: The stage contract is unauthored
         system: >-
           The Monarch specializes in omissions. One missing metadata field and it will argue the
           city is technically sideways, timeless, and not your problem.
         body: |
-          Asset failures often come from assuming one declaration establishes another. Dependency
-          encapsulation, model kind, instanceability, and the stage time range each require their
-          own authored opinion, even when a default prim, an Xform, a reference, and time samples
-          are already present.
+          The accumulated city reaches the Root Throne with every prim from the earlier floors
+          still standing, /City and /City/CrownDistrict included. The matter of the city is intact
+          and its meaning is not.
 
-          Performance also depends on the whole structure. Excess layers increase resolution and
-          composition costs, deep kind hierarchies reduce pruning benefits, and duplicated assets
-          defeat storage and prototype sharing.
+          The stage-level contract is blank. No default prim is recorded, no up axis, no start or
+          end time code, and /City carries no model kind. The throne prim has no composition arc,
+          so the civic sign asset is not present in the stage at all. Prims and geometry supply
+          none of these facts; each one is a separate authored opinion or it is absent.
+
+          The finished city needs /City/CrownDistrict/RootThrone defined as an Xform, referencing
+          sign.usda and marked instanceable; /City recorded as the default prim and carrying group
+          kind; the up axis set to Y; the start and end time codes set to 1 and 48; and a
+          documentation string on the throne. The default prim call takes a Usd.Prim rather than a
+          path string, sign.usda must expose its own default prim because the reference omits one,
+          and instanceable metadata requests sharing without authoring the arc it shares.
         points:
           - SetDefaultPrim expects a Usd.Prim, not a path string.
-          - SetInstanceable(True) belongs on the prim carrying the reusable composition arc.
+          - Instanceable metadata belongs on the prim carrying the reusable composition arc.
           - Save the root layer after all stage, prim, and composition metadata is authored.
           - Verify the source asset has defaultPrim before omitting the reference prim path.
       - kind: recap

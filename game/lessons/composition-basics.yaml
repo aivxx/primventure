@@ -1,97 +1,4 @@
 lessons:
-  - source: docs/scene-description-blueprints/index.md
-    title: Schema-Backed Prims
-    objective: Define typed prims with schema classes and use their declared properties through schema-specific accessors.
-    intro: >-
-      Schema Borough has survived for years on boxes labeled "probably geometry." Today we
-      introduce schemas, which give prims meaning, capabilities, and considerably better paperwork.
-      The live audience has been asked not to wager on your first type mismatch.
-    beats:
-      - kind: concept
-        heading: Schemas give prims meaning
-        system: >-
-          An empty container can become a light, a transform, or a cube. The sponsors call this
-          career mobility.
-        body: |
-          A prim is a container, while a schema defines the standard data and behavior associated
-          with that container. A typed, schema-backed prim has a type name such as Xform, Scope,
-          Cube, or SphereLight, allowing USD-aware applications to recognize and process it
-          consistently.
-
-          IsA schemas establish what a prim is. A prim has at most one authored type name, and
-          schema classes such as UsdGeom.Cube provide a typed interface to that prim. API schemas
-          instead describe capabilities that can be applied to compatible prims without replacing
-          their concrete type.
-        points:
-          - A typeless prim is valid; the properties and behavior of a typed schema arrive with a type name.
-          - IsA schema compatibility can be tested with prim.IsA(SchemaClass).
-          - API schemas add or expose a capability while preserving the prim's existing type.
-      - kind: concept
-        heading: Types declare standard properties
-        system: >-
-          The blueprint tells every department what belongs in the building. This is more
-          coordination than the Composition has achieved since the collapse.
-        body: |
-          Schema definitions standardize attribute names, value types, metadata, relationships,
-          and fallback values. For example, a Cube has a double-valued size attribute and inherits
-          geometric properties such as extent and displayColor through its schema hierarchy.
-
-          A schema accessor can return an attribute whose value is supplied by a schema fallback
-          even when no opinion is authored in any layer. Calling Set on that accessor authors a
-          real opinion, which then participates in value resolution and appears in the layer.
-        points:
-          - GetTypeName reports the prim's authored type token, such as Cube.
-          - GetSizeAttr returns a Usd.Attribute; call Get to read its resolved value.
-          - Prefer schema-specific methods when they exist; they are clearer and less brittle.
-      - kind: api
-        heading: Define through the schema class
-        system: >-
-          You could spell every property by hand. You could also represent yourself in floor-four
-          litigation.
-        body: |
-          Prefer a schema class's Define method when the desired type is known. It defines the prim
-          and any missing ancestors, authors the correct type name, and returns the typed schema
-          object. Use GetPrim when a generic Usd.Prim API is needed.
-        code: |
-          from pxr import Usd, UsdGeom
-
-          stage = Usd.Stage.Open(STAGE_PATH)
-          stall = UsdGeom.Cube.Define(
-              stage, "/City/BlueprintBorough/Stall"
-          )
-          stall.CreateSizeAttr(2.0)
-
-          prim = stall.GetPrim()
-          assert prim.GetTypeName() == "Cube"
-          assert prim.IsA(UsdGeom.Cube)
-          assert stall.GetSizeAttr().Get() == 2.0
-
-          stage.GetRootLayer().Save()
-      - kind: pitfall
-        heading: Where contestants lose the room
-        system: >-
-          A prim named Cube might be anything at all. The type name is the credential, whatever the
-          former mayor put on his letterhead.
-        body: |
-          A prim's name, path, and type name are separate. Only the authored type name grants a
-          schema, so an Xform named "Cube" stays an Xform, and wrapping an incompatible prim in a
-          schema object leaves its type exactly where it was. Author the intended type with Define
-          or stage.DefinePrim(path, typeName).
-        points:
-          - Define returns a schema object, while stage.DefinePrim returns a generic Usd.Prim.
-          - A schema attribute's fallback may make Get return a value even though no value is authored.
-          - Generic CreateAttribute requires the exact property name and Sdf value type, so schema accessors are safer.
-      - kind: recap
-        heading: What you now know
-        body: |
-          Schemas turn generic prim containers into standardized scene elements. IsA schemas
-          establish a prim's type, API schemas provide additional capabilities, and schema-specific
-          Define and attribute accessors author valid, interoperable scene description.
-    apply:
-      f2_market_stall: >-
-        Define the Stall with UsdGeom.Cube and author size 2. The market accepts typed goods only;
-        the untyped inventory was seized by a boss with a clipboard.
-
   - source: docs/scene-description-blueprints/lights.md
     title: Lights
     objective: Author lights as typed UsdLux prims and configure them through their namespaced inputs and schema accessors.
@@ -208,16 +115,26 @@ lessons:
         points:
           - An applied API schema adds capability without replacing the prim's concrete type.
           - "The same namespace applies, so an emissive mesh is configured through the same inputs and the same accessors."
-      - kind: pitfall
-        heading: Where contestants lose the room
+      - kind: work_order
+        heading: The row has geometry and no light prim
         system: >-
           The light stays dark, the file looks finished, and nothing anywhere raises an error.
-          This is my favorite failure on the floor.
+          Read the name that landed in the layer.
         body: |
-          The namespace is where runs are lost, because dropping it fails quietly. Authoring
-          intensity on a light raises nothing at all. It declares a brand new custom attribute
-          that no schema owns and no renderer reads, while the real inputs:intensity keeps its
-          fallback. The layer looks configured and the lamp stays off.
+          Lumen Row closes out Blueprint Borough, and the borough around it is already standing.
+          The Stall, the Yard, the Crane, and the Lift are each typed by the schema that owns their
+          job. The row itself is dark, because it holds geometry and transforms and not one prim
+          that emits.
+
+          /City/BlueprintBorough/StreetLamp does not exist. There is no prim spec at that path, so
+          nothing there carries a type name and nothing carries a brightness. Even once the prim is
+          defined, inputs:intensity resolves to 1.0 from the UsdLux schema fallback until an opinion
+          is authored on it, which is the same value a lamp nobody configured reports.
+
+          A lit row needs the StreetLamp defined as a UsdLux SphereLight with inputs:intensity set
+          to 750 through GetIntensityAttr. The detail worth checking is the name: the prefix and the
+          colon are part of it. An attribute spelled intensity is a separate custom property, and
+          inputs:intensity keeps its fallback.
         code: |
           from pxr import Sdf
 
@@ -250,6 +167,13 @@ lessons:
         Define the StreetLamp as a SphereLight, then set its intensity to 750 through the schema
         accessor. The attribute being graded is inputs:intensity, namespace and all. Lumen Row has
         been dark for two seasons and the audience has stopped pretending to be surprised.
+      f2_blueprint_marshal: >-
+        Author the whole borough in one pass. Define /City/BlueprintBorough as an Xform, then
+        inside it a Cube named Stall with size 2, a Scope named Yard, an Xform named Crane
+        translated to (0, 12, 0), an Xform named Lift scaled to (2, 2, 2) through XformCommonAPI,
+        and a SphereLight named StreetLamp at intensity 750. Six prims, each declared by the
+        schema that owns its job. The Marshal reads the manifest top to bottom and has never once
+        been talked out of a line item.
 
   - source: docs/composition-basics/layers.md
     title: Layers and Sublayers
@@ -316,14 +240,27 @@ lessons:
               print(layer.identifier)
 
           root.Save()
-      - kind: pitfall
-        heading: Saving and reloading are file operations
+      - kind: work_order
+        heading: Support layers exist on disk but contribute nothing
         system: >-
-          Reload discards unsaved opinions with the serenity of a producer cutting your best scene.
+          A path the authoring layer cannot resolve contributes nothing, and nothing in the file
+          will mention it.
         body: |
-          layer.Save() writes that layer's edits to its backing resource. layer.Reload() clears
-          unsaved content and reloads persisted content. Opinion strength and sublayer order stay
-          exactly as authored through both calls.
+          Layer Lane keeps the Quarter's data in separate files that sit on disk beside the stage's
+          root layer. One is a district registry that defines /City/CompositionQuarter with a
+          districtStatus of registered. Two more are permit layers that each define PermitDesk with
+          an opposite permitStatus, one open and one closed.
+
+          Every one of those files is complete and completely inert. The root layer's subLayerPaths
+          is empty, so none of them joins the local layer stack. The composed stage therefore has no
+          /City/CompositionQuarter prim at all, and neither districtStatus nor permitStatus has
+          anywhere to resolve from.
+
+          A composed Quarter needs those paths listed in the root layer's subLayerPaths, and the
+          root saved afterward. The detail worth checking is order: the list runs strongest to
+          weakest, so the first entry settles a conflict between two layers. Relative paths also
+          resolve against the layer that authors them, so a bare filename has to sit beside the
+          root layer.
         points:
           - Strength runs top down, so the first entry in subLayerPaths wins regardless of save order.
           - stage.Save writes dirty file-backed layers, while root.Save writes only the root layer.
@@ -414,15 +351,27 @@ lessons:
           print(booth.GetPrimStack())
 
           stage.GetRootLayer().Save()
-      - kind: pitfall
-        heading: The resolved specifier hides its sources
+      - kind: work_order
+        heading: The kiosk, the booth, and the blueprint are undeclared
         system: >-
-          The local document says over. The composed verdict says def. Both are true, which is why
+          The local document says over. The composed result says def. Both are true, which is why
           the Court sells refreshments.
         body: |
-          GetSpecifier reports the composed prim's resolved specifier, which may differ from the
-          specifier on any single contributing prim spec. Inspect GetPrimStack when distinguishing a
-          local over from the weaker def that establishes the prim.
+          Specifier Court sorts its prims by how they are declared. Along one wall the Billboard is
+          already half in place: a weaker base layer defines it as a Cube with size 2, and an empty
+          over spec sits at the same path in the stage's root layer. The kiosk, the permit booth,
+          and the booth blueprint have nothing at their paths.
+
+          The declarations are what is missing. /City/CompositionQuarter/CourtKiosk has no prim spec
+          anywhere, so default traversal has nothing to visit there. The Billboard's over carries no
+          size opinion, so size resolves to 2.0 from the weaker def beneath it. PermitBooth and
+          _BoothBlueprint have no specs at all, so neither resolves to a specifier.
+
+          A settled Court needs a def at the kiosk, a class at the blueprint, a def at the booth,
+          and a local size of 8.0 on the over that already exists. The detail worth checking is that
+          GetSpecifier reports the composed result rather than what any single layer says: a
+          stronger over above a weaker def resolves to def, and GetPrimStack is what shows both
+          specs.
         points:
           - Use OverridePrim to modify an existing composed prim without redefining its source.
           - Author a def when the new prim must exist on its own in default traversal.
@@ -521,15 +470,27 @@ lessons:
               "stallId", Sdf.ValueTypeNames.String
           ).Set("A")
           stage.GetRootLayer().Save()
-      - kind: pitfall
-        heading: Entry points and edits
+      - kind: work_order
+        heading: The destination lists no reference yet
         system: >-
-          A reference with no target is a dramatic entrance by nobody. Reviews were mixed.
+          An arc that resolves to nothing still reads as an arc in the file. Only the values tell
+          you which one you authored.
         body: |
-          Referencing an asset path without a prim path depends on valid defaultPrim metadata in
-          the target layer. If it is absent, USD cannot infer which root hierarchy to compose and
-          emits a warning. Author local changes on the destination and leave the shared source
-          asset closed.
+          Reference Arcade builds its addresses out of one asset instead of copies. arcade_sign.usda
+          already sits on disk, finished: it defines /Sign with a signText value of REFERENCE ARCADE
+          and names /Sign as the layer's default prim. At /City/CompositionQuarter/ArcadeSign the
+          destination is defined too, as a bare Xform.
+
+          That destination composes nothing. Its reference list is empty, so /Sign never arrives
+          beneath it and signText does not resolve there at all. The market block down the street is
+          emptier still: its three stall destinations, their arcs, and the stallId values that tell
+          them apart are all unauthored.
+
+          A working arcade needs a reference on each destination, authored with AddReference and
+          letting the asset's default prim supply the source prim path, plus a local stallId on each
+          stall. The detail worth checking is that AddReference validates nothing. An asset path
+          wrong relative to the authoring layer, or an asset naming no default prim, still records
+          the arc and brings no values across.
         points:
           - Asset paths must be valid from the authoring layer's location.
           - ClearReferences removes references authored at the edit target and leaves the source asset on disk.
@@ -613,14 +574,26 @@ lessons:
           instance = stage.DefinePrim("/City/InfoKiosk", "Xform")
           instance.GetReferences().AddReference("kiosk_asset.usda")
           stage.GetRootLayer().Save()
-      - kind: pitfall
-        heading: Metadata has jurisdiction
+      - kind: work_order
+        heading: The asset has two roots and no defaultPrim
         system: >-
           A nested lobby remains a lobby. The Gate has rejected stronger metaphors.
         body: |
-          SetDefaultPrim accepts any Usd.Prim at the Python type level, but the prim must be
-          top-level for valid defaultPrim metadata. Also ensure the metadata is authored on the
-          root layer that external consumers actually reference.
+          kiosk_asset.usda sits on disk beside the Quarter with two root prims in it: /Kiosk, which
+          carries an assetRole of information, and /Scratch, a Scope for working data. On the city
+          stage, /City/CompositionQuarter/InfoKiosk already holds a reference to that asset,
+          authored from an asset path with no prim path after it.
+
+          The asset's root layer has no defaultPrim metadata. With two roots and nothing naming the
+          entry point, that pathless reference has no way to choose between them, so it resolves
+          without the intended hierarchy, reports a composition warning, and leaves assetRole
+          unresolved on the destination. usdchecker treats a missing default prim as an asset
+          validation error as well.
+
+          A consumable asset needs /Kiosk retrieved as a Usd.Prim and handed to SetDefaultPrim on
+          the asset stage, with that stage's root layer saved afterward. Two details are easy to
+          miss: the call takes the prim itself rather than the path string, and each stage saves on
+          its own, so the asset needs its own save before the city stage composes it.
         points:
           - SetDefaultPrim needs the prim itself, so resolve it first with stage.GetPrimAtPath(path).
           - Only a root-level prim yields valid defaultPrim metadata, which rules out /World/Kiosk.
@@ -717,14 +690,28 @@ lessons:
           print(threat.GetPropertyStack())   # property specs, strong to weak
 
           stage.GetRootLayer().Save()
-      - kind: pitfall
-        heading: Strength outranks chronology
+      - kind: work_order
+        heading: The destination has no local opinion
         system: >-
-          Saving last wins you nothing. This rule has devastated executives across all ten floors.
+          Saving last earns you nothing. This rule has rearranged executives across all ten floors.
         body: |
-          A weaker reference saved after a local edit remains weaker. Likewise, flattening or
-          editing the source asset is unnecessary when a stronger local opinion can express the
-          shot- or instance-specific change non-destructively.
+          Two weaker source layers sit on disk in the Quarter, each holding a single value.
+          baron_sign.usda defines /BaronSign with a marquee reading THE BARON OWNS THIS.
+          reference_threat.usda defines /ThreatSource with a threatLevel of 40. On the city stage
+          the destination prims those two sources are meant to reach, BaronSign and OpinionColossus,
+          do not exist.
+
+          So there is nothing composed at either path to override. With no destination prim and no
+          arc, both source values stay in their own layers, unreached. Bring the arc in and the
+          referenced opinion becomes the only opinion at that property, which resolves to 40 and to
+          the marquee the Baron authored.
+
+          A corrected Quarter needs stronger values authored directly on those destinations in the
+          stage's root layer, THE CITY OWNS ITSELF on BaronSign and a threatLevel of 100 on
+          OpinionColossus, with the weaker arcs left in place. A direct local opinion is the L in
+          LIVRPS and outranks a referenced one. The detail worth checking is that strength is
+          structural rather than chronological, so saving the weaker source afterward does not
+          promote it.
         points:
           - Read LIVRPS strongest to weakest, with Local first and Specializes last.
           - A direct local value on the destination prim outranks a selected variant.
@@ -817,15 +804,27 @@ lessons:
           lighting.SetVariantSelection("night")
           assert lighting.GetVariantNames() == ["day", "night"]
           stage.GetRootLayer().Save()
-      - kind: pitfall
-        heading: Context controls authorship
+      - kind: work_order
+        heading: The variant set holds no variants
         system: >-
-          An edit outside the context applies to every choice. The Curator calls this inclusivity;
-          the validator calls it wrong.
+          An edit outside the variant context applies to every choice. Put branch-specific
+          opinions inside the branch.
         body: |
-          SetVariantSelection chooses which variant is active. Routing subsequent edits into that
-          variant takes GetVariantEditContext, which must be active while you author
-          variant-specific prims or properties.
+          Variant Gallery keeps its alternatives inside one prim instead of duplicating it.
+          /City/CompositionQuarter/VariantMarquee is already defined and already carries a variant
+          set named lighting, created by AddVariantSet. Further into the gallery,
+          /City/CompositionQuarter/ChoiceExhibit has nothing authored on it at all.
+
+          That lighting set is empty. It holds no variants, so GetVariantSelection returns an empty
+          string, no variant has any opinions to contribute, and modeName resolves to nothing on the
+          marquee. Three things are missing together at each prim: the variant names, a resolved
+          selection, and the value the selected variant supplies.
+
+          A finished gallery needs each variant added, selected, and its value authored inside
+          GetVariantEditContext, with night left selected on the marquee and blue on the exhibit.
+          The detail worth checking is the order. The context routes opinions into whichever variant
+          is currently selected, so authoring before selecting, or outside the with block, writes an
+          ordinary local opinion that sits above every variant instead.
         points:
           - Select the intended variant before opening its edit context.
           - Authoring outside the context creates an ordinary local opinion that can override every variant.

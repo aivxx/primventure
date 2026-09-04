@@ -59,16 +59,26 @@ lessons:
 
           root_layer.Save()
           print(list(root_layer.subLayerPaths))
-      - kind: pitfall
-        heading: Paths, order, and persistence
+      - kind: work_order
+        heading: Assemble both workstreams under one root layer
         system: >-
-          Three ways to lose one room: point nowhere, rank backward, or forget to save. The
-          broadcast graphics department has animations for all three.
+          Two entries in one list, and their order is the entire negotiation. The broadcast
+          graphics department wanted a longer segment.
         body: |
-          Appending in the wrong order reverses the intended winner when layers disagree. An
-          absolute path may work locally but makes the assembly non-portable, while a relative
-          path must be correct from the root layer's directory. The sublayer list is layer
-          metadata and must be saved with that layer.
+          Sublayer Yards has two finished workstream files sitting beside an empty root layer.
+          geometry.usda defines /World and a Hull cube. shading.usda carries an over on
+          /World/Hull with a display name on it. Both files are complete and both are saved.
+
+          Nothing combines them. The root layer's subLayerPaths is empty, so the composed stage
+          has no /World/Hull at all, and the shading workstream's opinion has no route onto the
+          hull that geometry modeled. Two entries in one list are the entire assembly.
+
+          Append shading.usda, then geometry.usda, and save the root layer. Order carries the
+          meaning, since the first entry is the strongest, so shading has to precede geometry for
+          its display name to win while /World/Hull still resolves as def from the geometry def.
+          Asset paths are anchored to the layer that authors them, and the sublayer list is
+          metadata on the root layer, so saving the two workstream files persists nothing about
+          how they combine.
         points:
           - The first appended path has the highest sublayer strength.
           - A missing layer path produces an unresolved dependency rather than copying its content.
@@ -143,16 +153,27 @@ lessons:
           sign_off = stage.GetAttributeAtPath("/World/Marquee.signOff").Get()
           print(sign_off)  # FINAL
           root.Save()
-      - kind: pitfall
-        heading: Local spans the whole layer stack
+      - kind: work_order
+        heading: Promote lighting ahead of layout on the Marquee
         system: >-
           LIVRPS uses "local" with the confidence of a term that knows it will be misunderstood.
           I admire that.
         body: |
-          Every direct opinion in a layer stack, including opinions in recursive sublayers, is
-          local relative to arcs that connect another layer stack. Sublayer ordering decides
-          strength inside that local category before inherits, variants, references, payloads,
-          and specializes are considered.
+          The marquee at /City/ArcHighlands/Marquee takes its sign-off text from two workstreams.
+          layout.usda authors /World/Marquee with signOff set to DRAFT. lighting.usda authors the
+          same prim with signOff set to FINAL. Both files are finished, and the city's root layer
+          lists neither of them.
+
+          So the composed marquee has no signOff to resolve, and the obvious assembly makes it
+          worse. Listing the files in the order they were written puts layout at index 0, where
+          DRAFT becomes the strongest opinion and lighting speaks into an empty stack. Neither
+          file needs editing; only their order does.
+
+          Define /World/Marquee as an Xform, set the root subLayerPaths to lighting.usda followed
+          by layout.usda, and stamp the prim's documentation. Watch where FINAL comes from once it
+          composes: the winning opinion has to be the one authored in lighting.usda, so typing
+          signOff again on the city's own root layer would outrank both workstreams and make the
+          promotion meaningless.
         points:
           - The earliest listed sublayer wins, however recently a later one was appended.
           - Choose a sublayer when the requirement is to preserve the same namespace without remapping.
@@ -233,15 +254,27 @@ lessons:
           copy = UsdGeom.Xform.Define(stage, "/World/TowerCopy").GetPrim()
           copy.GetReferences().AddInternalReference(Sdf.Path("/World/TowerA"))
           stage.GetRootLayer().Save()
-      - kind: pitfall
-        heading: A reference stays linked to its source
+      - kind: work_order
+        heading: Three destination prims, two source assets
         system: >-
-          Editing the source changes every consumer. Several contestants have tried to register
-          Surprise as a composition arc; the Clerk declined all three applications.
+          Editing the source changes every consumer. The Clerk has declined three applications to
+          register Surprise as a composition arc.
         body: |
-          Local overrides at a destination leave the source asset untouched, while edits to the
-          source asset reach every stage that references it. Missing assets, bad prim paths, and absent
-          default prims produce unresolved references rather than duplicated fallback geometry.
+          Reference Docks stocks two finished buildings in the city asset library, skyscraperA.usd
+          and skyscraperE.usd. The stage waiting for them holds a single /World Xform with nothing
+          beneath it, and the skyline on order is three towers.
+
+          Two assets, three towers, and no arc between them. One building has to appear twice,
+          which is the part worth getting right. Copying a source hierarchy into the stage would
+          fill the skyline and leave three separate documents to maintain, and the teams who own
+          those buildings could no longer keep working in their own files.
+
+          Define /World/skyscraperA_01, /World/skyscraperA_02, and /World/skyscraperE_01, then
+          call GetReferences().AddReference on each with the asset path. Both A destinations name
+          the same file, which is what makes this reuse rather than duplication. Neither call
+          supplies a prim path, so each arc targets the default prim of the referenced layer, and
+          a relative asset path is anchored to the layer authoring it rather than to wherever the
+          code runs.
         points:
           - Supply primPath explicitly unless the source layer defines the intended default prim.
           - Keep required dependencies inside the referenced source hierarchy.
@@ -316,14 +349,26 @@ lessons:
           UsdShade.MaterialBindingAPI.Apply(cube).Bind(red)
           stage.SetDefaultPrim(world)
           stage.GetRootLayer().Save()
-      - kind: pitfall
-        heading: Opening the asset directly hides defects
+      - kind: work_order
+        heading: Move the material inside the asset root
         system: >-
           It worked in the asset file is the traditional opening statement before the boss music.
         body: |
-          Opening the asset directly may hide an encapsulation defect because every root-level
-          sibling is present on that stage. Test the asset through the same reference boundary
-          consumers will use.
+          The kiosk asset at Reference Docks is a cube and one red material, and the open question
+          is where that material sits relative to the prim a consumer will reference. Nothing in
+          the city stands as that asset root yet.
+
+          The defect this job exists to prevent is a Looks scope authored as a sibling of /World.
+          On the stage where it was written everything looks correct, since /World and /Looks are
+          both root-level prims and the binding resolves. Reference /World from another stage and
+          only the cube arrives, its binding pointed at a material that does not exist in the new
+          context.
+
+          Define /World as an Xform, put both /World/Cube and /World/Looks/Red beneath it, mark
+          /World as the default prim with SetDefaultPrim, and document that root. Nothing may
+          remain at /Looks, because a material one level too high is invisible on the authoring
+          stage and missing at every destination. The default prim is what tells consumers which
+          root to reference.
         points:
           - Setting /World as default prim leaves sibling /Looks outside its subtree.
           - Referencing a layer with a target prim composes that prim's subtree alone.
@@ -402,14 +447,24 @@ lessons:
           assert building.IsLoaded()
 
           stage.GetRootLayer().Save()
-      - kind: pitfall
-        heading: Unload preserves the authored arc
+      - kind: work_order
+        heading: Author three deferred building destinations
         system: >-
           One closes the crate. The other throws away the shipping order. The insurers care deeply.
         body: |
-          Unload changes stage population while preserving the payload opinion. Removing or clearing
-          the payload edits the layer and changes the asset's composition contract. Also remember
-          that stages normally open with payloads loaded unless a different initial load set is requested.
+          Payload Berth holds the small building pack, sm_bldgF.usd, in the city asset library as
+          heavy cargo nobody has unpacked. The stage that will carry it has /World and no children
+          at all.
+
+          Three copies of that pack belong on this block. Referencing them would compose all three
+          the moment anyone opens the stage, leaving no way to inspect the block while keeping the
+          bulk out of memory, which is the reason the berth exists in the first place.
+
+          Define /World/sm_bldgF_01, _02, and _03, call GetPayloads().AddPayload with the asset
+          path on each, and save the root layer. Every destination carries its own arc, since one
+          prim holding three payloads composes something different. Load state is stage state at
+          runtime and never lands in the file, so what persists is the arc AddPayload authors,
+          which Unload deliberately leaves in place when it empties the crate.
         points:
           - Unloading a payload removes all scene description composed across that payload arc.
           - Local properties on the payload prim can remain available while its deferred contents are unloaded.
@@ -482,15 +537,25 @@ lessons:
 
           block.Unload()
           assert not block.IsLoaded()
-      - kind: pitfall
-        heading: Defer bulk, preserve interface
+      - kind: work_order
+        heading: A crate that stays readable while unloaded
         system: >-
           If unloading the warehouse also erases the sign telling you where the warehouse is,
           your interface has joined the boss faction.
         body: |
-          Information needed to navigate or decide what to load should be authored outside the
-          deferred payload contents, usually as local opinions on the payload prim. Essential
-          always-needed assets may be better represented by references.
+          The block at Payload Berth now carries three deferred buildings, and /World/CargoCrate is
+          the crate the Harbor Master keeps demanding be opened. That crate is not on the stage
+          yet.
+
+          So the city defers cargo and offers nothing lightweight that describes it. A crate whose
+          contents stay unloaded is only useful when the information needed to decide whether to
+          load it remains composed, and no such entry point exists anywhere on the block.
+
+          Define /World/CargoCrate as an Xform, author a payload on it targeting sm_bldgF.usd, and
+          stamp its documentation. Author that documentation as a local opinion on the crate prim
+          rather than inside the payloaded asset, or the label travels with the cargo and vanishes
+          the moment the crate is unloaded. Unloading never removes the arc itself, so the saved
+          layer still carries the payload once the contents are asleep.
         points:
           - "Load state differs from visibility: unloaded data is absent from composition, while hidden data still composes."
           - Efficiency still depends on asset structure, which a payload alone cannot repair.
@@ -565,15 +630,25 @@ lessons:
 
           assert lamp.GetAttribute("temperature").Get() == 2700
           stage.GetRootLayer().Save()
-      - kind: pitfall
-        heading: Broadcast scope has boundaries
+      - kind: work_order
+        heading: One shared temperature for every lamp
         system: >-
           Global namespace is a phrase with excellent menace and several important footnotes.
         body: |
-          A stronger override to an inherit source broadcasts throughout that stage's composition
-          context and stops at its boundary, leaving unrelated stages with their own results. A
-          local destination opinion also wins over the inherited value because Local precedes
-          Inherits in LIVRPS.
+          Inherit Street has one fixture standing: /World/StreetLamp, an Xform whose fixture
+          attribute reads double. It has no temperature, and nothing anywhere in the namespace
+          holds shared lamp policy.
+
+          Typing 2700 onto that lamp would light one fixture and teach the street nothing. The next
+          lamp installed would need its own copy of the value, and an electrician retuning the
+          color temperature would have to visit every lamp on the street. What the street needs is
+          a single abstract source it can be corrected from.
+
+          Create the class prim /_street_lamp_dbl, author temperature 2700 on it, then call
+          GetInherits().AddInherit with that path on the lamp. The composed 2700 arrives across the
+          arc instead of being authored at the fixture, which is what lets a later correction to
+          the class reach every lamp inheriting it. The class specifier keeps that source out of
+          traversal and unimaged; the leading underscore is convention alone.
         points:
           - Use a class specifier when the source should be abstract and non-imageable.
           - Changes authored in one consuming scenario stay within it and leave independent scenarios alone.
@@ -651,14 +726,25 @@ lessons:
 
           assert road.GetAttribute("osm:street:maxspeed").Get() == 20
           stage.GetRootLayer().Save()
-      - kind: pitfall
-        heading: The weakest opinion still waits in the stack
+      - kind: work_order
+        heading: A road default that yields to the posted limit
         system: >-
-          The fallback remains in the stack, waiting. Patiently. Professionally. Unlike the studio audience.
+          The fallback remains in the stack, waiting. Patiently. Professionally.
         body: |
-          A stronger local value hides the specialized value for that property while the specializes
-          arc and its other contributions remain in place. Removing the stronger opinion can expose
-          the fallback again.
+          Inherit Street has its lamp class standing, and /World/MainStreet has not been laid yet.
+          Neither has the imported road data that streets across the city fall back on when nobody
+          has surveyed them.
+
+          Main Street is surveyed and its posted limit is 20, while the imported default is 30.
+          Authoring the speed on the shared source alone composes 30 on Main Street, which is wrong
+          for this road. Removing the shared source and posting 20 by itself is worse, since every
+          other road is then left without any default to fall back on.
+
+          Create a class prim carrying osm:street:maxspeed, add the arc on /World/MainStreet
+          through GetSpecializes().AddSpecialize, then author maxspeed 20 on the street and stamp
+          its documentation. The posted 20 has to be a local opinion on the street itself rather
+          than a value arriving across the arc. The broadcast fallback is not replaced by it; it
+          waits in the stack behind the local value and returns if the posting is ever removed.
         points:
           - Local and referenced values both outrank a specialized source.
           - Author the arc on the destination prim; the class source only holds the fallback data.
@@ -765,14 +851,26 @@ lessons:
 
           notes.Save()
           stage.GetRootLayer().Save()
-      - kind: pitfall
-        heading: Authoring writes through the edit target
+      - kind: work_order
+        heading: Compose the Highland block from three arcs
         system: >-
-          Editing the verdict without checking the filing destination is how contestants become cautionary B-roll.
+          Confirm the edit target before authoring. A correct composed result can still leave the
+          opinion in the wrong file.
         body: |
-          Usd authoring writes through the current edit target, leaving whichever weaker spec
-          supplied the resolved value exactly as it was. A sublayer chosen as edit target still
-          needs an explicit save, and its strength stays wherever layer ordering puts it.
+          Recaptured Skyline is one block short. /City/ArcHighlands stands from the neighborhoods
+          behind it, but /City/ArcHighlands/HighlandBlock has no prim spec in any layer of the
+          stack, so there is no composed prim for towers or a warehouse to sit beneath.
+
+          A composed prim is only ever as strong as the specs authored for it, and this block has
+          none. The block the district wants carries three children: two towers built from the
+          city's skyscraper assets, and one warehouse whose bulk should stay deferred until
+          somebody asks for it.
+
+          Define HighlandBlock as an Xform, author each arc on its own child prim through that
+          prim's editing interface, and document the block. The Debug Gauntlet next door adds the
+          detail that is easiest to miss: displayName on /World is authored while notes.usda is the
+          active edit target, and that weaker layer needs its own save call, because saving the
+          root layer persists nothing written through a different target.
         points:
           - "GetPrimAtPath returns a composed Usd.Prim, while GetPrimStack returns contributing Sdf.PrimSpec objects."
           - "SetEditTarget changes where future opinions are written; existing opinions keep their current strength."
@@ -850,14 +948,25 @@ lessons:
 
           for spec in attr.GetPropertyStack():
               print("property:", spec.layer.identifier, spec.path, spec.default)
-      - kind: pitfall
-        heading: A spec can contribute without winning
+      - kind: work_order
+        heading: Five arcs on one sign, one resolved value
         system: >-
-          Five specs can attend. One opinion wins. This is already fairer than the auditions.
+          Five specs can attend. One opinion wins. The other four remain on the record.
         body: |
-          A spec's appearance in a stack proves that it contributes to composition, and each field
-          on it still competes separately. A weaker arc that loses one property may therefore still
-          supply children, metadata, or other properties.
+          The LIVERPS Labyrinth has a sign with five arcs aimed at it. ref_sign.usda authors
+          floorIndex 1 on its default prim, payload_sign.usda authors floorIndex 3 on its own, and
+          /City/ArcHighlands/LabyrinthSign is not on the stage yet, so two competing values already
+          exist before anything is authored.
+
+          The sign has to display 4 while every weaker arc stays alive as evidence. An inherit, an
+          edition variant set selecting final, a reference, a payload, and a specialize all
+          contribute to that one prim, and pulling arcs out to simplify the trace changes the
+          composition and hides the very sources a trace exists to identify.
+
+          Author floorIndex 4 as a local opinion on the sign, then add each arc to that same prim
+          and document it. The 4 has to be local rather than arriving across an arc, since local is
+          the only category that outranks all five. The variant set needs draft and final both
+          authored with final selected, which is a separate decision from authoring the arc.
         points:
           - GetPrimStack includes specs beyond those authoring the property under investigation.
           - GetPropertyStack is the focused view for a specific attribute or relationship.
@@ -950,17 +1059,25 @@ lessons:
           assert rank.Get() == 6  # Local beats Specializes.
           for spec in rank.GetPropertyStack():
               print(spec.layer.identifier, spec.path)
-      - kind: pitfall
-        heading: LIVRPS orders stacks, resolution reads values
+      - kind: work_order
+        heading: File the archive and answer from the rules
         system: >-
           TfDebug can narrate runtime diagnostics with an excellent stage voice. Reading the authored stack remains your job.
         body: |
-          LIVRPS builds strength-ordered prim and property stacks. Value resolution then considers
-          the relevant authored values, time samples, and schema fallbacks. A schema fallback
-          supplies its value only after every authored LIVRPS opinion has been exhausted.
+          The Certification Archive sits at the end of the Colosseum, and
+          /City/CrownDistrict/CertificationArchive is the one prim missing from it. Archivist Prime
+          files nothing that arrives without its stage contract in order.
 
-          Internal ordering rules such as sublayer order and list-edit composition still apply
-          within each arc category.
+          The city reaching the archive is flattened from everything published before it, so the
+          district is standing but the archive prim is not, and the stage metadata the filing gets
+          indexed under is whatever the earlier floors left behind. The contract the archive
+          accepts is stated plainly: Y as the up axis, 0.01 metersPerUnit, and startTimeCode 1.
+
+          Define the archive as a Scope, set its documentation to the exact wording asked for, and
+          author those three pieces of stage metadata. Then answer from the ordering rules
+          themselves rather than the acronym, because each question sits on a boundary: an external
+          reference with no prim path needs a default prim in the referenced layer, and a schema
+          fallback supplies a value only once every authored LIVRPS opinion is exhausted.
         points:
           - Rank opinions by LIVRPS category and layer-stack order; timestamps, file sizes, and Python call order carry no weight.
           - An external reference without a prim path requires a default prim in the referenced layer.

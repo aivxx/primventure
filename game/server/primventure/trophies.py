@@ -1,10 +1,10 @@
-"""Key Items: room-clear trophies and the Curio Desk that appraises them.
+"""Key Items: room-clear trophies that cash in for Opinion Points.
 
-A trophy is any inventory entry that is not a consumable. Trading never removes
-one. The desk stamps it instead, so the backpack keeps reading as a transcript
-of the rooms a player cleared while the stamp records that its trade value is
-already spent. Trophies buy the Saferoom's consumable bundles and nothing else,
-which keeps Opinion Points the only currency bosses pay out.
+A trophy is any inventory entry that is not a consumable. Cashing in never
+removes one. The Saferoom stamps it instead, so the backpack keeps reading as a
+transcript of the rooms a player cleared while the stamp records that its trade
+value is already spent. Three unstamped trophies buy one Opinion Point, which is
+the only way Key Items enter the consumable store's currency.
 """
 from __future__ import annotations
 
@@ -12,9 +12,10 @@ from typing import Any
 
 from .models import PlayerState
 
-CONSUMABLES = ("hint_tokens", "prim_censuses")
+CONSUMABLES = ("hint_tokens", "usd_checks")
 
-TROPHY_COSTS: dict[str, int] = {"hint_refill": 3, "prim_census": 4}
+# Three unstamped trophies buy one Opinion Point.
+TROPHY_OP_COST = 3
 
 
 def is_trophy(name: str) -> bool:
@@ -50,21 +51,11 @@ def stamp(state: PlayerState, count: int) -> dict[str, int]:
     return stamped
 
 
-def desk(shop: dict[str, dict[str, Any]], state: PlayerState) -> dict[str, Any]:
-    """The trade counter, priced off the same offers the Saferoom sells."""
-    offers = {}
-    for offer_id, cost in TROPHY_COSTS.items():
-        offer = shop.get(offer_id)
-        if offer is None:
-            continue
-        offers[offer_id] = {
-            "name": offer["name"],
-            "trophy_cost": cost,
-            "inventory": dict(offer.get("inventory", {})),
-        }
+def summary(state: PlayerState) -> dict[str, Any]:
+    """How many trophies can still buy Opinion Points."""
     rows = trophy_rows(state)
     return {
         "unstamped": unstamped(state),
         "held": sum(held for _, held, _ in rows),
-        "offers": offers,
+        "op_cost": TROPHY_OP_COST,
     }

@@ -163,12 +163,47 @@ def test_lessons_teach_in_depth() -> None:
         if (
             len(lesson.beats) < 4
             or kinds[-1] != "recap"
-            or "pitfall" not in kinds
+            or "work_order" not in kinds
             or not any(beat.code for beat in lesson.beats)
             or prose < 1200
         ):
             thin.append(source)
     assert not thin
+
+
+def test_work_orders_state_the_scene_gap_and_fix_without_failure_theater() -> None:
+    """The work-order beat explains the job instead of dramatizing a failed run."""
+    vague: list[str] = []
+    theatrical = re.compile(
+        r"\b(?:contestants?|audience|judges?|lose|lost|failure|failed run|classic trap)\b",
+        re.IGNORECASE,
+    )
+    implementation_language = re.compile(
+        r"\bf\d+_[a-z0-9_]+\b|\bworld target\b|\bvalidator\b|\b(?:checks?|room) "
+        r"(?:grades?|reads?|expects?)\b|\bgraded\b|\bread back\b|\badapt this page\b|"
+        r"\bseeding\b|\b(?:boss|fight|job|rooms?) (?:opens?|creates?|starts?)\b|"
+        r"\bthe script\b|\bstarter\b|\bsubmission\b",
+        re.IGNORECASE,
+    )
+    show_language = re.compile(r"\b(?:validator|graded|checks?)\b", re.IGNORECASE)
+    for source, lesson in QuestStore().lessons.all().items():
+        orders = [beat for beat in lesson.beats if beat.kind == "work_order"]
+        if len(orders) != 1:
+            vague.append(f"{source}: expected one work order, found {len(orders)}")
+            continue
+        order = orders[0]
+        paragraphs = [paragraph for paragraph in order.body.strip().split("\n\n") if paragraph]
+        if len(paragraphs) < 3:
+            vague.append(f"{source}: work order needs scene, gap, and fix paragraphs")
+        if order.heading.startswith("Where ") or theatrical.search(order.heading):
+            vague.append(f"{source}: theatrical heading {order.heading!r}")
+        if theatrical.search(order.body):
+            vague.append(f"{source}: theatrical work-order body")
+        if implementation_language.search(order.body):
+            vague.append(f"{source}: work order exposes implementation details")
+        if theatrical.search(order.system) or show_language.search(order.system):
+            vague.append(f"{source}: work-order host line describes scoring or failure")
+    assert not vague, vague
 
 
 def test_system_voice_stays_in_its_own_fields() -> None:
@@ -344,6 +379,32 @@ def test_quest_view_does_not_leak_answers() -> None:
     assert public["lesson"] is None
 
 
+def test_an_unanswered_briefing_question_says_so_instead_of_wrong(tmp_path: Path) -> None:
+    """A learner who has not answered yet is not sent back to hunt a mistake."""
+    briefing = QuestStore().get("f0_stage_intake")
+    saves = SaveStore(tmp_path / "save.json")
+
+    blank = QuestRunner(saves).run(briefing, RunRequest(answers=[]))
+
+    assert not blank.success
+    assert all("Not answered yet" in result.message for result in blank.results)
+    assert not any("Incorrect" in result.message for result in blank.results)
+    # The prompts still name what is outstanding, so the desk stays actionable.
+    assert briefing.questions[0].prompt in blank.state["last_fail"]["failed_checks"]
+    readings = blank.state["last_fail"]["observations"]
+    assert all("not answered this question yet" in read["observed"] for read in readings)
+
+
+def test_a_briefing_room_clears_on_its_answers_alone(tmp_path: Path) -> None:
+    briefing = QuestStore().get("f0_stage_intake")
+    saves = SaveStore(tmp_path / "save.json")
+
+    cleared = QuestRunner(saves).run(briefing, RunRequest(answers=[0, 0]))
+
+    assert cleared.success
+    assert briefing.language == "none" and not briefing.validator.get("assertions")
+
+
 def test_every_python_terminal_ships_the_save_line() -> None:
     for quest in QuestStore().all():
         if quest.language != "python":
@@ -365,7 +426,7 @@ def test_bosses_open_the_accumulated_city_without_pre_authoring_answers() -> Non
         "AddVariantSet(",
     )
     bosses = [quest for quest in QuestStore().all() if quest.kind.endswith("boss")]
-    assert len(bosses) == 37
+    assert len(bosses) == 38
     for boss in bosses:
         assert "Usd.Stage.Open(STAGE_PATH)" in boss.starter, boss.id
         assert "stage.GetRootLayer().Save()" in boss.starter, boss.id
@@ -590,6 +651,8 @@ def _cleared_opener(tmp_path: Path, monkeypatch) -> tuple[SaveStore, Quest, str]
     quest = next(item for item in QuestStore().all() if item.id == "f0_first_prim")
     source = f'{quest.starter}stage.DefinePrim("/City", "Xform")\nstage.GetRootLayer().Save()\n'
     saves = SaveStore(tmp_path / "save.json")
+    # The stage briefing is the room before this one, so the route starts there.
+    saves.save(PlayerState(completed_quests=["f0_stage_intake"]))
     cleared = QuestRunner(saves).run(quest, RunRequest(code=source))
     assert cleared.success, [check.message for check in cleared.results if not check.passed]
     return saves, quest, source
@@ -672,8 +735,8 @@ def test_expectations_name_the_exact_value_the_validator_wants() -> None:
         '/City.cityName is set to "Primventure"',
     ]
     assert (
-        "/City/BlueprintBorough/Bridge.destination targets exactly "
-        "/City/BlueprintBorough/Stall"
+        "/City/PropertyWard/Bridge.destination targets exactly "
+        "/City/PropertyWard/LampGlobe"
     ) in quest_view(quests["f2_relationship_bridge"], PlayerState())["expects"]
 
 
@@ -748,6 +811,7 @@ def test_nameplate_room_is_solvable_from_what_the_ui_states(
     monkeypatch.setattr(runner_module, "WORLD_DIR", world)
     catalog = QuestStore().all()
     saves = SaveStore(tmp_path / "save.json")
+    saves.save(PlayerState(completed_quests=["f0_stage_intake"]))
     runner = QuestRunner(saves)
 
     # The city starts empty, so /City exists only once the opening room has

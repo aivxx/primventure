@@ -1,10 +1,10 @@
 floor: 1
-floor_name: Property Clocktower
+floor_name: Records Clocktower
 quests:
   - id: f1_lamp_post
     title: Set the Lamp Globe's Radius Attribute
     floor: 1
-    floor_name: Property Clocktower
+    floor_name: Records Clocktower
     neighborhood: Attribute Alley
     kind: room
     prerequisites: [f0_gatekeeper]
@@ -28,46 +28,112 @@ quests:
     world_target: /City/PropertyWard/LampGlobe
     recipes: [UsdGeom.Sphere.Define, UsdGeom.Sphere.GetRadiusAttr]
 
-  - id: f1_civic_record
-    title: "The Registrar: Stage and Prim Metadata"
+  - id: f1_binding_canal
+    title: Point the Canal at the Lamp It Feeds
     floor: 1
-    floor_name: Property Clocktower
-    neighborhood: Metadata Market
-    kind: neighborhood_boss
+    floor_name: Records Clocktower
+    neighborhood: Binding Canal
+    kind: room
     prerequisites: [f1_lamp_post]
     level_required: 3
-    exam_tasks: [set_metadata, distinguish_metadata_attributes]
-    stats: {lore: 2, resolve: 1}
-    brief: "SYSTEM: The Registrar erased the district ledger. Restore the official record."
+    exam_tasks: [create_relationship, target_prim]
+    stats: {craft: 2, insight: 2}
+    brief: "SYSTEM: An attribute holds a value. A relationship holds an address. The canal needs the second kind."
+    starter: |
+      from pxr import Sdf, Usd
+      stage = Usd.Stage.Open(STAGE_PATH)
+      # 1. Define /City/PropertyWard with type Xform, then /City/PropertyWard/Canal with type Xform.
+      # 2. Create a relationship named feeds on the Canal and target the lamp globe.
+      #    CreateRelationship returns the relationship; SetTargets takes a list of paths.
+      stage.GetRootLayer().Save()
+    language: python
+    validator:
+      assertions:
+        - prim_type: {path: /City/PropertyWard, value: Xform}
+        - prim_type: {path: /City/PropertyWard/Canal, value: Xform}
+        - relationship_targets:
+            path: /City/PropertyWard/Canal.feeds
+            targets: [/City/PropertyWard/LampGlobe]
+    cookbook: docs/stage-setting/properties/relationships.md
+    xp: 80
+    reward: Copper Binding Wire
+    world_target: /City/PropertyWard/Canal
+    recipes: [Usd.Prim.CreateRelationship, Usd.Relationship.SetTargets]
+
+  - id: f2_relationship_bridge
+    title: "Bridge Warden: Relationships and Targets"
+    floor: 1
+    floor_name: Records Clocktower
+    neighborhood: Binding Canal
+    kind: neighborhood_boss
+    prerequisites: [f1_binding_canal]
+    level_required: 3
+    exam_tasks: [create_relationship, target_prim]
+    stats: {insight: 2, resolve: 2}
+    brief: "SYSTEM: The bridge exists, but knows neither bank. Author both connections."
     starter: |
       from pathlib import Path
       from pxr import Gf, Kind, Sdf, Usd, UsdGeom, UsdLux, UsdShade
 
       stage = Usd.Stage.Open(STAGE_PATH)
       # This boss opens your accumulated city. Author every graded opinion below.
-      # 1. Define /City/PropertyWard with type Xform.
-      # 2. Set /City/PropertyWard metadata kind to 'group'.
-      # 3. Set /City/PropertyWard metadata documentation to 'Civic property district.'.
+      # 1. Define /City/PropertyWard/Bridge with type Xform.
+      # 2. Create /City/PropertyWard/Bridge.destination targeting exactly ['/City/PropertyWard/LampGlobe'].
+      # 3. Create /City/PropertyWard/Bridge.origin targeting exactly ['/City/PropertyWard/Canal'].
       stage.GetRootLayer().Save()
     language: python
     validator:
       assertions:
-      - prim_type: {path: /City/PropertyWard, value: Xform}
-      - metadata_equals: {path: /City/PropertyWard, key: kind, value: group}
-      - metadata_equals: {path: /City/PropertyWard, key: documentation, value: Civic property district.}
-    cookbook: docs/stage-setting/metadata.md
-    xp: 120
-    reward: Registrar Seal
-    world_target: /City/PropertyWard
-    recipes: [Usd.Object.SetMetadata, Usd.ModelAPI.SetKind]
+      - prim_type: {path: /City/PropertyWard/Bridge, value: Xform}
+      - relationship_targets:
+          path: /City/PropertyWard/Bridge.destination
+          targets: [/City/PropertyWard/LampGlobe]
+      - relationship_targets:
+          path: /City/PropertyWard/Bridge.origin
+          targets: [/City/PropertyWard/Canal]
+    cookbook: docs/stage-setting/properties/relationships.md
+    xp: 150
+    reward: Silver Binding Cable
+    world_target: /City/PropertyWard/Bridge
+    recipes: [Usd.Prim.CreateRelationship, Usd.Relationship.SetTargets]
+
+  - id: f1_clockwork_room
+    title: Wind the Clock Face Across Two Time Samples
+    floor: 1
+    floor_name: Records Clocktower
+    neighborhood: Clockwork Crossing
+    kind: room
+    prerequisites: [f2_relationship_bridge]
+    level_required: 4
+    exam_tasks: [author_timesamples]
+    stats: {craft: 2, insight: 2}
+    brief: "SYSTEM: An attribute set once holds that value forever. Set it at a time and it holds that value at that time."
+    starter: |
+      from pxr import Usd, UsdGeom
+      stage = Usd.Stage.Open(STAGE_PATH)
+      # 1. Define a Cube at /City/PropertyWard/Clock.
+      # 2. Set its size attribute to 1.0 at time 1, then to 10.0 at time 48.
+      #    The size attribute's Set() takes a time= keyword alongside the value.
+      stage.GetRootLayer().Save()
+    language: python
+    validator:
+      assertions:
+        - prim_type: {path: /City/PropertyWard/Clock, value: Cube}
+        - attribute_equals: {path: /City/PropertyWard/Clock.size, time: 1, value: 1.0}
+        - attribute_equals: {path: /City/PropertyWard/Clock.size, time: 48, value: 10.0}
+    cookbook: docs/stage-setting/timecodes-timesamples.md
+    xp: 90
+    reward: Escapement Spring
+    world_target: /City/PropertyWard/Clock
+    recipes: [Usd.Attribute.Set, UsdGeom.Cube.GetSizeAttr]
 
   - id: f1_clockwork_crossing
     title: "Clockwork Crossing: Timecodes and Time Samples"
     floor: 1
-    floor_name: Property Clocktower
+    floor_name: Records Clocktower
     neighborhood: Clockwork Crossing
-    kind: floor_boss
-    prerequisites: [f1_civic_record]
+    kind: neighborhood_boss
+    prerequisites: [f1_clockwork_room]
     level_required: 4
     exam_tasks: [configure_timeline, author_timesamples]
     stats: {craft: 2, resolve: 2}
@@ -78,33 +144,257 @@ quests:
 
       stage = Usd.Stage.Open(STAGE_PATH)
       # This boss opens your accumulated city. Author every graded opinion below.
-      # 1. Define /City/PropertyWard/Clock with type Xform.
+      # 1. Define /City/PropertyWard/Clock with type Cube.
       # 2. Set stage startTimeCode to 1.
       # 3. Set stage endTimeCode to 48.
-      # 4. Set /City/PropertyWard/Clock.xformOp:translate to [0.0, 0.0, 0.0] at time 1.
-      # 5. Set /City/PropertyWard/Clock.xformOp:translate to [0.0, 4.0, 0.0] at time 48.
-      # 6. Set /City/PropertyWard/Clock metadata documentation to 'Clockwork Crossing: Timecodes and Time Samples cleared.'.
-      # 7. Set stage up axis to Y.
+      # 4. Set /City/PropertyWard/Clock.size to 1.0 at time 1.
+      # 5. Set /City/PropertyWard/Clock.size to 10.0 at time 48.
       stage.GetRootLayer().Save()
     language: python
     validator:
       assertions:
-      - prim_type: {path: /City/PropertyWard/Clock, value: Xform}
+      - prim_type: {path: /City/PropertyWard/Clock, value: Cube}
       - {start_time: 1}
       - {end_time: 48}
-      - attribute_equals:
-          path: /City/PropertyWard/Clock.xformOp:translate
-          time: 1
-          value: [0.0, 0.0, 0.0]
-      - attribute_equals:
-          path: /City/PropertyWard/Clock.xformOp:translate
-          time: 48
-          value: [0.0, 4.0, 0.0]
-      - metadata_equals: {path: /City/PropertyWard/Clock, key: documentation, value: 'Clockwork Crossing: Timecodes and Time Samples
-            cleared.'}
-      - {up_axis: Y}
+      - attribute_equals: {path: /City/PropertyWard/Clock.size, time: 1, value: 1.0}
+      - attribute_equals: {path: /City/PropertyWard/Clock.size, time: 48, value: 10.0}
     cookbook: docs/stage-setting/timecodes-timesamples.md
     xp: 160
     reward: Forty-Eight Tooth Gear
     world_target: /City/PropertyWard/Clock
     recipes: [Usd.Stage.SetStartTimeCode, Usd.Stage.SetEndTimeCode, Usd.Attribute.Set]
+
+  - id: f1_paths_survey
+    title: Survey the Archive With Built Paths
+    floor: 1
+    floor_name: Records Clocktower
+    neighborhood: Archive Stacks
+    kind: room
+    prerequisites: [f1_clockwork_crossing]
+    level_required: 5
+    exam_tasks: [build_prim_path, author_at_property_path]
+    stats: {insight: 3, lore: 2}
+    brief: "SYSTEM: Every prim is found by its path, and a path is a value you can build rather than a string you retype."
+    starter: |
+      from pxr import Sdf, Usd
+      stage = Usd.Stage.Open(STAGE_PATH)
+      # 1. Build the path /City/Archive with Sdf.Path, then AppendChild("Stacks") for the child.
+      # 2. Define both as Xform prims at those paths.
+      # 3. Create an int attribute shelfCount on the Stacks prim and set it to 12.
+      stage.GetRootLayer().Save()
+    language: python
+    validator:
+      assertions:
+        - prim_type: {path: /City/Archive, value: Xform}
+        - prim_type: {path: /City/Archive/Stacks, value: Xform}
+        - attribute_equals: {path: /City/Archive/Stacks.shelfCount, value: 12}
+    cookbook: docs/stage-setting/prim-property-paths.md
+    xp: 100
+    reward: Surveyor's Chain
+    world_target: /City/Archive/Stacks
+    recipes: [Sdf.Path, Sdf.Path.AppendChild, Usd.Stage.GetPrimAtPath]
+
+  - id: f1_format_foundry
+    title: Choose the Foundry's File Format
+    floor: 1
+    floor_name: Records Clocktower
+    neighborhood: Warden Foundry
+    kind: room
+    prerequisites: [f1_paths_survey]
+    level_required: 5
+    exam_tasks: [choose_file_format]
+    stats: {lore: 3, insight: 2}
+    brief: "SYSTEM: Same scene description, three encodings. The Foundry cares which one you pick and, unusually for this building, it is right to."
+    starter: ""
+    language: none
+    validator:
+      assertions: []
+    cookbook: docs/stage-setting/usd-file-formats.md
+    xp: 110
+    reward: Foundry Stamp
+    world_target: /City/Archive
+    recipes: [.usda, .usdc, .usdz]
+    questions:
+      - prompt: Which format is the human-readable text encoding you can open in an editor?
+        choices: [.usda, .usdc, .usdz]
+        answer: 0
+        explanation: >-
+          .usda is the ASCII encoding. .usdc is the binary crate encoding, and .usdz is
+          an uncompressed archive that packages a scene with its assets.
+      - prompt: A colleague asks for one file they can hand off with every texture included. Which do you send?
+        choices: [.usdz, .usda, .usdc]
+        answer: 0
+        explanation: >-
+          .usdz is a package format, so the scene and the assets it depends on travel
+          together as a single deliverable.
+      - prompt: What does the .usd extension signal about a layer's encoding?
+        choices:
+          - Either text or binary, so the encoding can change without renaming the file
+          - Always text
+          - Always binary
+        answer: 0
+        explanation: >-
+          .usd is deliberately agnostic. That lets a pipeline swap a layer between the
+          text and binary encodings without breaking every reference that names it.
+
+  - id: f2_schema_warden
+    title: "Schema Warden: Typed Text in the Foundry"
+    floor: 1
+    floor_name: Records Clocktower
+    neighborhood: Warden Foundry
+    kind: neighborhood_boss
+    prerequisites: [f1_format_foundry]
+    level_required: 6
+    exam_tasks: [define_typed_prim, author_attribute, create_relationship]
+    stats: {craft: 3, resolve: 2}
+    brief: "SYSTEM: The Warden rejects vague forms. Every container typed, every value named, every reference addressed."
+    starter: |
+      from pathlib import Path
+      from pxr import Gf, Kind, Sdf, Usd, UsdGeom, UsdLux, UsdShade
+
+      stage = Usd.Stage.Open(STAGE_PATH)
+      # This boss opens your accumulated city. Author every graded opinion below.
+      # 1. Define /City/Archive/WardenVault with type Xform.
+      # 2. Create a string attribute /City/Archive/WardenVault.formatNote set to 'usda'.
+      # 3. Create /City/Archive/WardenVault.archives targeting exactly ['/City/PropertyWard/Clock'].
+      # 4. Keep /City/Archive/Stacks.shelfCount set to 12.
+      stage.GetRootLayer().Save()
+    language: python
+    validator:
+      assertions:
+      - prim_type: {path: /City/Archive/WardenVault, value: Xform}
+      - attribute_equals: {path: /City/Archive/WardenVault.formatNote, value: usda}
+      - relationship_targets:
+          path: /City/Archive/WardenVault.archives
+          targets: [/City/PropertyWard/Clock]
+      - attribute_equals: {path: /City/Archive/Stacks.shelfCount, value: 12}
+    cookbook: docs/stage-setting/usd-file-formats.md
+    xp: 200
+    reward: Blueprint Sigil
+    world_target: /City/Archive/WardenVault
+    recipes: [Usd.Stage.DefinePrim, Usd.Prim.CreateAttribute, Usd.Prim.CreateRelationship]
+
+  - id: f1_module_desk
+    title: Draw the Right Module From the Desk
+    floor: 1
+    floor_name: Records Clocktower
+    neighborhood: Module Desk
+    kind: room
+    prerequisites: [f2_schema_warden]
+    level_required: 6
+    exam_tasks: [identify_usd_modules]
+    stats: {lore: 3, insight: 2}
+    brief: "SYSTEM: You have been importing these for six rooms. The desk would like to establish that you know why."
+    starter: ""
+    language: none
+    validator:
+      assertions: []
+    cookbook: docs/stage-setting/usd-modules.md
+    xp: 60
+    reward: Module Requisition Slip
+    world_target: /City/Archive
+    recipes: [Usd, Sdf, Gf]
+    questions:
+      - prompt: Which module opens stages and gives you the generic prim and property interfaces?
+        choices: [Usd, Sdf, Gf]
+        answer: 0
+        explanation: >-
+          Usd is the core client-facing module for authoring, composing, and reading
+          scene description.
+      - prompt: You need Sdf.ValueTypeNames.String and Sdf.Path. What is Sdf for?
+        choices:
+          - Scene description foundations, including layers, paths, and value types
+          - Linear algebra and geometric math types
+          - Geometry schemas such as Xform and Cube
+        answer: 0
+        explanation: >-
+          Sdf is the scene description foundation. It implements layers and the path and
+          value-type vocabulary the rest of the API is expressed in.
+      - prompt: Where do the 3D math types you assign to attributes come from?
+        choices: [Gf, Usd, UsdGeom]
+        answer: 0
+        explanation: >-
+          Gf is the graphics foundation, holding the vector, matrix, and math types you
+          use when getting and setting attribute values.
+
+  - id: f1_records_office
+    title: Stamp the Lamp's Record With Metadata
+    floor: 1
+    floor_name: Records Clocktower
+    neighborhood: Records Office
+    kind: room
+    prerequisites: [f1_module_desk]
+    level_required: 6
+    exam_tasks: [set_metadata, distinguish_metadata_attributes]
+    stats: {lore: 3, craft: 2}
+    brief: "SYSTEM: Attributes carry the scene's data. Metadata carries what the pipeline needs to know about the scene. Do not confuse the two in front of the Registrar."
+    starter: |
+      from pxr import Usd
+      stage = Usd.Stage.Open(STAGE_PATH)
+      globe = stage.GetPrimAtPath("/City/PropertyWard/LampGlobe")
+      # 1. Set the globe's documentation metadata to 'Alley lamp globe.'.
+      # 2. Set its comment metadata to 'Glass blown on floor one.'.
+      #    SetMetadata takes the field name and the value.
+      stage.GetRootLayer().Save()
+    language: python
+    validator:
+      assertions:
+        - metadata_equals:
+            path: /City/PropertyWard/LampGlobe
+            key: documentation
+            value: Alley lamp globe.
+        - metadata_equals:
+            path: /City/PropertyWard/LampGlobe
+            key: comment
+            value: Glass blown on floor one.
+    cookbook: docs/stage-setting/metadata.md
+    xp: 120
+    reward: Notary Ribbon
+    world_target: /City/PropertyWard/LampGlobe
+    recipes: [Usd.Object.SetMetadata, Usd.Object.GetMetadata]
+
+  - id: f1_civic_record
+    title: "The Registrar: Stage and Prim Metadata"
+    floor: 1
+    floor_name: Records Clocktower
+    neighborhood: Records Office
+    kind: floor_boss
+    prerequisites: [f1_records_office]
+    level_required: 7
+    exam_tasks: [set_metadata, define_typed_prim, create_relationship]
+    stats: {lore: 2, resolve: 1}
+    brief: "SYSTEM: The Registrar erased the district ledger. Restore the official record, every district and every stamp."
+    starter: |
+      from pathlib import Path
+      from pxr import Gf, Kind, Sdf, Usd, UsdGeom, UsdLux, UsdShade
+
+      stage = Usd.Stage.Open(STAGE_PATH)
+      # This boss opens your accumulated city. Author every graded opinion below.
+      # 1. Define /City/PropertyWard with type Xform.
+      # 2. Set /City/PropertyWard metadata documentation to 'Civic property district.'.
+      # 3. Define /City/Archive with type Xform.
+      # 4. Set /City/Archive metadata documentation to 'Civic records district.'.
+      # 5. Define /City/Archive/Stacks with type Xform.
+      # 6. Set /City/Archive/Stacks metadata comment to 'Ledger stacks, floor one.'.
+      # 7. Create /City/Archive/Stacks.indexes targeting exactly ['/City/PropertyWard/Clock'].
+      stage.GetRootLayer().Save()
+    language: python
+    validator:
+      assertions:
+      - prim_type: {path: /City/PropertyWard, value: Xform}
+      - metadata_equals: {path: /City/PropertyWard, key: documentation, value: Civic property district.}
+      - prim_type: {path: /City/Archive, value: Xform}
+      - metadata_equals: {path: /City/Archive, key: documentation, value: Civic records district.}
+      - prim_type: {path: /City/Archive/Stacks, value: Xform}
+      - metadata_equals:
+          path: /City/Archive/Stacks
+          key: comment
+          value: "Ledger stacks, floor one."
+      - relationship_targets:
+          path: /City/Archive/Stacks.indexes
+          targets: [/City/PropertyWard/Clock]
+    cookbook: docs/stage-setting/metadata.md
+    xp: 180
+    reward: Registrar Seal
+    world_target: /City/Archive
+    recipes: [Usd.Object.SetMetadata, Usd.Stage.DefinePrim, Usd.Prim.CreateRelationship]

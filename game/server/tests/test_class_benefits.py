@@ -68,40 +68,50 @@ def test_specialization_grants_kit_once(tmp_path: Path, monkeypatch) -> None:
     api_module.saves.save(PlayerState(level=2, xp=120))
     first = client.post("/api/specialization/Compositor").json()
     assert first["specialization"] == "Compositor"
-    assert first["inventory"]["prim_censuses"] == 2
+    assert first["inventory"] == {"hint_tokens": 2, "usd_checks": 2}
+    assert first["class_benefits"]["catalog"][0]["kit"].startswith(
+        "Declare and receive one free USD Check"
+    )
     assert first["title"].startswith("Compositor")
     again = client.post("/api/specialization/Compositor").json()
-    assert again["inventory"]["prim_censuses"] == 2
+    assert again["inventory"] == {"hint_tokens": 2, "usd_checks": 2}
     denied = client.post("/api/specialization/Aggregator")
     assert denied.status_code == 409
 
 
-def test_aggregator_hint_restock_grants_three(tmp_path: Path, monkeypatch) -> None:
+def test_assist_restock_fills_hints_and_usd_checks(tmp_path: Path, monkeypatch) -> None:
+    from primventure import api as api_module
+
+    monkeypatch.setattr(api_module, "saves", SaveStore(tmp_path / "save.json"))
+    client = TestClient(api_module.app)
+    api_module.saves.save(PlayerState(
+        opinion_points=2,
+        inventory={"hint_tokens": 0, "usd_checks": 1},
+    ))
+    bought = client.post("/api/shop/hint_refill").json()
+    assert bought["opinion_points"] == 1
+    assert bought["inventory"]["hint_tokens"] == 2
+    assert bought["inventory"]["usd_checks"] == 2
+    assert bought["shop"]["hint_refill"]["full"] is True
+    denied = client.post("/api/shop/hint_refill")
+    assert denied.status_code == 409
+    assert "capacity" in denied.json()["detail"]
+
+
+def test_aggregator_hint_restock_fills_to_three(tmp_path: Path, monkeypatch) -> None:
     from primventure import api as api_module
 
     monkeypatch.setattr(api_module, "saves", SaveStore(tmp_path / "save.json"))
     client = TestClient(api_module.app)
     api_module.saves.save(PlayerState(
         level=2, xp=120, opinion_points=4, specialization="Aggregator",
+        inventory={"hint_tokens": 0, "usd_checks": 0},
         benefit_claims={"starter_kit": True},
     ))
     bought = client.post("/api/shop/hint_refill").json()
-    assert bought["inventory"]["hint_tokens"] == 5
-    assert bought["shop"]["hint_refill"]["inventory"]["hint_tokens"] == 3
-
-
-def test_compositor_census_costs_one(tmp_path: Path, monkeypatch) -> None:
-    from primventure import api as api_module
-
-    monkeypatch.setattr(api_module, "saves", SaveStore(tmp_path / "save.json"))
-    client = TestClient(api_module.app)
-    api_module.saves.save(PlayerState(
-        level=2, xp=120, opinion_points=1, specialization="Compositor",
-        benefit_claims={"starter_kit": True},
-    ))
-    bought = client.post("/api/shop/prim_census").json()
-    assert bought["opinion_points"] == 0
-    assert bought["inventory"]["prim_censuses"] == 3
+    assert bought["inventory"]["hint_tokens"] == 3
+    assert bought["inventory"]["usd_checks"] == 2
+    assert bought["shop"]["hint_refill"]["caps"] == {"hint_tokens": 3, "usd_checks": 2}
 
 
 def test_free_hint_on_home_floor_at_zero_stock(tmp_path: Path, monkeypatch) -> None:
@@ -111,7 +121,7 @@ def test_free_hint_on_home_floor_at_zero_stock(tmp_path: Path, monkeypatch) -> N
     client = TestClient(api_module.app)
     api_module.saves.save(PlayerState(
         level=6, xp=520, specialization="Aggregator",
-        inventory={"hint_tokens": 0, "prim_censuses": 0},
+        inventory={"hint_tokens": 0},
         benefit_claims={"starter_kit": True},
     ))
     first = client.post("/api/quests/f6_entry_point/hint")

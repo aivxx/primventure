@@ -71,16 +71,26 @@ lessons:
           assert color.GetInterpolation() == UsdGeom.Tokens.constant
           assert primvars.GetPrimvar("displayColor").Get() == [Gf.Vec3f(0.0, 1.0, 0.0)]
           stage.GetRootLayer().Save()
-      - kind: pitfall
-        heading: Value count must match interpolation
+      - kind: work_order
+        heading: The hedge mesh carries no displayColor primvar
         system: >-
-          A face color for every vertex reads as malformed evidence, and the judges have learned
-          to count.
+          A face color for every vertex reads as malformed data, and counting the values is the
+          first way to diagnose the mismatch.
         body: |
-          An array-valued primvar still needs an array when constant interpolation requires only
-          one logical value. The array length and interpolation must agree with topology. A
-          renderer may ignore, warn about, or misinterpret a primvar whose declared interpolation
-          and element count do not match.
+          Primvar Hedge sits just past the gate into Beyond-Basics Gardens, and the stage under it
+          is new. One prim stands on it, a Mesh at /City/BeyondTheWalls/Hedge. That is the whole
+          scene: a typed gprim with nothing authored on it.
+
+          The hedge has no primvars:displayColor. Nothing on the prim states what color it carries,
+          and nothing states how many logical values that color supplies or which topology element
+          each value belongs to, so a shader or viewer reaching for the primvar finds no primvar
+          there.
+
+          A green hedge needs the primvar authored through UsdGeom.PrimvarsAPI: CreatePrimvar with
+          the name displayColor, the Sdf type Color3fArray, and constant interpolation, then Set to
+          (0, 1, 0). The detail worth checking is that the declared type is an array even though
+          constant interpolation wants exactly one logical value, so the value is a one-element list
+          holding a single Gf.Vec3f rather than the vector on its own.
         points:
           - "displayColor has type Color3fArray, so set [Gf.Vec3f(...)] rather than a bare Gf.Vec3f."
           - "Creating primvars:displayColor with CreateAttribute omits the UsdGeom.Primvar interface unless the naming and metadata are authored correctly."
@@ -186,17 +196,26 @@ lessons:
 
           assert prim.GetAttribute("a").Get() == 1
           stage.GetRootLayer().Save()
-      - kind: pitfall
-        heading: Custom fields leave meaning to convention
+      - kind: work_order
+        heading: The namespaced properties are absent
         system: >-
-          The live broadcast loves arbitrary fields. Downstream departments prefer knowing whether
-          temperature means Celsius, kelvin, or a contestant's emotional state.
+          Arbitrary fields are easy to author. Downstream departments still need to know whether
+          temperature means Celsius, kelvin, or neither.
         body: |
-          Schemas supply standardized behavior that custom attributes leave to local convention.
-          Producers can independently choose conflicting names, types, units, or meanings, and
-          custom=True validates none of them. A change block should wrap one coherent batch of
-          edits; its guarantees cover change notification alone, with no transaction or undo
-          semantics.
+          Two places in the city need data that no schema supplies.
+          /City/BeyondTheWalls/NorthGate stands on a new stage as a single Xform, and the warden's
+          note about it exists only as talk. Far later, in the Certification Colosseum,
+          /World/Batch has not been defined at all.
+
+          The properties themselves are simply absent. The gate has no primvars:notes:warden, and
+          the batch prim has no a, b, or c, so every one of those lookups resolves to nothing. No
+          schema owns these names, which also means nothing supplies a fallback in their place.
+
+          Each one needs CreateAttribute called with the exact property name and its declared Sdf
+          value type, then Set: the string watch the north gate on the gate, and 1, 2, and 3 on the
+          batch prim inside a single Sdf.ChangeBlock. The detail worth checking is that a namespace
+          prefix is part of the name. primvars:notes:warden is one string with its colons included,
+          not a path through child prims.
         points:
           - "A value whose Python type is incompatible with the declared Sdf type will fail to author."
           - "Sdf.ChangeBlock coalesces change processing; edits already authored survive a later failure inside the block."
@@ -278,16 +297,27 @@ lessons:
           assert "/City/BeyondTheWalls/Topiary/Hero" in paths
           assert "/City/BeyondTheWalls/Topiary/Draft" not in paths
           stage.GetRootLayer().Save()
-      - kind: pitfall
-        heading: Activation differs from visibility
+      - kind: work_order
+        heading: Both children resolve active by default
         system: >-
           Visibility hides an actor from the camera. Activation removes the actor and the entire
           family tree from rehearsal. Casting asks that you keep the two straight.
         body: |
-          Activation reaches past rendering into composition and traversal. Use visibility to
-          hide renderable geometry while preserving its composed subtree for processing. Use
-          RemovePrim or layer-spec editing only when scene description should actually be erased
-          from a particular layer.
+          Quiet Garden is meant to show one topiary and keep its rejected draft on file. Nothing of
+          it stands in the city yet: there is no Xform at /City/BeyondTheWalls/Topiary and no Hero
+          or Draft beneath it, so nothing there has an active state to resolve and default traversal
+          walks past the whole address.
+
+          Once that subtree is defined, what is missing turns into an opinion rather than a prim.
+          All prims are active by default, so with no active metadata authored anywhere, Hero and
+          Draft resolve identically and default traversal visits both. The garden wants Hero present
+          and Draft pruned, which no fallback will produce.
+
+          A pruned garden needs SetActive(False) authored on Draft while Hero keeps resolving
+          active. The detail worth checking is reach: deactivating a prim prunes everything beneath
+          it from composition, so a descendant's own active opinion cannot restore it and only a
+          stronger opinion on Draft itself can. SetActive also writes into the current edit target,
+          not necessarily the layer that defined the prim.
         points:
           - "Deactivating a parent prunes every descendant, even if a child has an active=true opinion."
           - "SetActive authors into the current edit target, which may leave the layer that originally defined the prim untouched."
@@ -389,15 +419,25 @@ lessons:
           for prim in iterator:
               if prim.GetName() == "Environment":
                   iterator.PruneChildren()
-      - kind: pitfall
-        heading: Default traversal is selective
+      - kind: work_order
+        heading: No census attribute exists on /World
         system: >-
-          Policy excluded the missing class prim, which is theft wearing a lanyard.
+          Policy excluded the class prim from the count, which is theft wearing a lanyard.
         body: |
-          Traverse reports the stage through the default predicate, which is narrower than the full
-          set of authored prim specs. That view excludes class prims because they are abstract,
-          inactive prims, undefined over-only prims, and unloaded payload descendants. Choose
-          TraverseAll or a custom predicate when those prims are intentionally required.
+          The Census Office keeps a tally of the city's concrete residents. Its stage is small: an
+          Xform at /World, two Meshes at /World/A and /World/B, and a class prim at
+          /World/_Blueprint. Everything the office has to record comes out of walking that
+          scenegraph.
+
+          There is no census attribute on /World, so the tally has nowhere to resolve from. The
+          class prim is the wrinkle in what that tally should say. It is composed onto the stage and
+          it is a real prim, but it is abstract, so it sits outside the default traversal view.
+
+          A filed census needs stage.Traverse() iterated, each prim tested with IsA(UsdGeom.Mesh),
+          and the total written to an int attribute named census on /World. The detail worth
+          checking is that Traverse already applies the default predicate, so _Blueprint never
+          reaches the loop and the correct total is 2 rather than 3. Comparing GetTypeName() text
+          instead of using IsA also skips derived schema types.
         points:
           - "Combine Usd predicates with the bitwise operators; Python's boolean operators evaluate truthiness instead."
           - "GetChildren is one level deep and cannot replace a recursive PrimRange."
@@ -487,16 +527,28 @@ lessons:
           assert UsdGeom.GetStageUpAxis(stage) == UsdGeom.Tokens.y
           assert stage.GetTimeCodesPerSecond() == 24
           stage.GetRootLayer().Save()
-      - kind: pitfall
-        heading: Changing conventions requires changing content
+      - kind: work_order
+        heading: Neither unit convention is authored
         system: >-
           Relabeling a hundred-unit wall as meters leaves the wall exactly as enormous as before
           and makes the error official.
         body: |
-          Changing metersPerUnit changes how authored distances are interpreted while the authored
-          values and transforms stay precisely as written. Changing upAxis likewise leaves geometry
-          in its original orientation. Corrective transforms or conversion tools must alter the
-          content when changing conventions.
+          Measure Yard holds a single Xform at /World on a new stage and nothing else. The wall it
+          measures was modeled in centimeters, and later floors compose lamp posts and assets onto
+          this same city, so whatever this stage says about its own scale and its own vertical axis
+          is what everything downstream believes.
+
+          The root layer authors neither piece of metadata. metersPerUnit and upAxis both resolve
+          from fallbacks, 0.01 and Y, which happen to be the values the yard wants, so the numbers
+          are already correct while the file records no intent at all. A consumer reading it cannot
+          tell a deliberate centimeter Y-up stage from one nobody configured.
+
+          A stage with a stated contract needs both authored explicitly: SetStageMetersPerUnit at
+          0.01 and SetStageUpAxis with UsdGeom.Tokens.y. The detail worth checking is that this
+          metadata only says how to interpret authored distances. Changing it rewrites no points and
+          no transform values, and composition carries a referenced asset's geometry across as
+          authored, so a mismatch stays a mismatch until the content or a corrective transform
+          changes.
         points:
           - "A reference carries centimeter values across as authored; the root stage's metersPerUnit only reinterprets them."
           - "framesPerSecond is a playback hint, while timeCodesPerSecond is the authored temporal scale."
@@ -588,16 +640,27 @@ lessons:
           assert lamp.IsModel()
           assert lamp.IsComponent()
           stage.GetRootLayer().Save()
-      - kind: pitfall
-        heading: Labels must obey hierarchy
+      - kind: work_order
+        heading: The lamp post carries no kind metadata
         system: >-
           Calling the lamp an assembly leaves the lamp unimproved and the model hierarchy
           inaccurate in a way that downstream tools can automate.
         body: |
-          Kind carries model hierarchy semantics, so registered tokens must appear in a valid
-          hierarchy. A token authored in an invalid one can cause model predicates and asset tools
-          to omit or misclassify content. Use custom metadata for arbitrary labels, and reserve
-          kind for model hierarchy semantics.
+          The lamp post at the end of Measure Yard is meant to stand as a reusable leaf asset, the
+          sort of thing later floors bring into a scene as a unit rather than walk into piece by
+          piece. Nothing stands at /City/BeyondTheWalls/LampPost yet, so the city has no such asset
+          to point at.
+
+          Kind is prim-level metadata with nothing standing in for it. With no kind authored,
+          GetKind returns an empty token, IsModel and IsComponent are both false, and a model-aware
+          traversal using Usd.PrimIsModel passes the prim over entirely. A schema type says what
+          data a prim carries and nothing about its role.
+
+          A recognizable asset needs the Xform defined and its kind set through Usd.ModelAPI,
+          calling SetKind with Kind.Tokens.component. Two details are easy to miss: model is the
+          abstract base of the taxonomy and should never be the authored token, and a component's
+          ancestors in the model hierarchy have to be group or assembly for the classification to be
+          valid.
         points:
           - "Reserve authoring for concrete tokens such as group, assembly, and component; model is an abstract base."
           - "Components sit at the leaves of the model hierarchy; mark important interior nodes with subcomponent."
@@ -699,17 +762,26 @@ lessons:
               if prim.IsA(UsdGeom.Gprim)
           ]
           assert renderable_prims == [cube.GetPath()]
-      - kind: pitfall
-        heading: Applications use Hydra; delegates do the rendering
+      - kind: work_order
+        heading: The marker prim and its architecture string are missing
         system: >-
-          Contestants have answered viewport, renderer, stage, and the button labeled Render. The
-          sponsors insisted I recite all four wrong answers after last season.
+          Viewport, renderer, stage, and the button labeled Render are all wrong. The sponsors
+          insisted I recite every one of them.
         body: |
-          Hydra coordinates rendering while USD composition remains a separate system, and the
-          actual image comes from a render delegate. usdview is an application that uses Hydra,
-          and HdStorm is a render delegate used through Hydra. Scene indexes belong to Hydra scene
-          processing, while asset resolvers and value clips solve asset location and time-sampled
-          composition respectively.
+          Hydra Overlook and the Customizing Colosseum trade in explanations rather than authored
+          prims, so nothing changes on the stage in either place. The one thing this material leaves
+          behind in the city is a marker under /City/CrownDistrict, and that marker is not there.
+
+          No Scope exists at /City/CrownDistrict/HydraMarker, and no architecture attribute exists
+          on it, so the string naming Hydra's three parts has nowhere to resolve from. Nothing here
+          draws a frame either: no render delegate is loaded in the process running this code, and a
+          plain usd-core install supplies composition APIs rather than imaging.
+
+          A recorded answer needs the Scope defined and an architecture string authored on it naming
+          the scene delegate, the render index, and the render delegate in that order. The detail
+          worth checking is which name belongs to which part: usdview is an application that uses
+          Hydra, HdStorm is the render delegate shipped with OpenUSD, and the render index is neither
+          a delegate nor a renderer.
         points:
           - "A scene delegate adapts source scene data; a render delegate implements a backend."
           - "The render index coordinates and tracks the renderable scene between those delegates."
@@ -839,16 +911,28 @@ lessons:
 
           flattened = composed.Flatten()
           flattened.Export("delivery.usda")
-      - kind: pitfall
-        heading: A resolved value hides its history
+      - kind: work_order
+        heading: The strongest opinion is unauthored
         system: >-
           The value 4 is correct and almost useless as an explanation. The boss requires both
           competence and receipts.
         body: |
-          A resolved value arrives without a citation, so the layer or arc behind it stays hidden
-          until you look. Inspect the property stack before changing composition or deleting weaker
-          opinions. Flatten only after the editable source is preserved, and remember that layer
-          offsets affect time mapping rather than rewriting source samples.
+          Four places arrange sources for one resolved value in four different ways. weaker.usda
+          holds /Probe with signal 1, while /World/Probe on the city stage has nothing on it.
+          clip.usda holds amp samples at times 0 and 5. part.usda defines /World/Cube under a
+          sublayer of an in-memory stage. Up at the Gardens overlook, /World sits empty.
+
+          In every one of them the strongest opinion is the one nobody has authored. /World/Probe
+          has no local signal, so signal resolves to the referenced 1. The clip arc is unauthored,
+          so its samples would land at their original times. The composed stage still carries its
+          sublayer instead of an exported result, and /World and /World/Hero have no stage metadata,
+          model kind, active opinions, or primvar on them.
+
+          Each needs its strongest opinion written: a local signal of 4 on the probe, a reference
+          carrying Sdf.LayerOffset(offset=10), a flattened layer exported to the stage path. The
+          detail worth checking is that a layer offset maps time through the arc rather than
+          rewriting source samples, and that Get() asks for the default time code, so an animated
+          value needs an explicit one.
         points:
           - "attr.Get() requests Usd.TimeCode.Default(), so animated values need an explicit time code."
           - "GetPropertyStack is property-specific; GetPrimStack includes all contributing prim specs."

@@ -1,13 +1,53 @@
 floor: 0
 floor_name: Prim Threshold
 quests:
+  - id: f0_stage_intake
+    title: Sign In at the Stage Intake Desk
+    floor: 0
+    floor_name: Prim Threshold
+    neighborhood: Intake Desk
+    kind: room
+    prerequisites: []
+    level_required: 1
+    exam_tasks: [create_stage, open_stage, save_stage]
+    stats: {lore: 1, insight: 1}
+    brief: "SYSTEM: Nothing gets authored until you know where it lands. A stage is the scene you compose into and the layer it is written to. This room asks for no code: read the lesson, then answer the desk's two questions and acknowledge the brief."
+    starter: ""
+    language: none
+    validator:
+      assertions: []
+    cookbook: docs/stage-setting/stage.md
+    xp: 40
+    reward: Intake Lanyard
+    world_target: /
+    recipes: [Usd.Stage.CreateNew, Usd.Stage.Open, Usd.Stage.Save]
+    questions:
+      - prompt: You need a stage backed by a file that does not exist yet. Which call?
+        choices:
+          - Usd.Stage.CreateNew(path)
+          - Usd.Stage.Open(path)
+          - Usd.Stage.CreateInMemory()
+        answer: 0
+        explanation: >-
+          CreateNew makes the layer on disk and returns the stage composed over it. Open
+          requires the file to already exist, and CreateInMemory never touches disk.
+      - prompt: You authored prims onto an open stage and the file on disk is unchanged. What is missing?
+        choices:
+          - A save, which writes the stage's root layer
+          - A second call to Usd.Stage.Open
+          - A type name on each prim
+        answer: 0
+        explanation: >-
+          Authoring edits the stage in memory. Until the root layer is saved, nothing
+          reading the file, including the judges, can see your work.
+
   - id: f0_first_prim
     title: Define the City's First Prim
     floor: 0
     floor_name: Prim Threshold
     neighborhood: Arrival Hall
     kind: room
-    prerequisites: []
+    prerequisites: [f0_stage_intake]
     level_required: 1
     exam_tasks: [create_prim, inspect_stage]
     stats: {craft: 1, insight: 1}
@@ -57,16 +97,16 @@ quests:
     recipes: [Usd.Prim.CreateAttribute, Usd.Attribute.Set]
 
   - id: f0_gatekeeper
-    title: "Gatekeeper of the Root: Default Prim and Up Axis"
+    title: "Gatekeeper of the Threshold: Prims and Attributes"
     floor: 0
     floor_name: Prim Threshold
     neighborhood: Departure Gate
     kind: floor_boss
     prerequisites: [f0_nameplate]
     level_required: 2
-    exam_tasks: [set_default_prim, configure_stage]
+    exam_tasks: [define_typed_prim, author_attribute]
     stats: {resolve: 2, insight: 1}
-    brief: "SYSTEM: The Gatekeeper accepts only a stage with a clear entrance."
+    brief: "SYSTEM: The Gatekeeper accepts typed containers carrying named data, and nothing vaguer."
     starter: |
       from pathlib import Path
       from pxr import Gf, Kind, Sdf, Usd, UsdGeom, UsdLux, UsdShade
@@ -74,19 +114,19 @@ quests:
       stage = Usd.Stage.Open(STAGE_PATH)
       # This boss opens your accumulated city. Author every graded opinion below.
       # 1. Define /City with type Xform.
-      # 2. Set the stage default prim to /City.
-      # 3. Set stage up axis to Y.
-      # 4. Keep /City.cityName set to 'Primventure'.
+      # 2. Keep /City.cityName set to 'Primventure'.
+      # 3. Define /City/Threshold with type Xform.
+      # 4. Create a string attribute /City/Threshold.districtName set to 'Prim Threshold'.
       stage.GetRootLayer().Save()
     language: python
     validator:
       assertions:
       - prim_type: {path: /City, value: Xform}
-      - {default_prim: /City}
-      - {up_axis: Y}
       - attribute_equals: {path: /City.cityName, value: Primventure}
-    cookbook: docs/stage-setting/stage.md
+      - prim_type: {path: /City/Threshold, value: Xform}
+      - attribute_equals: {path: /City/Threshold.districtName, value: Prim Threshold}
+    cookbook: docs/stage-setting/properties/attributes.md
     xp: 100
     reward: Threshold Transit Pass
-    world_target: /
-    recipes: [Usd.Stage.SetDefaultPrim, UsdGeom.SetStageUpAxis]
+    world_target: /City/Threshold
+    recipes: [Usd.Stage.DefinePrim, Usd.Prim.CreateAttribute, Usd.Attribute.Set]

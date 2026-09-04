@@ -66,15 +66,25 @@ lessons:
               prim.SetInstanceable(True)
 
           stage.GetRootLayer().Save()
-      - kind: pitfall
-        heading: Sharing needs a composition arc
+      - kind: work_order
+        heading: Three bench prims with no composition arc
         system: >-
-          Painting three objects the same color fools the audience and amuses the validator, which
-          remains stubbornly sober about what counts as an instance.
+          Three matching names do not create shared scene description. The composition arcs do.
         body: |
-          Instanceable metadata requests instancing of composition-derived content. OpenUSD derives
-          a prototype from the composition arc on the instanceable prim, so that arc is what makes
-          sharing possible.
+          At the Scenegraph Thickets, three empty Xforms named BenchA, BenchB, and BenchC stand
+          beneath /City/InstanceWilds. bench.usda is already published in the world's assets
+          folder, so the seat design exists; none of the three prims points at it.
+
+          Each bench is an empty transform, so the stage holds three names and no bench scene
+          description at all. Marking them instanceable in this state would change nothing.
+          Instancing is derived from composition arcs, and three locally defined Xforms give
+          OpenUSD nothing to build a prototype from.
+
+          The finished arrangement needs the same bench.usda reference on all three prims and
+          instanceable set to true on all three, then a saved root layer. The metadata belongs on
+          the same prim that carries the arc, which here is the referencing prim itself.
+          UsdUtils.ComputeUsdStageStats reports totalPrimCount, totalInstanceCount, and
+          prototypeCount, which is how you confirm the sharing happened rather than assume it.
         points:
           - "SetInstanceable(True) yields an instance and prototype once a reference, payload, or other relevant composition arc is present."
           - "Author instanceable metadata on the root that owns the asset composition arc, which is usually the referencing prim itself."
@@ -168,15 +178,27 @@ lessons:
               print(descendant.GetPath(), descendant.IsInstanceProxy())
 
           stage.GetRootLayer().Save()
-      - kind: pitfall
-        heading: Descendant overrides break the promise
+      - kind: work_order
+        heading: BenchB needs a name while it stays shared
         system: >-
-          The shared descendant is read-only because it is shared. This sentence has ended more
-          appeals than any judge on the broadcast.
+          The shared descendant is read-only because it is shared. Put per-instance data on the
+          instance root.
         body: |
-          Paths below an active instance root resolve to instance proxies, so sparse opinions there
-          cannot be authored. Root-level transform, metadata, and other properties remain editable
-          because the root sits above the shared prototype subgraph.
+          The bench arrangement at the Scenegraph Thickets is already sharing: BenchA, BenchB, and
+          BenchC each reference bench.usda and each carry instanceable true, so all three draw on
+          one prototype. BenchB is the seat that needs a readable name.
+
+          BenchB has no displayName, and the obvious places to put one are unavailable. Paths below
+          an active instance root resolve to instance proxies, which are read-only, so no
+          descendant of BenchB can hold the label. Clearing instanceable would open those
+          descendants, but it would also remove BenchB from the shared prototype and materialize
+          its whole subgraph for the sake of a string.
+
+          BenchB needs to keep instanceable true and its bench.usda reference intact, with
+          displayName authored as Shared Foundry Bench on the instance root itself. The root stays
+          mutable precisely because it sits above the shared subgraph, which is also why per-copy
+          transforms work there. Author against your instance roots only, since prototypes are
+          runtime objects whose paths shift between runs.
         points:
           - "Author against your instance roots, since prototypes are implicit runtime objects with unstable paths."
           - "Scenegraph instancing requires both the composition arc and instanceable metadata set to true."
@@ -257,16 +279,26 @@ lessons:
               )
 
           stage.GetRootLayer().Save()
-      - kind: pitfall
-        heading: Too many exceptions defeat sharing
+      - kind: work_order
+        heading: One bench needs an edit its proxies refuse
         system: >-
           A unique exception is refinement. Nine hundred unique exceptions are a new asset library
           assembled during a panic.
         body: |
-          Deinstancing trades some optimization for complete control. Its cost scales as more
-          copies leave the prototype, so it is best for a small number of genuinely unique edits.
-          If many copies need the same refinement, authoring another reusable asset configuration
-          that can form its own shared prototype is usually more efficient.
+          Three benches stand at the Scenegraph Thickets, BenchA, BenchB, and BenchC, each
+          referencing bench.usda and each carrying instanceable true. All three share one
+          prototype, and none of their descendants can be authored.
+
+          BenchC is the copy that needs a unique descendant change, such as hiding a decal. While
+          it remains an instance, its composed children are read-only instance proxies, so that
+          edit has nowhere to land. Clearing instanceable on all three would hand back editability
+          nobody asked for on the other two and materialize their subgraphs as well.
+
+          Only BenchC needs instanceable false, along with the displayName Unique Sticker Bench,
+          while BenchA and BenchB stay instanceable. Order matters, because descendants stay
+          read-only until the metadata is cleared. The reference survives, so the bench content is
+          still composed. In the source exercise, one deinstanced box moved instances from 1,450 to
+          1,449 and prims from 1,711 to 1,741 while the prototype count stayed at three.
         points:
           - "Clear instanceable only on the copy that needs the unique edit."
           - "Deinstance before touching descendants, since an instance proxy stays read-only until then."
@@ -355,15 +387,27 @@ lessons:
           ])
 
           stage.GetRootLayer().Save()
-      - kind: pitfall
-        heading: Arrays must agree
+      - kind: work_order
+        heading: The PointInstancer has none of its three properties
         system: >-
           Index 1 cannot select the only prototype at index 0. Arithmetic remains undefeated on
           all ten floors.
         body: |
-          Every protoIndices value must be a valid zero-based index into the ordered prototypes
-          relationship. Per-instance arrays must align by element index; mismatched lengths or an
-          invalid prototype index produce incomplete or invalid instance data.
+          In the Point Wastes, /World/Scatter is defined as a PointInstancer and
+          /World/Scatter/Prototypes/Crate is defined as an Xform that already references
+          cargo.usda. The prototype hierarchy is in place and the instancer above it is bare.
+
+          None of the three required properties is authored. Nothing targets the crate hierarchy,
+          so the instancer has no prototype available to it. With no protoIndices, no instances are
+          declared. With no positions, there is nowhere to put them. The prim composes without
+          complaint and represents zero crates.
+
+          The finished scatter needs the prototypes relationship targeting the crate prim's path,
+          protoIndices holding four zeros, and positions holding four points along X at 0, 2, 4,
+          and 6. With one target in the list, every index value must be 0, since 1 would point
+          past its end. protoIndices and positions must describe the same instance count, positions
+          are in the instancer's local space, and the arrays exist only in memory until the layer
+          is saved.
         points:
           - "With one prototype target, every protoIndices value must be 0."
           - "Positions are expressed in the PointInstancer's local space."
@@ -482,16 +526,28 @@ lessons:
           - "The prototype root transform is more local than the per-instance transform."
           - "The PointInstancer prim transform is least local and affects the complete scatter."
           - "Without authored ids, instance ids are inferred from protoIndices element indices."
-      - kind: pitfall
-        heading: One edit rewrites an array
+      - kind: work_order
+        heading: One prototype target cannot describe two objects
         system: >-
           Move one peanut, rewrite the positions array. The city tried sparse array opinions once.
           We now refer to that district in the past tense.
         body: |
-          Array attributes resolve as whole values, so moving one point requires authoring the
-          complete positions array in the stronger opinion. Animated overrides can
-          require full arrays at every time sample, making binary USDC layers preferable to
-          human-readable USDA for large data.
+          The scatter in the Point Wastes holds crates only: /World/Scatter carries one prototype
+          target, four zero indices, and four positions along X. Benches are meant to stand among
+          those crates, and nothing in the instancer can name a second kind of object.
+
+          A single-entry prototypes list cannot express two kinds of object. Defining a bench prim
+          beneath Prototypes changes nothing on its own, because a prototype takes effect only once
+          the relationship targets it, and every existing index value means whatever position it
+          holds in that ordered list.
+
+          The finished scatter needs both prototype prims with their references, crate to
+          cargo.usda and bench to bench.usda, the prototypes relationship set to crate first and
+          bench second, protoIndices alternating 0 and 1 across the four positions, and a
+          documentation string on the scatter. Target order and index values are one contract, so
+          reordering the targets later silently retypes existing instances, and arrays resolve
+          whole: changing one index or position means authoring that entire array again in the
+          stronger opinion.
         points:
           - "Point instances are compact to represent but less convenient for one-off downstream edits."
           - "Changing prototype relationship order without remapping protoIndices changes instance types."
@@ -591,18 +647,27 @@ lessons:
           ])
 
           stage.GetRootLayer().Save()
-      - kind: pitfall
-        heading: Optimization follows workflow
+      - kind: work_order
+        heading: Two populations, two different access patterns
         system: >-
-          There is no universal instancer. There is only the correct tradeoff and the contestant
-          currently applying one tool to every visible object.
+          There is no universal instancer. Choose the representation that matches how each
+          population will be edited.
         body: |
-          Support for larger counts is only one factor in the choice. Array-based copies are
-          difficult to inspect and refine individually, while scenegraph instances cost one instance
-          root per copy and preserve meaningful paths and legal root opinions.
+          The Warehouse Recapture opens with bench.usda and cargo.usda both published and both
+          instancing techniques already in hand. /City/InstanceWilds/Warehouse does not exist yet,
+          and neither does anything beneath it.
 
-          Choose at the asset boundary according to count, granularity, expected overrides, and
-          downstream interaction. A warehouse can use both without compromising modularity.
+          The district needs two populations that are not alike. The office benches are named,
+          selectable objects that carry per-copy root metadata and may need an occasional unique
+          refinement. The crate field is a uniform population whose members need no prim paths of
+          their own. Reaching for one technique for both would either give every crate a scenegraph
+          name or bury the benches in arrays where they cannot be addressed.
+
+          The finished district needs /City/InstanceWilds/Warehouse defined as an Xform; BenchA and
+          BenchB beneath Office, referencing bench.usda and marked instanceable; CrateField defined
+          as a PointInstancer with a cargo prototype, six indices, and six positions; and a
+          documentation string on the warehouse. The crate field reports no instances and no
+          prototypes until the prototypes relationship targets the crate prim.
         points:
           - "Prefer scenegraph instancing for named, selectable assets that need per-copy root metadata or occasional unique refinement."
           - "Prefer point instancing for huge similar populations controlled naturally by arrays."
@@ -686,20 +751,27 @@ lessons:
           print(row.IsInstanceable())
 
           stage.GetRootLayer().Save()
-      - kind: pitfall
-        heading: Extra levels carry their own cost
+      - kind: work_order
+        heading: The aggregate row is neither composed nor shared
         system: >-
           Every unique composition can demand another prototype. The Forge considers this a
           collection. Your profiler will use stronger language.
         body: |
-          Nested instancing adds indirection and can increase the number of distinct prototypes
-          when nested assemblies have different composition arcs, variant selections, or asset
-          configurations. The technique saves memory when many copies actually share each level;
-          unique configurations reduce that sharing.
+          At the Mirror Furnace, bench_row.usda is published in the assets folder and already
+          contains its own instanceable bench descendants, so the inner level of sharing is
+          finished. /City/InstanceWilds/BenchRow does not exist on the stage.
 
-          Deinstancing outer or inner copies also materializes more unique scene description.
-          Repeated unique deinstances beneath nested aggregates can multiply the amount of
-          separately represented content and erase the intended memory advantage.
+          The aggregate is not composed at all, which leaves exactly one boundary to author. The
+          tempting alternative is to open the row and mark its individual seats instanceable, which
+          repeats work the published asset already did and adds no sharing the outer arrangement
+          does not already provide.
+
+          The finished row needs /City/InstanceWilds/BenchRow defined as an Xform referencing
+          bench_row.usda, with assembly kind authored on it and instanceable set to true, plus a
+          documentation string, the stage up axis set to Y, and metersPerUnit set to 0.01. Those
+          last two facts belong to the city itself and are authored separately from the prim.
+          Marking the outer root does not disturb the inner instances, since each level derives its
+          own prototypes, and root-level opinions stay legal on an instanceable prim.
         points:
           - "Instance boundaries should align with asset boundaries that repeat in practice."
           - "Variant and composition differences can split otherwise similar aggregates into separate prototypes."
