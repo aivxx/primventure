@@ -211,9 +211,10 @@ lessons:
           compatible composition arcs. Instance roots remain mutable for placement and metadata,
           while instance proxies expose shared descendants for read-only inspection.
     apply:
-      f7_prototype_sentinel: >-
-        Set BenchB's displayName to Shared Foundry Bench and leave it instanceable. Name the mirror
-        by its frame; the Sentinel becomes tiresome when contestants attack the reflection.
+      f7_shared_prototypes: >-
+        Say how many prototypes three arc-free instanceable prims produce, and name the one part of
+        an instance that stays editable. Learn which surface is yours before the Thickets hand you
+        three benches.
 
   - source: docs/asset-modularity-instancing/refining-scenegraph-instances/scenegraph-deinstance-refinement.md
     title: Selective Deinstancing
@@ -560,17 +561,19 @@ lessons:
           protoIndices selects among multiple prototypes, transform order determines final
           placement, and compactness comes at the cost of sparse per-instance editability.
     apply:
-      f7_point_wastes_boss: >-
-        Target Crate first and Bench second, alternate protoIndices 0 and 1 across four X
-        positions, and preserve both references. The boss counts from zero and prosecutes reorderings.
+      f7_vectorized_scatter: >-
+        Read a protoIndices value against its ordered prototypes relationship, and say what moving
+        one instance out of a hundred thousand costs you. The Wastes count from zero and resolve
+        arrays whole.
 
   - source: docs/asset-modularity-instancing/asset-modularity/exercise-assets-overview.md
     title: Modular Assets at Scale
-    objective: Combine reusable components into assemblies and choose scenegraph or point instancing according to how each repeated asset must be used.
+    objective: Trace how a five-asset library of components and assemblies composes, through references alone, into a warehouse of 44,408 prims.
     intro: >-
       The Warehouse District contains 44,408 prims assembled from five useful assets and one
-      alarming confidence in reuse. Your task is to package that complexity where higher-level
-      work can reference it, instance it, and remain blissfully unaware of the bolts.
+      alarming confidence in reuse. Your task is to read the lineup left to right, learn which
+      assets are leaves and which are built from leaves, and see how twenty-five arrangements of
+      one rack become a building that nobody had to author twice.
     beats:
       - kind: concept
         heading: Components build assemblies
@@ -597,92 +600,83 @@ lessons:
         body: |
           A small asset library can produce a large composed stage. The exercise warehouse uses 25
           rack components, 75 pallet components, and 1,350 box components, totaling 44,408 prims
-          before instancing optimization.
+          on the composed stage.
 
           Layout authors only need to reference and arrange the high-level rack asset. Changes to
           a reused component can propagate through assemblies and all referencing scenes without
           copying its scene description into each placement.
         points:
-          - "Asset modularity is the prerequisite for efficient instancing because repetition must be expressed through reusable composition."
+          - "Hiding internal complexity behind one referenced asset is what lets higher-level workflows scale."
           - "References preserve asset boundaries and allow source assets to evolve independently."
           - "Assemblies reduce the amount of scene structure a layout author must manage directly."
       - kind: api
-        heading: Match the representation to the asset
+        heading: Reference the finished assembly and arrange it
         system: >-
-          Benches get names. Crates get indices. This is the closest the Warehouse District comes
-          to a social hierarchy.
+          Twenty-five placements of one asset. The set dressers were expecting a longer afternoon.
         body: |
-          Use scenegraph instances for moderate counts of asset hierarchies that need distinct prim
-          paths, root metadata, transforms, or selective deinstancing. Use a PointInstancer for
-          very large populations whose per-copy state fits aligned arrays and whose members do not
-          need independent prim paths.
+          Composing the warehouse takes one call per placement. Define a prim, reference the rack
+          assembly, and give the prim its own transform. The rack's internal pallets, boxes, and
+          shelving arrive with the reference, so the arrangement never names them.
 
-          The two techniques can coexist in one assembly. An office can hold named instanceable
-          benches while a neighboring crate field uses one PointInstancer.
+          Each placement is an ordinary prim with an ordinary composition arc, which is why the
+          asset boundary holds. The referenced layer keeps its own defaultPrim and its own
+          structure, and the arranging layer holds nothing but paths and placements.
         code: |
-          from pxr import Gf, Usd, UsdGeom
+          from pxr import Usd, UsdGeom
 
-          stage = Usd.Stage.CreateNew("warehouse.usda")
-          warehouse = "/City/InstanceWilds/Warehouse"
+          stage = Usd.Stage.CreateNew("scenario.usda")
+          warehouse = "/World/Warehouse"
           UsdGeom.Xform.Define(stage, warehouse)
 
-          for name in ("BenchA", "BenchB"):
-              prim = UsdGeom.Xform.Define(
-                  stage, f"{warehouse}/Office/{name}"
-              ).GetPrim()
-              prim.GetReferences().AddReference("bench.usda")
-              prim.SetInstanceable(True)
-
-          field = UsdGeom.PointInstancer.Define(
-              stage, f"{warehouse}/CrateField"
-          )
-          crate = stage.DefinePrim(
-              f"{warehouse}/CrateField/Prototypes/Crate", "Xform"
-          )
-          crate.GetReferences().AddReference("cargo.usda")
-          field.CreatePrototypesRel().SetTargets([crate.GetPath()])
-          field.CreateProtoIndicesAttr([0] * 6)
-          field.CreatePositionsAttr([
-              Gf.Vec3f(float(i * 2), 0.0, 0.0) for i in range(6)
-          ])
+          for index in range(25):
+              placement = UsdGeom.Xform.Define(
+                  stage, f"{warehouse}/Rack_BoxPallet_A01_{index:02d}"
+              )
+              placement.GetPrim().GetReferences().AddReference(
+                  "./Assets/Assemblies/Rack_BoxPallet_A01.usd"
+              )
+              placement.AddTranslateOp().Set((index * 150.0, 0.0, 0.0))
 
           stage.GetRootLayer().Save()
       - kind: work_order
-        heading: Two populations, two different access patterns
+        heading: One rack asset, twenty-five placements
         system: >-
-          There is no universal instancer. Choose the representation that matches how each
-          population will be edited.
+          Read the lineup before the arrangement. Five assets explain forty-four thousand prims;
+          nothing else has to.
         body: |
-          The Warehouse Recapture opens with bench.usda and cargo.usda both published and both
-          instancing techniques already in hand. /City/InstanceWilds/Warehouse does not exist yet,
-          and neither does anything beneath it.
+          The lineup at the Scenegraph Thickets stands five assets wide. CubeBox_A04_26cm,
+          BlockPallet_A07, and BulkStorageRack_A01 are components, meaning leaf-level models that
+          nothing else is assembled from. BoxPallet_A01 and Rack_BoxPallet_A01 are assemblies, and
+          the second one contains the first.
 
-          The district needs two populations that are not alike. The office benches are named,
-          selectable objects that carry per-copy root metadata and may need an occasional unique
-          refinement. The crate field is a uniform population whose members need no prim paths of
-          their own. Reaching for one technique for both would either give every crate a scenegraph
-          name or bury the benches in arrays where they cannot be addressed.
+          The interesting fact is how little describes how much. BoxPallet_A01 holds eighteen box
+          components and one pallet component. Rack_BoxPallet_A01 holds three BoxPallet assemblies
+          and one rack component. The warehouse scenario is that rack referenced and arranged
+          twenty-five times, which resolves to twenty-five racks, seventy-five pallets, 1,350
+          boxes, and 44,408 prims in total.
 
-          The finished district needs /City/InstanceWilds/Warehouse defined as an Xform; BenchA and
-          BenchB beneath Office, referencing bench.usda and marked instanceable; CrateField defined
-          as a PointInstancer with a cargo prototype, six indices, and six positions; and a
-          documentation string on the warehouse. The crate field reports no instances and no
-          prototypes until the prototypes relationship targets the crate prim.
+          Reading the lineup means being able to say which of the five assets is a component and
+          which is an assembly, and being able to explain why the composed count is enormous while
+          the library on disk stays five layers deep. The answer is that every placement is a
+          reference to an existing layer rather than a fresh copy of its scene description, so the
+          arrangement pays for paths and transforms instead of geometry.
         points:
-          - "Prefer scenegraph instancing for named, selectable assets that need per-copy root metadata or occasional unique refinement."
-          - "Prefer point instancing for huge similar populations controlled naturally by arrays."
+          - "A component is a leaf-level model; an assembly composes components and other assemblies."
+          - "Rack_BoxPallet_A01 nests an assembly inside an assembly, which is how three boxes become 1,350."
+          - "Referencing and arranging one high-level asset is the whole authoring cost of the warehouse."
           - "Keep assemblies composed, since flattening trades reusable composition structure for a shorter hierarchy."
-          - "Reserve scenegraph prims for copies whose paths a workflow actually uses; arrays scale better at hundreds of thousands."
       - kind: recap
         heading: What you now know
         body: |
-          Components compose into assemblies, assemblies scale through references, and instancing
-          optimizes the resulting repetition. Scenegraph instances preserve named roots and
-          selective editability; point instancers maximize compactness for array-driven populations.
+          Components compose into assemblies, assemblies compose into other assemblies, and
+          references let a five-asset library resolve into a 44,408-prim warehouse. Layout work
+          arranges the top-level asset and inherits everything below it, which keeps the asset
+          boundary intact and the arranging layer small.
     apply:
-      f7_warehouse_district: >-
-        Build two instanceable office benches from bench.usda and a six-copy cargo PointInstancer
-        at CrateField. Recapture the district with both tools; monopolies are how floors collapse.
+      f7_asset_lineup: >-
+        Trace how a handful of referenced components and assemblies compose into a warehouse of
+        44,408 prims, and classify a single reusable box. Walk the lineup before the Wilds start
+        repeating it.
 
   - source: docs/asset-modularity-instancing/authoring-scenegraph-instancing/nested-instancing.md
     title: Nested Instancing
@@ -786,6 +780,1103 @@ lessons:
           effective when each level corresponds to genuinely repeated modular content and unique
           refinements remain exceptional.
     apply:
-      f7_mirror_forge: >-
-        Mark the BenchRow prim instanceable and preserve its bench_row.usda reference. The Forge
-        built mirrors inside mirrors; defeat it by making the arrangement intentional.
+      f7_nested_aggregates: >-
+        Define nested instancing in one sentence, and name the part of a component asset besides
+        geometry that most often repays sharing. Survey the Furnace before it asks you to author
+        an aggregate.
+
+  - source: docs/asset-modularity-instancing/asset-modularity/what-is-asset-modularity.md
+    title: Asset Modularity
+    objective: Explain how layer stacks and composition arcs make modular content reuse the foundation of large OpenUSD scenes.
+    intro: >-
+      Before the Wilds start repeating anything, somebody has to decide what the repeatable thing
+      is. Break the project into parts, let separate teams own the parts, compose the parts back
+      into a scene. The Forge would prefer you author every bolt by hand, which is precisely why
+      nobody who has ever met a deadline does.
+    beats:
+      - kind: concept
+        heading: A scene composes through its root layer stack
+        system: >-
+          Two operators, one composed result. Learning them apart is what keeps the later floors
+          from feeling like weather.
+        body: |
+          In OpenUSD a scene is composed through its root layer stack, which is the root layer plus
+          every sublayer, including the sublayers of those sublayers. A scenario layer might
+          sublayer a facility layer and an elements layer, and each of those contributes opinions
+          to the same composed stage.
+
+          Composition arcs are the other operator. Where sublayers extend the local layer stack,
+          arcs compose data from other layer stacks into it, which is how an elements layer brings
+          in reference after reference of the same rack asset.
+
+          Composition resolves competing opinions by strength ordering, LIVERPS, which stands for
+          Local, Inherits, Variant Sets, Relocates, References, Payloads, and Specializes. Local
+          means the local layer stack, and its position at the front is why a downstream layer can
+          always speak over what an arc brought in.
+        points:
+          - "The root layer stack is the root layer plus its complete sublayer tree."
+          - "Composition arcs compose other layer stacks into the local one."
+          - "LIVERPS resolves competing opinions, with the local layer stack strongest."
+          - "The two are often grouped as composition operators, but instancing behavior depends on telling them apart."
+      - kind: concept
+        heading: Modularity is building from self-contained parts
+        system: >-
+          One team owns the rack. Another owns the warehouse. Neither has to read the other's
+          bolts, which is the closest this industry comes to peace.
+        body: |
+          Modularity is the principle of building complex systems from smaller, self-contained
+          assets, and composition is what makes it practical in OpenUSD. It lets a project be
+          decomposed into manageable parts, lets those parts be iterated independently, and lets
+          them be synthesized into a larger scene or reused across projects entirely.
+
+          The benefits are not only workflow benefits. Less redundancy means fewer places for an
+          error to hide, so a rack validated for one scenario is likely to hold up in the next
+          three. Reused assets also become familiar, and familiarity is what makes an unfamiliar
+          scene navigable.
+
+          Centralized editing is the sharpest advantage. Change the underlying asset once and every
+          use resolves the new value, so a new variant or a more advanced material model propagates
+          from the rack through the warehouse and back out to every scenario. Scenarios that share
+          the same robot and factory also share system resources such as storage and memory, though
+          the precise gain depends on the system, the asset resolver, and the file format.
+        points:
+          - "Composition lets parts be decomposed, iterated, synthesized, and reused."
+          - "Validated reuse reduces redundancy and standardizes what readers encounter."
+          - "One edit to a referenced asset resolves everywhere that asset is composed."
+          - "Sharing layers across scenarios reduces layers opened, file size, RAM, and VRAM."
+      - kind: api
+        heading: Sublayer the workstreams, reference the assets
+        system: >-
+          The scenario layer holds almost nothing. That is the feature, not an oversight.
+        body: |
+          A scenario layer sublayers the workstreams that build it, and those workstreams use
+          composition arcs to bring assets in. A facility layer composes the warehouse; an elements
+          layer composes the racks that stand inside it.
+
+          Every layer here stays small because none of them owns the asset's scene description. The
+          arc points at a published layer and the composed stage resolves its contents.
+        code: |
+          from pxr import Sdf, Usd, UsdGeom
+
+          scenario = Sdf.Layer.CreateNew("scenario.usda")
+          scenario.subLayerPaths = ["./facility.usda", "./elements.usda"]
+          scenario.Save()
+
+          stage = Usd.Stage.Open("elements.usda")
+          for index in range(3):
+              rack = UsdGeom.Xform.Define(
+                  stage, f"/World/Warehouse/Rack_{index:02d}"
+              )
+              rack.GetPrim().GetReferences().AddReference(
+                  "./Assets/Assemblies/Rack_BoxPallet_A01.usd"
+              )
+
+          stage.GetRootLayer().Save()
+      - kind: concept
+        heading: Libraries extend reuse past one project
+        system: >-
+          Architecture from the CAD tool, digital humans from a vendor, pallets from whoever
+          answered the email. The composed stage does not ask where anything came from.
+        body: |
+          Modularity inside one project extends across projects through asset catalogs and
+          libraries. A library shares parts among several assets, so a pallet can be used directly
+          as a component and also as part of an aggregate such as a box-pallet or a box-pallet-rack.
+          The same layer serves all of those uses.
+
+          In software this is the DRY principle, don't repeat yourself. In OpenUSD it means avoid
+          duplicating the same object or data and reference an existing central asset whenever
+          possible. Libraries of related modules are what large environments such as factories and
+          supply chains are actually built from.
+
+          A composed stage can also synthesize content from several libraries at once, with
+          different asset structures, pipelines, and toolsets. Different modular structures coexist
+          on one stage without having to be reconciled first.
+        points:
+          - "One library layer can serve as a component and as part of several aggregates."
+          - "Referencing a central asset instead of duplicating data is DRY applied to scene description."
+          - "Assets from unrelated pipelines and catalogs can coexist on one composed stage."
+      - kind: work_order
+        heading: One rack, four scenarios, one place to change it
+        system: >-
+          Read what reuse buys before the floor starts charging you for repetition.
+        body: |
+          Four warehouse scenarios stand in the Wilds and all four use the same rack. One team
+          designs the rack, a second lays racks out into a warehouse, and a third simulates
+          scenarios inside it. Every scenario composes through its own root layer stack, and each
+          of those stacks pulls the rack in through composition arcs.
+
+          What the arrangement raises is the question of what happens when the rack changes. If
+          each scenario held its own copy of the rack's scene description, a more advanced material
+          model would be four separate edits and four opportunities to disagree. Nothing about the
+          composed picture would look different, which is what makes duplication easy to accept and
+          expensive to live with.
+
+          Because every scenario references one published rack layer instead, the edit happens once
+          and resolves upward through the assemblies and out to all four scenarios. Reading this
+          arrangement means naming the layers that make up a root layer stack, saying which
+          operator brought the rack in, and explaining why the strength ordering leaves a
+          downstream scenario free to override what the arc supplied.
+        points:
+          - "A root layer stack is the root layer plus every sublayer, recursively."
+          - "Arcs compose other layer stacks in; sublayers extend the local one."
+          - "One edit to a shared asset resolves in every scene that references it."
+          - "LIVERPS keeps local opinions strongest, so downstream refinement stays available."
+      - kind: recap
+        heading: What you now know
+        body: |
+          Composition supplies two operators, layer stacks and arcs, and modularity decides what
+          those operators compose. Building from self-contained assets makes work parallel,
+          validation reusable, and edits central, and asset libraries carry the same benefits
+          across projects, pipelines, and toolsets.
+    apply:
+      f7_modularity_doctrine: >-
+        Name the layers in a root layer stack, say what one edit to a referenced rack reaches, and
+        explain why layer stacks and arcs are worth telling apart. Read the doctrine before the
+        Wilds start charging for repetition.
+
+  - source: docs/asset-modularity-instancing/what-is-instancing.md
+    title: What Instancing Declares
+    objective: Contrast composition's open refinement with instancing's declared deduplication, and state what each approach costs at runtime.
+    intro: >-
+      The Wilds are about to ask you to give something up. Composition lets you repeat an asset and
+      then edit every copy, which is generous and, at forty thousand copies, ruinous. Instancing is
+      a signed statement that certain copies are closed for edits. The Forge finds the paperwork
+      distasteful.
+    beats:
+      - kind: concept
+        heading: The local layer stack is where refinement happens
+        system: >-
+          Everything composed lands somewhere you can still edit it. That is the superpower, and
+          also the bill.
+        body: |
+          Composition brings assets in, and the local layer stack is where all of that composed
+          content becomes refinable. Robots can be articulated and assembly lines simulated,
+          materials can be modified and variants selected, all downstream of the assets themselves.
+
+          Sparse overrides are often called OpenUSD's superpower for exactly this reason. You can
+          work modularly, assemble the result, and keep refining it without touching the sources.
+          Encapsulating assets in modular layers is what amortizes the cost of a layer both within
+          one scene and across many.
+        points:
+          - "Composed content stays open to refinement in the local layer stack."
+          - "Sparse overrides let assembly and refinement happen downstream of the asset."
+          - "Modular layers amortize a layer's cost within one scene and across scenes."
+      - kind: concept
+        heading: Deduplication after the fact is not free
+        system: >-
+          Somebody has to walk the scene and confirm the forty robot arms are still forty of the
+          same arm. That somebody is your runtime.
+        body: |
+          After composition, a runtime may be able to detect that attribute values or whole parts
+          are identical and deduplicate them. That is real, and it is not free. Deduplication
+          trades time and algorithmic complexity for a smaller in-memory scene.
+
+          The work is per copy. Every robot arm has to be compared against the source to learn
+          whether it has been refined and whether it carries overrides. The more repetition a scene
+          holds, the more that comparison costs, and repetition is the entire reason the scene was
+          built modularly in the first place.
+        points:
+          - "Post-composition deduplication trades processing time for in-memory scene size."
+          - "Each repeated subgraph has to be inspected for overrides before it can be shared."
+          - "The cost grows with exactly the repetition that modular authoring encourages."
+      - kind: api
+        heading: Repetition through composition alone
+        system: >-
+          Three arms, three arcs, one quiet refinement. Nothing here says the copies are
+          interchangeable, because nothing here can.
+        body: |
+          Composition repeats an asset by referencing it at several prims, and any of those prims
+          may then be refined. Because refinement is always permitted, the presence of an override
+          cannot be known without going and looking for it.
+        code: |
+          from pxr import Usd, UsdGeom
+
+          stage = Usd.Stage.CreateNew("scenario.usda")
+          for name in ("RobotArm_01", "RobotArm_02", "RobotArm_03"):
+              prim = UsdGeom.Xform.Define(stage, f"/World/{name}").GetPrim()
+              prim.GetReferences().AddReference("./RobotArm.usd")
+
+          # One copy is refined downstream, which composition fully allows.
+          joint = stage.GetPrimAtPath("/World/RobotArm_02/joint_1")
+          UsdGeom.Xformable(joint).AddRotateXOp().Set(10.0)
+
+          # With nothing declared, sameness has to be discovered prim by prim.
+          for prim in stage.Traverse():
+              print(prim.GetPath(), len(prim.GetPrimStack()))
+
+          stage.GetRootLayer().Save()
+      - kind: concept
+        heading: Instancing declares the answer in advance
+        system: >-
+          Yes, yes, we know they are identical. Nobody touched them. Please stop looking.
+        body: |
+          It would be useful to be able to say up front that a particular scene element is not open
+          to refinement. That statement is instancing, a declarative deduplication of modular
+          repetition. You limit per-instance customization and the composed result is shared among
+          the copies, producing a fast and memory-efficient view of the scene.
+
+          The saving is the inspection you no longer pay for. Declaratively tagging parts of a
+          scene as closed to downstream editing lets scenegraph processors skip the comparison
+          entirely, simplify their view of the scene, and spend nothing discovering what you have
+          already told them.
+
+          Later lessons cover the two implementations OpenUSD provides, scenegraph instancing and
+          point instancing. Both rest on this same bargain, and the rest of the floor is a long
+          argument about how much refinement can be won back afterwards.
+        points:
+          - "Instancing declares that tagged content will not be refined downstream."
+          - "The shared composed result replaces per-copy inspection."
+          - "Scenegraph instancing and point instancing are the two implementations of the declaration."
+      - kind: work_order
+        heading: Forty referenced arms and one honest question
+        system: >-
+          Decide what the repetition is for before deciding how to represent it.
+        body: |
+          A scenario in the Wilds references one robot arm asset forty times, and a handful of those
+          arms carry downstream overrides that pose them differently. The composed stage is correct,
+          modular, and completely refinable, which is exactly what composition promised.
+
+          What the arrangement cannot say is that most of those arms are interchangeable. A runtime
+          that wants to represent the repeated structure once has to go arm by arm, comparing each
+          against the source to see whether anything was authored on it. That comparison scales
+          with the repetition, so the more the scene reuses, the more it pays.
+
+          The alternative fits in one sentence. Declare up front that particular elements are closed
+          to refinement, and the composed result can be shared with no inspection at all. Reading
+          this arrangement means being able to state that trade in both directions, including its
+          price, which is the sparse overrides on the shared content you are agreeing not to author.
+        points:
+          - "Composition repeats and refines; deduplication then has to be discovered."
+          - "Discovery costs time per repeated subgraph, which grows with reuse."
+          - "Instancing declares the sameness instead of detecting it."
+          - "The declaration is paid for with per-instance refinement of the shared content."
+      - kind: recap
+        heading: What you now know
+        body: |
+          Modular layers and composition give you repetition plus unlimited downstream refinement,
+          and deduplicating that result afterwards costs processing time per repeated copy.
+          Instancing declares in advance that specific elements are not open to refinement, which
+          lets OpenUSD share their composed structure and skip the comparison work entirely.
+    apply:
+      f7_dedup_declaration: >-
+        Say what a runtime must do to deduplicate ordinary composed repetition, what instancing
+        declares instead, and what the declaration costs you. Sign the waiver before the Thickets
+        hand you three benches.
+
+  - source: docs/asset-modularity-instancing/authoring-scenegraph-instancing/exercise-nested-instancing.md
+    title: Nested Instancing in Practice
+    objective: Move the instance boundary up to the assembly and read the prim, instance, and prototype counts and the authoring flexibility that result.
+    intro: >-
+      The component boxes already share. Now the Mirror Forge wants the whole rack to share, and it
+      is willing to pay you in load time. Fewer prototypes, larger prototypes, and a pallet full of
+      hand-placed boxes that all suddenly agree with one another.
+    beats:
+      - kind: concept
+        heading: A higher boundary yields fewer, larger prototypes
+        system: >-
+          Twenty-five instances instead of fourteen hundred and fifty. The memory graph sends
+          flowers.
+        body: |
+          Nested instancing here means marking the assemblies instanceable when those assemblies
+          already contain instanced components. The rack aggregate becomes the shared boundary, and
+          everything inside it is represented once.
+
+          The warehouse scenario reports the change plainly. With no instancing it composes 44,408
+          prims, no instances, and no prototypes. With the component models instanceable it composes
+          1,711 prims, 1,450 instances, and three prototypes. With the racks instanceable instead it
+          composes 1,482 prims, 25 instances, and a single prototype based on Rack_BoxPallet_A01.
+
+          Only the racks are marked, not the box-pallet assemblies inside them, because
+          BoxPallet_A01 is already part of Rack_BoxPallet_A01. Choosing the outer boundary is what
+          produces fewer and larger prototypes.
+        points:
+          - "An instanceable assembly whose contents are instanced produces nested instancing."
+          - "Marking the outer aggregate turned 1,450 instances into 25 and three prototypes into one."
+          - "Marking the inner assembly instead would give more prototypes, each smaller."
+      - kind: concept
+        heading: The shared subgraph stops taking local opinions
+        system: >-
+          A creator posed every box by hand for realism. The prototype has reviewed those poses and
+          selected one.
+        body: |
+          Before nesting, each pallet in the scenario showed its own decal arrangement, because a
+          creator authored local opinions on the individual boxes to give them unique positions and
+          rotations for added realism. Those opinions sit on prims inside the rack.
+
+          Once the rack is an instance, those prims are instance proxies, so their local opinions
+          are ignored and every pallet shows the same formation. The diversity remaining in the
+          composed stage is whatever the shared prototype itself contains.
+
+          That is the trade in one line. The higher up the prim hierarchy the instance boundary
+          moves, the more performance it returns and the less authoring flexibility remains beneath
+          it. Refinement techniques exist to win some of that flexibility back, and every one of
+          them operates on the instance roots rather than inside them.
+        points:
+          - "Local opinions authored inside a nested prototype no longer resolve on the stage."
+          - "A higher instance boundary trades authoring flexibility for load and render time."
+          - "Time to first frame in the source exercise moved from 27.77 seconds to 5.31 seconds."
+      - kind: api
+        heading: Reference the aggregate, mark the aggregate
+        system: >-
+          The row asset already handled its seats. One promise per row is the whole day's work.
+        body: |
+          An aggregate asset that already contains instanceable descendants needs nothing opened.
+          Reference it at a new prim, set instanceable on that prim, and OpenUSD composes the nested
+          structure and derives the prototypes each level needs.
+
+          UsdUtils.ComputeUsdStageStats reports totalPrimCount, totalInstanceCount, and
+          prototypeCount, which is how the effect of moving the boundary gets observed rather than
+          assumed.
+        code: |
+          from pxr import Usd, UsdGeom, UsdUtils
+
+          stage = Usd.Stage.CreateNew("nested_rows.usda")
+          UsdGeom.Xform.Define(stage, "/City/InstanceWilds/NestedRows")
+
+          for name in ("RowA", "RowB"):
+              row = UsdGeom.Xform.Define(
+                  stage, f"/City/InstanceWilds/NestedRows/{name}"
+              ).GetPrim()
+              row.GetReferences().AddReference("assets/bench_row.usda")
+              row.SetInstanceable(True)
+
+          print(UsdUtils.ComputeUsdStageStats(stage))
+
+          stage.GetRootLayer().Save()
+      - kind: work_order
+        heading: Two rows whose seats already share
+        system: >-
+          The inner level is finished. Author the outer one and read what the counts do.
+        body: |
+          At the Scenegraph Thickets, bench_row.usda is published in the assets folder and its two
+          seats are already instanceable inside the asset, so the inner level of sharing is done.
+          Two empty transforms named RowA and RowB stand beneath /City/InstanceWilds/NestedRows and
+          neither one points at anything.
+
+          Empty transforms compose no bench content at all, so neither level has anything to share
+          yet. The tempting alternative is to open the row and mark its individual seats, which
+          repeats what the published asset already did and adds no sharing the outer arrangement
+          would not provide on its own.
+
+          The finished arrangement needs the same bench_row.usda reference on both rows and
+          instanceable set to true on both, then a saved root layer. Marking the outer root leaves
+          the inner instances undisturbed, because each level derives its own prototypes from its
+          own arcs. What it does disturb is any per-seat opinion authored beneath a row, since those
+          paths resolve to instance proxies once the row itself is an instance.
+        points:
+          - "Author the arc and the instanceable metadata on the aggregate root itself."
+          - "Each nesting level derives its own prototypes, so the inner sharing is unaffected."
+          - "Per-seat opinions beneath an instanced row stop resolving, which is the flexibility being traded."
+          - "Compare totalPrimCount, totalInstanceCount, and prototypeCount to confirm the boundary moved."
+      - kind: recap
+        heading: What you now know
+        body: |
+          Marking assemblies instanceable when their components are already instanced produces
+          nested instancing, which collapses many small instances into a few large prototypes and
+          sharply reduces prim count and time to first frame. The cost is paid inside the new
+          prototype, where local opinions on individual descendants no longer resolve.
+    apply:
+      f7_nested_rack_rows: >-
+        Reference bench_row.usda on RowA and RowB and mark both rows instanceable. The seats inside
+        already share; you are buying the row.
+
+  - source: docs/asset-modularity-instancing/refining-scenegraph-instances/scenegraph-instance-refinement.md
+    title: Instance Editability and Refinement
+    objective: Apply the three rules of instance editability and identify the refinement techniques that work through the editable instance root.
+    intro: >-
+      Three rules, and the Thickets will hold you to all of them. Prototypes are a runtime fiction.
+      Instance proxies are politely immovable. The instanceable prim is yours, and every refinement
+      technique on this floor is a different way of exploiting that one loophole.
+    beats:
+      - kind: concept
+        heading: Three rules decide where an opinion can land
+        system: >-
+          The performance came from somewhere. It came from here.
+        body: |
+          The performance benefit of instancing comes from the fact that instances cannot be
+          edited. You are choosing to limit OpenUSD's superpower of sparse overrides in exchange
+          for a cheaper scene, and the limit has exactly three rules.
+
+          Prototypes are a runtime data model and are not editable. Instance proxies are not
+          editable, and local opinions authored on them are discarded. Instanceable prims are
+          editable, which is what lets every instance carry its own transform and root metadata.
+        points:
+          - "Prototypes are not editable, because they are a runtime data model."
+          - "Instance proxies are not editable, and local opinions on them are discarded."
+          - "Instanceable prims are editable, which is what per-instance placement relies on."
+      - kind: concept
+        heading: The two invalid overrides go wrong differently
+        system: >-
+          One produces an error. The other produces nothing at all, which is worse, because
+          nothing looks a great deal like success from a distance.
+        body: |
+          A prototype path such as /__Prototype_01 appears in a tree view and looks addressable. An
+          over authored at that path composes as a dangling override completely unrelated to the
+          actual prototype, because prototype paths are generated at runtime and shift between runs.
+
+          An over authored beneath an active instance root, such as /World/RobotArm_01/joint_1,
+          targets an instance proxy instead. Authoring there is refused outright, since a property
+          spec cannot be created at an instance proxy path.
+
+          The same layer can carry a perfectly valid override one line away. A translation authored
+          directly on /World/RobotArm_01 applies and positions the prim, because that prim is the
+          instanceable prim rather than shared content.
+        points:
+          - "A prototype override is a dangling opinion, neither an error nor an edit."
+          - "Authoring to an instance proxy is refused, because the spec cannot be created."
+          - "The instance root accepts ordinary opinions such as transforms and metadata."
+      - kind: api
+        heading: Edit the root, read the proxies
+        system: >-
+          Two lines, two outcomes. The difference is one path segment.
+        body: |
+          Placement and root metadata belong on the instanceable prim. Anything below it can be
+          reached through instance proxies, and reading is all those paths support.
+        code: |
+          from pxr import Usd, UsdGeom
+
+          stage = Usd.Stage.Open("scenario.usda")
+          arm = stage.GetPrimAtPath("/World/RobotArm_01")
+
+          # Valid: the instanceable prim is editable.
+          UsdGeom.Xformable(arm).AddTranslateOp().Set((10.0, 0.0, 20.0))
+
+          # Read-only: every descendant resolves as an instance proxy.
+          for proxy in Usd.PrimRange(arm, Usd.TraverseInstanceProxies()):
+              print(proxy.GetPath(), proxy.IsInstanceProxy())
+
+          stage.GetRootLayer().Save()
+      - kind: concept
+        heading: Refinement is the permitted set of edits
+        system: >-
+          You do not have to choose between variety and sharing. You do have to choose which of
+          five techniques you are willing to pay for.
+        body: |
+          Needing variety does not rule instancing out. Instances cannot be edited, but they can be
+          refined, and refinement means a permissible edit on the instanceable prim with one of two
+          effects. Either the edit is natively inherited by the instance, or it changes that
+          instance's composition and triggers the creation of a new prototype.
+
+          Those two effects are what separate the techniques ahead. Deinstancing removes one prim
+          from the set of instances. Hierarchical refinement authors inherited properties such as
+          primvars, transformation operations, and visibility on an ancestor. Refinement using
+          variant sets makes a different selection. Ad hoc arcs refinement adds a composition arc.
+          Broadcasted refinement authors on an inherit or specialize target that many instances
+          share.
+        points:
+          - "A refinement is either natively inherited or produces an additional prototype."
+          - "Deinstancing, hierarchical refinement, variant sets, ad hoc arcs, and broadcasting are the five techniques."
+          - "Every technique operates on the instanceable prim, never inside the shared subgraph."
+      - kind: work_order
+        heading: A decal that three different paths cannot hide
+        system: >-
+          Learn which prim accepts the opinion before deciding which technique to reach for.
+        body: |
+          A warehouse scenario stands with its component boxes already instanced. One box,
+          CubeBox_A04_26cm_18, is meant to ship without its decal, and the decal is a mesh named
+          SM_CubeBox_A04_Decal_01 beneath that box.
+
+          Three paths present themselves and two of them go nowhere. Setting visibility on the
+          decal mesh targets an instance proxy, which refuses the opinion outright and says so.
+          Reaching for the prototype path the tree view displays produces an opinion attached to a
+          name that will not exist on the next run, and says nothing at all. Neither attempt changes
+          the composed stage.
+
+          The path that works runs through the box itself, which is the instanceable prim and
+          remains fully editable. Its own translation, visibility, and activation all accept
+          opinions, and every refinement technique on this floor builds on that one fact. Knowing
+          which of the three prims is editable is what tells you whether a given change wants a
+          variant selection, an added arc, an inherited property, or an outright deinstance.
+        points:
+          - "Instance proxies refuse authoring; prototype paths absorb it into nothing."
+          - "The instanceable prim accepts transforms, visibility, activation, and metadata."
+          - "Which prim is editable determines which refinement technique can deliver a change."
+          - "Prototype paths shift between runs and are never an authoring target."
+      - kind: recap
+        heading: What you now know
+        body: |
+          Instancing buys its performance by closing instances to editing, and the three rules say
+          exactly where that closure applies: prototypes never, instance proxies never, instanceable
+          prims always. Refinement is the set of edits the third rule permits, either inherited
+          natively or paid for with an additional prototype.
+    apply:
+      f7_editability_rules: >-
+        Say what a prototype override and an instance proxy override each accomplish, then define
+        refinement in terms of the instanceable prim. Learn the three rules before the Thickets ask
+        you to bend them.
+
+  - source: docs/asset-modularity-instancing/refining-scenegraph-instances/scenegraph-variant-set-refinement.md
+    title: Refinement Using Variant Sets
+    objective: Refine instances through variant selections authored on the instanceable prim, and account for the prototypes those selections create.
+    intro: >-
+      Some variety is not an exception, it is a workflow. Boxes open, boxes close, boxes get
+      allocated for shipping. Encode the states once inside the asset, put the switch where an
+      instance can still reach it, and the Thickets will let you have diversity and sharing in the
+      same scene.
+    beats:
+      - kind: concept
+        heading: Variant selections are composition, so prototypes follow them
+        system: >-
+          The switch is part of composition, which means OpenUSD counts it when deciding what can
+          be shared.
+        body: |
+          A recurring workflow pattern can often be captured as variants or states inside the asset
+          itself. Variant sets are part of composition, and variant selections are evaluated when
+          OpenUSD determines which implicit prototypes it needs to create.
+
+          That is what makes them a refinement technique. Selecting a different variant edits the
+          subgraph of an instance, and OpenUSD works out whatever additional prototypes the
+          selections require. A useful pattern is to place the variant set on the instanceable prim
+          so selections stay available even when the asset is instanced, which pairs directly with
+          the asset structure concept of asset parameterization.
+
+          Two states across a population of boxes means two prototypes rather than one. Half the
+          boxes open and half closed still share; they simply share across two prototypes.
+        points:
+          - "Variant selections are evaluated when implicit prototypes are derived."
+          - "Placing the variant set on the instanceable prim keeps selections reachable on an instance."
+          - "Each distinct selection in use can add one prototype, not one hierarchy per copy."
+      - kind: concept
+        heading: The counts scale better than deinstancing
+        system: >-
+          A little foresight in the asset buys refinement that costs almost nothing to repeat.
+        body: |
+          The warehouse scenario makes the comparison concrete. Plain instancing composes 1,711
+          prims, 1,450 instances, and three prototypes. Deinstancing one box gives 1,741 prims and
+          1,449 instances. Deinstancing two gives 1,771 prims and 1,448 instances.
+
+          Switching two boxes to an allocated variant instead composes 1,737 prims, still 1,450
+          instances, and four prototypes. The instance count never drops, the new prototype is the
+          entire cost, and switching a third box or a three hundredth adds nothing further to the
+          prim count because they all resolve to a prototype that already exists.
+        points:
+          - "Variant refinement keeps every copy an instance, so the instance count holds."
+          - "A newly used selection adds one prototype, not one hierarchy per copy."
+          - "The technique scales with the number of copies that share the same selection."
+      - kind: api
+        heading: Author the set on the root, then select
+        system: >-
+          Two benches, one variant set apiece, two different answers. Both stay in the shared
+          arrangement.
+        body: |
+          Author the variant set on the prim that carries the asset arc, add the states it can hold,
+          and set the selection per copy. Because the set lives on the instanceable prim, each
+          instance can answer differently while both keep their instanceable metadata.
+        code: |
+          from pxr import Usd, UsdGeom
+
+          stage = Usd.Stage.CreateNew("benches.usda")
+
+          for name, state in (("BenchA", "stored"), ("BenchB", "allocated")):
+              prim = UsdGeom.Xform.Define(
+                  stage, f"/City/InstanceWilds/{name}"
+              ).GetPrim()
+              prim.GetReferences().AddReference("assets/bench.usda")
+              prim.SetInstanceable(True)
+
+              status = prim.GetVariantSets().AddVariantSet("statusVariant")
+              status.AddVariant("stored")
+              status.AddVariant("allocated")
+              status.SetVariantSelection(state)
+
+          stage.GetRootLayer().Save()
+      - kind: work_order
+        heading: Two benches that need different states and no exceptions
+        system: >-
+          Put the switch where an instance can reach it, then answer differently per copy.
+        body: |
+          Two benches stand at the Scenegraph Thickets, BenchA and BenchB, each referencing
+          bench.usda and each carrying instanceable true. Both draw on one prototype, and neither
+          has any notion of a state.
+
+          The pair needs to report different states, and the obvious places to put that information
+          are unavailable. No descendant of either bench can hold it, because those paths resolve to
+          read-only instance proxies. Clearing instanceable would open the descendants and also cost
+          both benches their place in the shared prototype, all for what is fundamentally a switch
+          with two positions.
+
+          The finished pair needs a statusVariant set on each bench holding the variants stored and
+          allocated, with stored selected on BenchA, allocated selected on BenchB, and instanceable
+          still true on both. The set belongs on the same prim that carries the asset arc, since
+          that is the prim a selection can still be authored on. Two selections in use means two
+          prototypes, which is the whole price of the variety.
+        points:
+          - "Author the variant set on the instanceable prim, not inside the referenced content."
+          - "A selection is a composition change, so OpenUSD derives the prototypes it implies."
+          - "Both copies stay instanceable, so the instance count is unchanged."
+          - "Distinct selections in use, not the number of copies, determine how many prototypes appear."
+      - kind: recap
+        heading: What you now know
+        body: |
+          Variant sets authored on the instanceable prim let each instance select a different state
+          while remaining an instance. Because selections are composition, OpenUSD derives one
+          additional prototype per distinct selection in use, which keeps prim counts nearly flat
+          and scales far better than deinstancing when the variation belongs to an established
+          workflow.
+    apply:
+      f7_status_variants: >-
+        Add a statusVariant set to BenchA and BenchB, then select stored and allocated respectively
+        while both stay instanceable. Two states, two prototypes, nothing deinstanced.
+
+  - source: docs/asset-modularity-instancing/refining-scenegraph-instances/scenegraph-hierarchical-refinement.md
+    title: Hierarchical Refinement
+    objective: Refine instances with inherited properties such as primvars, transformation operations, and visibility without creating additional prototypes.
+    intro: >-
+      The cheapest variety on the floor. Some properties inherit down the hierarchy, which means an
+      opinion on the instance root is read by shaders inside the shared subgraph without composing
+      anything new. The prototype count does not move. Neither does the prim count.
+    beats:
+      - kind: concept
+        heading: Inherited properties refine without new prototypes
+        system: >-
+          Nothing new is composed, so nothing new has to be shared. The counts stay exactly where
+          they were.
+        body: |
+          Hierarchical refinement means refining instances by authoring inherited properties on
+          ancestor prims. Three kinds do most of the work. Transformation operations move, rotate,
+          or scale an ancestor and affect every descendant instance. Visibility on an ancestor hides
+          all of its descendant instances. Primvars assigned on an ancestor can create shading and
+          material variation among the instances beneath it.
+
+          None of these creates a prototype. They lean on inheritance rather than composition, so
+          the subgraphs among the instances remain identical and only the ancestor carries a new
+          opinion.
+        points:
+          - "Transformation operations on an ancestor apply to every descendant instance."
+          - "Visibility on an ancestor hides its descendant instances."
+          - "Primvars on an ancestor can vary shading across the instances beneath it."
+          - "No additional prototype is derived, because no composition changed."
+      - kind: concept
+        heading: Primvars inherit, so shaders inside a prototype can read them
+        system: >-
+          The material asks the hierarchy a question. The instance root answers.
+        body: |
+          Primvars can drive material properties such as color, and the convenient part is that
+          they inherit down the prim hierarchy. An opinion authored on the instanceable prim, or on
+          any ancestor of it, can be read by materials anywhere inside that instance's subgraph.
+
+          That makes them a very lightweight way to introduce a great deal of variety. In the
+          source exercise a custom cleanness primvar drives the occlusion input of the box's
+          cardboard material through a primvar reader shader, so a lower value darkens the box and
+          marks it as having sat in the warehouse too long.
+
+          The counts confirm how little this costs. Plain instancing composes 1,711 prims, 1,450
+          instances, and three prototypes; primvar refinement composes exactly the same 1,711
+          prims, 1,450 instances, and three prototypes. The only new opinions live on instanceable
+          prims that were already counted, and the single prototype absorbs all of the shading
+          variability on its own.
+        points:
+          - "A primvar authored on an ancestor is readable by materials throughout the subgraph."
+          - "A primvar reader shader inside the asset turns the value into appearance."
+          - "Prim, instance, and prototype counts are all unchanged by primvar refinement."
+      - kind: api
+        heading: Author the primvar on the instance root
+        system: >-
+          Three benches, one prototype, two shades. The third bench declined to comment.
+        body: |
+          Use UsdGeom.PrimvarsAPI on the instanceable prim to create the primvar and set its value.
+          Constant interpolation applies one value across the whole instance, which is what per-copy
+          variation wants.
+        code: |
+          from pxr import Gf, Sdf, Usd, UsdGeom
+
+          stage = Usd.Stage.Open("benches.usda")
+
+          for name, shade in (("BenchA", 0.5), ("BenchB", 0.25)):
+              prim = stage.GetPrimAtPath(f"/City/InstanceWilds/{name}")
+              primvars = UsdGeom.PrimvarsAPI(prim)
+              color = primvars.CreatePrimvar(
+                  "displayColor",
+                  Sdf.ValueTypeNames.Color3fArray,
+                  UsdGeom.Tokens.constant,
+              )
+              color.Set([Gf.Vec3f(shade, shade, shade)])
+
+          stage.GetRootLayer().Save()
+      - kind: work_order
+        heading: Three identical benches and two that need shading
+        system: >-
+          Author on the roots and let inheritance carry the value into the shared content.
+        body: |
+          Three benches stand at the Scenegraph Thickets, BenchA, BenchB, and BenchC, each
+          referencing bench.usda and each carrying instanceable true. All three draw on one
+          prototype and all three look identical.
+
+          Two of them need to read as darker than the third. The shading opinion cannot go on the
+          seat inside a bench, because that path resolves to a read-only instance proxy, and it
+          should not cost either bench its place in the prototype either. What is wanted is variety
+          the shared subgraph reads rather than variety the shared subgraph contains.
+
+          The finished arrangement needs a constant displayColor primvar on BenchA set to
+          (0.5, 0.5, 0.5) and on BenchB set to (0.25, 0.25, 0.25), with BenchC left as published
+          and all three still instanceable. Because primvars inherit downward, the value authored
+          on each root is visible to the shared seat beneath it, and because nothing about the
+          composition changed, the prototype count stays where it was.
+        points:
+          - "Author the primvar on the instanceable prim; inheritance carries it into the subgraph."
+          - "Constant interpolation gives the whole instance one value."
+          - "Leaving a copy unauthored is how it keeps the asset's own appearance."
+          - "Prim and prototype counts are unaffected, which is why this is the cheapest variety available."
+      - kind: recap
+        heading: What you now know
+        body: |
+          Hierarchical refinement uses inherited properties on ancestors, primvars, transformation
+          operations, and visibility, to vary instances without changing their composition. Because
+          nothing new is composed, no prototype is added and no prim count grows, which makes it the
+          least expensive way to introduce variety across a large instanced population.
+    apply:
+      f7_primvar_shade: >-
+        Author a constant displayColor primvar on BenchA and BenchB, leave BenchC as published, and
+        keep every bench instanceable. Variety the prototype reads rather than variety it holds.
+
+  - source: docs/asset-modularity-instancing/refining-scenegraph-instances/scenegraph-ad-hoc-arcs-refinement.md
+    title: Ad Hoc Arcs Refinement
+    objective: Add a composition arc to an instanceable prim to refine it, and judge when the prototype that results pays for itself.
+    intro: >-
+      Prototypes are derived from composition arcs, which is a rule you may use as well as obey.
+      Add an arc to an instance and OpenUSD builds a new prototype carrying whatever the arc
+      brought with it. Add the same arc to a dozen instances and the Forge quietly stops
+      complaining.
+    beats:
+      - kind: concept
+        heading: A new arc on an instance root buys a new prototype
+        system: >-
+          The instance stays an instance. It simply joins a different prototype.
+        body: |
+          New composition arcs can be added to an instanceable prim on the local layer stack, and
+          within that additional arc you can introduce new opinions on the instance. The result is a
+          new prototype for that instance and for any copy that shares the same new arc.
+
+          In the source example, four robot arm instances share one prototype until an internal
+          reference carrying a different pose is added to one of them. Afterwards three instances
+          use the original prototype and one uses a new prototype that includes the extra reference.
+
+          Nothing is deinstanced, and the arc is authored downstream rather than in the asset, so
+          the source asset itself is untouched.
+        points:
+          - "Arcs added on the instanceable prim are legal, because that prim is editable."
+          - "Prototypes are built off composition arcs, so an extra arc means an extra prototype."
+          - "Copies that share the same added arc share the resulting prototype."
+      - kind: concept
+        heading: The technique pays off in proportion to repetition
+        system: >-
+          One instance with a private prototype is an expensive way to be special.
+        body: |
+          The warehouse counts show the shape of the cost. Plain instancing composes 1,711 prims,
+          1,450 instances, and three prototypes. Stamping two boxes through an added reference
+          composes 1,741 prims, still 1,450 instances, and four prototypes.
+
+          The prim count rose by thirty, the instance count did not move, and one prototype was
+          added holding the modifications the new arc introduced. That prototype is then shared by
+          both stamped boxes, and by every further box given the same arc.
+
+          The more instances take the arc, the better the technique looks. If only one or two copies
+          will ever want it, deinstancing is simpler and more straightforward. Preserving instancing
+          at all costs is not the goal, since OpenUSD has many ways to perform well without it.
+        points:
+          - "The instance count is unchanged, because nothing left the set of instances."
+          - "One added prototype is shared by every instance carrying the same arc."
+          - "With only one or two copies involved, deinstancing is the better option."
+      - kind: api
+        heading: Add the second reference and keep the metadata
+        system: >-
+          Two benches, one placard, nothing deinstanced. The arc does the talking.
+        body: |
+          Author the additional reference on the instance root alongside the asset reference it
+          already carries. Both arcs contribute to the composed instance, and the instanceable
+          metadata stays exactly as it was.
+        code: |
+          from pxr import Usd
+
+          stage = Usd.Stage.Open("benches.usda")
+
+          for name in ("BenchA", "BenchB"):
+              prim = stage.GetPrimAtPath(f"/City/InstanceWilds/{name}")
+              prim.GetReferences().AddReference("assets/sign.usda")
+              print(prim.IsInstanceable(), prim.IsInstance())
+
+          stage.GetRootLayer().Save()
+      - kind: work_order
+        heading: A placard for two benches out of three
+        system: >-
+          Give the pair a second arc and let them share the prototype it produces.
+        body: |
+          Three benches stand at the Scenegraph Thickets, BenchA, BenchB, and BenchC, each
+          referencing bench.usda and each carrying instanceable true. All three draw on one
+          prototype.
+
+          Two of the three have been marked for a placard, and the placard is published content of
+          its own in sign.usda. Adding it beneath either bench is impossible, since those paths
+          resolve to read-only instance proxies, and clearing instanceable on the pair would
+          materialize two complete bench hierarchies in order to deliver one piece of shared
+          signage.
+
+          The finished arrangement needs a second reference to sign.usda on BenchA and BenchB, with
+          both still instanceable and BenchC untouched. Because prototypes are derived from arcs,
+          the pair now composes differently from BenchC and OpenUSD derives one additional prototype
+          that the two of them share. A third bench given the same reference would join that same
+          prototype rather than add another.
+        points:
+          - "The additional reference goes on the instance root, which remains editable."
+          - "Both prims keep instanceable true, so the instance count is unchanged."
+          - "The added arc produces one prototype shared by every copy that carries it."
+          - "Judge the technique by how many copies will take the arc, not by how clever it is."
+      - kind: recap
+        heading: What you now know
+        body: |
+          Adding a composition arc to an instanceable prim refines that instance without
+          deinstancing it, and OpenUSD derives one new prototype shared by every copy carrying the
+          same arc. The instance count holds and the prim cost is that prototype, so the technique
+          is worth it in proportion to how many instances will use the arc.
+    apply:
+      f7_stamp_arc: >-
+        Add a second reference to sign.usda on BenchA and BenchB and leave both instanceable. One
+        added arc, one new prototype, two benches sharing it.
+
+  - source: docs/asset-modularity-instancing/refining-scenegraph-instances/scenegraph-broadcasted-refinement.md
+    title: Broadcasted Refinement
+    objective: Broadcast one opinion to many instances through a shared inherit or specialize target instead of authoring each instance separately.
+    intro: >-
+      Adding the same arc bench by bench is honest work and terrible engineering. Inherits and
+      specializes were built to broadcast, so put a class prim inside the assembly, point every copy
+      at it, and author once. The Forge will receive the message on all channels simultaneously.
+    beats:
+      - kind: concept
+        heading: Inherits and specializes broadcast downstream opinions
+        system: >-
+          One namespace, many listeners. This is the only arc that gets to send a memo.
+        body: |
+          Broadcasted refinement leverages the special broadcasting ability of inherit and
+          specialize arcs. Both are built for downstream refinement, so new opinions authored on
+          the inherited or specialized namespace in any downstream layer stack reach every prim
+          whose inherit or specialize arc targets that namespace, applied according to LIVERPS.
+
+          This works on instances as well. In the source example the robot arms in one work cell
+          inherit from a shared namespace inside that cell and the arms in another cell do not.
+          Authoring a new pose in the shared namespace reaches the first cell's arms and leaves the
+          second cell's arms exactly as they were.
+
+          The instances that received the broadcast now compose differently from the ones that did
+          not, so they share a new prototype among themselves.
+        points:
+          - "Inherit and specialize targets accept opinions from any downstream layer stack."
+          - "Every prim arcing to that namespace receives the opinions, resolved by LIVERPS."
+          - "The instances that receive the broadcast share one new prototype."
+      - kind: concept
+        heading: One opinion is cheaper than many identical ones
+        system: >-
+          The alternative is authoring the same arc box by box until the pallet is finished or you
+          are.
+        body: |
+          The warehouse counts make the comparison direct. Plain instancing composes 1,711 prims,
+          1,450 instances, and three prototypes. Broadcasting a stamp to every box on one pallet
+          composes 1,747 prims, still 1,450 instances, and four prototypes.
+
+          Every box on that pallet now shares the same new prototype carrying the stamp, and the
+          instance count never moved. Reaching those boxes one at a time through individual arcs
+          would author the same change many times over for the same composed result.
+
+          The technique is at its best when a modification has to reach many instances that already
+          share a common inherit or specialize target. Assets that ship such a target, often a class
+          prim inside the assembly, are what make the technique available at all.
+        points:
+          - "Authoring on the shared target once reaches every instance that arcs to it."
+          - "The instance count is unchanged and one prototype is added for the affected group."
+          - "A class prim inside the assembly is the usual shape of a broadcast target."
+      - kind: api
+        heading: Create the target, arc to it, author once
+        system: >-
+          A class prim, two specialize arcs, one reference. The pallet updates itself.
+        body: |
+          Create the class prim inside the assembly, give each copy a specialize arc to it, then
+          author the refinement on the class. The opinion could equally be a direct one; a reference
+          is simply a convenient way to bring published content along with it.
+        code: |
+          from pxr import Usd, UsdGeom
+
+          stage = Usd.Stage.Open("pallet.usda")
+          pallet = "/City/InstanceWilds/BenchPallet"
+
+          shared = stage.CreateClassPrim(f"{pallet}/_PalletBench")
+
+          for name in ("BenchA", "BenchB"):
+              prim = stage.GetPrimAtPath(f"{pallet}/{name}")
+              prim.GetSpecializes().AddSpecialize(shared.GetPath())
+
+          # One opinion, authored once, reaching both benches.
+          shared.GetReferences().AddReference("assets/sign.usda")
+
+          stage.GetRootLayer().Save()
+      - kind: work_order
+        heading: Every bench on the pallet needs the same placard
+        system: >-
+          Author the change once, on the target the copies share.
+        body: |
+          A pallet of benches stands at the Scenegraph Thickets. BenchA and BenchB sit beneath
+          /City/InstanceWilds/BenchPallet, each referencing bench.usda and each carrying
+          instanceable true, and the pallet holds no shared namespace of any kind.
+
+          Every bench on this pallet needs the same placard. Adding the arc to each bench
+          individually produces the right picture and the wrong structure, because the next change
+          to the pallet would begin the same round of per-copy authoring again. Nothing beneath
+          either bench can hold the change either, since those paths resolve to read-only instance
+          proxies.
+
+          The finished pallet needs a class prim at /City/InstanceWilds/BenchPallet/_PalletBench, a
+          specialize arc from each bench to that class, and one reference to sign.usda authored on
+          the class itself. The class prim is the shared namespace, so the single opinion on it
+          reaches both benches and any bench added to the pallet later. Both benches keep
+          instanceable true and share the one new prototype the broadcast produces.
+        points:
+          - "A class prim is a specialize target rather than scene content meant to render directly."
+          - "Each copy needs its own arc to the target; the opinion is authored only once."
+          - "Benches added to the pallet later receive the broadcast with no further authoring."
+          - "The affected instances stay instances and share a single new prototype."
+      - kind: recap
+        heading: What you now know
+        body: |
+          Broadcasted refinement authors one opinion on a shared inherit or specialize target, and
+          every instance arcing to that namespace receives it, resolved by LIVERPS. The affected
+          instances remain instances and share one additional prototype, which makes this the
+          efficient choice whenever the same modification has to reach a whole group of copies.
+    apply:
+      f7_broadcast_class: >-
+        Create the _PalletBench class, specialize both benches to it, and reference sign.usda on the
+        class once. One opinion, whole pallet, both benches still shared.
+
+  - source: docs/asset-modularity-instancing/refining-point-instances.md
+    title: Refining Point Instances
+    objective: Prune, hide, promote, and shade individual point instances while keeping the PointInstancer's compact array representation.
+    intro: >-
+      The Wastes keep their population in arrays, which is efficient right up to the moment one
+      crate needs a name. Point instances can still be hidden, pruned, promoted into real prims, or
+      shaded individually. None of it is as convenient as a prim path, and all of it is cheaper.
+    beats:
+      - kind: concept
+        heading: Hiding and pruning are two different tools
+        system: >-
+          One of them animates. The other one leaves.
+        body: |
+          A PointInstancer can be refined downstream by pruning or hiding individual instances.
+          inactiveIds metadata prunes an instance entirely, while the invisibleIds attribute hides
+          it. Both address instances by id rather than by path, because a point has no path of its
+          own.
+
+          The rule of thumb is about time. An instance that has to turn on and off over the course
+          of an animation belongs in invisibleIds, and anything else belongs in inactiveIds. A nice
+          feature of inactiveIds is that it can be list-edited, so ids can be added and removed
+          sparsely instead of by rewriting the whole set.
+
+          Introducing an additional prototype is the other structural refinement, and point
+          instancing's explicit prototype pattern makes it a three-step job. Define a new prim
+          hierarchy for the prototype, add it to the prototypes relationship, and update protoIndices
+          so the chosen instances select it.
+        points:
+          - "inactiveIds prunes an instance; invisibleIds hides it."
+          - "Use invisibleIds when the state changes over time, inactiveIds otherwise."
+          - "inactiveIds is list-editable, so ids can be added and removed sparsely."
+          - "A new prototype needs a hierarchy, a relationship target, and updated protoIndices."
+      - kind: concept
+        heading: Promotion turns one point into a real subgraph
+        system: >-
+          The crate gets a prim path, a transform, and eventually a speaking role.
+        body: |
+          Promotion means turning a point instance into a full-fledged subgraph on the stage so it
+          can be overridden the way any other prim can. It starts with pruning the point, then
+          replaces it with the asset referenced at its own prim in the same position.
+
+          Computing that position is the part worth care. ComputeInstanceTransformsAtTime returns
+          the complete transform for each instance, accounting for the prototype's own root
+          transform as well as the per-instance positions, orientations, scales, and velocities,
+          which is more robust than reading the positions array directly. Passing the ignore-mask
+          option lets a previously deactivated instance still be queried.
+
+          Once promoted, the crate is an ordinary prim hierarchy. It can be animated, retextured, or
+          rebuilt entirely, while the rest of the population stays in its arrays.
+        points:
+          - "Promotion is pruning plus a referenced prim placed at the instance's transform."
+          - "ComputeInstanceTransformsAtTime accounts for the prototype transform and per-instance arrays."
+          - "The promoted prim accepts ordinary opinions, unlike the point it replaced."
+      - kind: api
+        heading: Hide the id, reference the asset, place the prim
+        system: >-
+          Two lines to remove a crate, three to give it a career.
+        body: |
+          Author the id on the instancer, then define the promoted prim, reference the same asset
+          the prototype uses, and place it where the point stood.
+        code: |
+          from pxr import Gf, Usd, UsdGeom
+
+          stage = Usd.Stage.Open("scatter.usda")
+          field = UsdGeom.PointInstancer(
+              stage.GetPrimAtPath("/City/InstanceWilds/CrateScatter")
+          )
+
+          # Hide the point that is about to be replaced.
+          field.CreateInvisibleIdsAttr([2])
+
+          promoted = stage.DefinePrim(
+              "/City/InstanceWilds/PromotedCrate", "Xform"
+          )
+          promoted.GetReferences().AddReference("assets/cargo.usda")
+          UsdGeom.Xformable(promoted).AddTranslateOp().Set(
+              Gf.Vec3d(4.0, 0.0, 0.0)
+          )
+
+          stage.GetRootLayer().Save()
+      - kind: concept
+        heading: Primvars vary per instance, unless something stronger answers first
+        system: >-
+          The prototype already had an opinion. Strength ordering is not impressed that yours is
+          more interesting.
+        body: |
+          Primvars authored on a PointInstancer with vertex interpolation are applied per instance,
+          so a prototype whose material reads a primvar can give every point a different value. Two
+          thousand packing peanuts can each take their own value from one array.
+
+          There is one catch worth knowing. Primvars inherit, but only where a descendant has not
+          already set a value. If the referenced prototype authors the primvar itself, that
+          descendant opinion is stronger than the ancestor opinion on the instancer, and the
+          instancer's array has no visible effect at all.
+
+          Blocking the prototype's opinion clears the way, after which the inherited per-instance
+          values resolve as intended.
+        points:
+          - "Vertex interpolation maps one array element to each instance."
+          - "A descendant opinion on the prototype outranks the ancestor opinion on the instancer."
+          - "Blocking the prototype's attribute lets the instancer's inherited values apply."
+      - kind: work_order
+        heading: One crate out of four has to leave the array
+        system: >-
+          Take the point out of the picture, then put the asset back in its place.
+        body: |
+          A scatter in the Point Wastes holds four crates. /City/InstanceWilds/CrateScatter carries
+          one prototype target, four zero indices, and four positions along X at 0, 2, 4, and 6, and
+          the crate at index 2 is the one that has to become editable.
+
+          A point instance has no prim path of its own, so there is nowhere to author on it. Every
+          array on the instancer resolves whole, and this crate needs precisely the kind of
+          individual treatment that arrays exist to avoid providing.
+
+          The finished scatter needs index 2 hidden through invisibleIds, a prim at
+          /City/InstanceWilds/PromotedCrate referencing cargo.usda, and a translation of (4, 0, 0)
+          on it, which is where the hidden point stood. The other three crates stay in their arrays
+          untouched, so the population keeps its compact representation and only the promoted crate
+          gains a path that anything can be authored against.
+        points:
+          - "invisibleIds and inactiveIds address instances by id, since points have no paths."
+          - "A promoted instance is an ordinary prim referencing the same asset the prototype uses."
+          - "Place the promoted prim at the transform the instance held so nothing appears to move."
+          - "The remaining instances keep the compact array representation."
+      - kind: recap
+        heading: What you now know
+        body: |
+          Point instances can be hidden with invisibleIds, pruned with list-editable inactiveIds,
+          promoted into full prim hierarchies for unrestricted authoring, and shaded per instance
+          through vertex-interpolated primvars. Each technique leaves the PointInstancer's compact
+          representation intact for the rest of the population and pays for individual treatment
+          only where it is asked for.
+    apply:
+      f7_promote_point: >-
+        Hide instance 2 with invisibleIds, then reference cargo.usda at PromotedCrate and translate
+        it to (4, 0, 0). One crate gets a path; the other three stay in the arrays.

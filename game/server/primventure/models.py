@@ -37,6 +37,30 @@ class LessonCard(BaseModel):
     apply: dict[str, str] = Field(default_factory=dict)
 
 
+class WorkOrder(BaseModel):
+    """A boss's own job sheet, in the same shape a card's work-order beat takes."""
+    heading: str
+    system: str = ""
+    body: str
+    points: list[str] = Field(default_factory=list)
+    code: str = ""
+
+
+class BossReview(BaseModel):
+    """A boss's lesson: a review of the run it caps, plus one fresh work order.
+
+    A boss introduces nothing, so it adapts no curriculum page of its own. The
+    review is assembled from the cards its run already taught, which keeps it
+    honest when a room is resequenced. Only the framing and the work order are
+    authored here.
+    """
+    quest: str
+    objective: str
+    intro: str
+    work_order: WorkOrder
+    apply: str = ""
+
+
 class Quest(BaseModel):
     id: str
     title: str

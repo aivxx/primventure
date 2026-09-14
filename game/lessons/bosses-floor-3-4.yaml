@@ -1,0 +1,190 @@
+# Bosses introduce no curriculum pages. Each record frames a cumulative review
+# assembled from the non-boss lessons in its review window.
+reviews:
+  - quest: f3_layer_stack_boss
+    objective: >-
+      Compose conflicting permit opinions through an explicitly ordered local
+      layer stack.
+    intro: >-
+      Layer Lane established that separate files can contribute to one stage.
+      The permit desk brings two such files together and makes their order
+      determine the composed status.
+    work_order:
+      heading: The permit layers need a declared strength order
+      system: >-
+        The first listed sublayer speaks more strongly than every sublayer
+        listed after it.
+      body: |
+        Layer Lane already has a district registry and two permit files beside the city stage. safety.usda authors the PermitDesk status as closed, while commerce.usda authors the same property as open.
+
+        The root layer does not yet establish the required order for those conflicting sources. Without commerce.usda first, the intended open status is not the strongest sublayer opinion, and the desk lacks the documentation that records its settled state.
+
+        Set the root subLayerPaths to commerce.usda followed by safety.usda, preserve PermitDesk as an Xform whose permitStatus resolves to open from commerce.usda, and set its documentation to "Two-Faced Permit Desk: Sublayer Strength Order cleared.".
+      points:
+        - "subLayerPaths is ordered strongest to weakest."
+        - "Reordering the root list changes composition without rewriting either source."
+        - "The composed property source should be commerce.usda."
+    apply: >-
+      Order commerce.usda before safety.usda, keep the desk resolving open from
+      commerce, and stamp the exact documentation.
+
+  - quest: f3_specifier_boss
+    objective: >-
+      Distinguish abstract, concrete, and overriding prim specs while preserving
+      the composed traversal result.
+    intro: >-
+      Specifier Court separates what exists, what amends existing data, and what
+      serves as an abstract source. The permit booth requires those roles to
+      agree at one address.
+    work_order:
+      heading: The booth and its blueprint have no declarations
+      system: >-
+        Concrete work belongs on a def; reusable abstract intent belongs on a
+        class.
+      body: |
+        Specifier Court has already shown a concrete kiosk and a local over layered above a weaker definition. The remaining permit booth is meant to draw its department from an abstract booth blueprint while appearing in ordinary traversal.
+
+        Neither the blueprint nor the booth has the necessary declaration at its path. Without a class spec the abstract source has no authored identity, and without a def the booth has no concrete existence or department value to expose.
+
+        Author _BoothBlueprint with a composed class specifier, define PermitBooth as an Xform with a composed def specifier, set its department to permits, include only the concrete booth in default traversal, and set its documentation to "The Abstract Blueprint: Def, Over, and Class cleared.".
+      points:
+        - "A class is abstract and omitted from default traversal."
+        - "A def establishes concrete existence."
+        - "A stronger over can contribute opinions while a weaker def keeps the composed prim defined."
+    apply: >-
+      Declare the blueprint as class, the booth as a concrete Xform def with
+      department permits, and stamp the exact documentation.
+
+  - quest: f3_reference_arcade
+    objective: >-
+      Reuse an external asset and specialize its composed value with a stronger
+      local opinion.
+    intro: >-
+      Reference Arcade established the source, destination, and default entry
+      point of a reusable asset. Strength ordering now determines how the
+      destination may amend that source.
+    work_order:
+      heading: BaronSign has a source but no local amendment
+      system: >-
+        A local destination opinion outranks the value introduced through its
+        reference.
+      body: |
+        baron_sign.usda defines a default BaronSign whose marquee reads THE BARON OWNS THIS. The city needs that reusable hierarchy composed at /City/CompositionQuarter/BaronSign without changing the source file.
+
+        The destination has no complete composition of the source and no stronger marquee of its own. Leaving only the referenced value makes the source text the resolved text and provides no local record of the city's amendment.
+
+        Define the destination as an Xform, reference baron_sign.usda, author the local marquee THE CITY OWNS ITSELF so the city layer is its strongest source, retain at least two contributing prim specs, and set documentation to "Duplicate Baron: Override a Referenced Asset cleared.".
+      points:
+        - "A reference preserves reusable source data at a new destination."
+        - "A direct local property opinion outranks a referenced opinion."
+        - "The prim stack retains both local and referenced contributions."
+    apply: >-
+      Reference baron_sign.usda, author the exact local marquee, preserve both
+      contributions, and stamp the exact documentation.
+
+  - quest: f3_variant_boss
+    objective: >-
+      Author named alternatives inside a variant set and leave the requested
+      alternative selected.
+    intro: >-
+      Variant Gallery keeps mutually exclusive choices in one prim. The exhibit
+      must retain both colors while composing the blue choice.
+    work_order:
+      heading: ChoiceExhibit has no authored alternatives
+      system: >-
+        A selection chooses one branch; it does not replace or erase the other
+        branches.
+      body: |
+        Variant Gallery already contains a marquee whose day and night choices live in one variant set. ChoiceExhibit is the corresponding color exhibit at /City/CompositionQuarter/ChoiceExhibit and is intended to retain red and blue alternatives.
+
+        The exhibit has no color variant set, no selected branch, and no activeColor value supplied by that branch. A plain local color would sit outside the alternatives and would not represent a selectable choice.
+
+        Define ChoiceExhibit as an Xform, author a color variant set containing red and blue, leave blue selected with activeColor resolving to blue, and set documentation to "Curator of False Choices: Variant Selection cleared.".
+      points:
+        - "Variant-specific opinions belong inside the selected variant edit context."
+        - "Changing a selection leaves every authored variant intact."
+        - "The selected blue branch must supply the composed activeColor."
+    apply: >-
+      Keep red and blue in the color variant set, select blue, resolve
+      activeColor to blue, and stamp the exact documentation.
+
+  - quest: f3_city_block
+    objective: >-
+      Assemble several locally specialized destinations from one reusable
+      referenced asset.
+    intro: >-
+      The Quarter has established references, default entry points, and local
+      overrides. Modular Market applies those ideas to three distinct uses of
+      one maintained source.
+    work_order:
+      heading: Modular Market has addresses but no shared asset
+      system: >-
+        Three destinations can share one source while carrying independent
+        local identities.
+      body: |
+        market_stall.usda is the reusable source for a three-stall block under /City/CompositionQuarter/ModularMarket. The intended destinations are Stall_A, Stall_B, and Stall_C, each representing one use of the same maintained asset.
+
+        The market hierarchy and its reference arcs are absent, so none of the three addresses receives the source asset. The destinations also lack their local stallId values, and Stall_C has no assetClass identifying the shared source role.
+
+        Define ModularMarket as an Xform, reference market_stall.usda on Stall_A, Stall_B, and Stall_C, author local stallId values A, B, and C respectively, set Stall_C.assetClass to market_stall, and set market documentation to "Modular Market: Compose a Block From One Asset cleared.".
+      points:
+        - "Each destination keeps its own namespace while sharing the source hierarchy."
+        - "Local identifiers specialize each use without changing market_stall.usda."
+        - "All three destinations should retain their reference arcs."
+    apply: >-
+      Build the market Xform, reference the shared stall at all three
+      destinations, assign their exact local identities, and stamp the market.
+
+  - quest: f3_opinion_colossus
+    objective: >-
+      Combine local, variant, and referenced contributions while ensuring the
+      direct local value resolves strongest.
+    intro: >-
+      Opinion Quarter has progressed from layer ordering to composition arcs
+      and named alternatives. The plaza brings those sources onto one prim and
+      asks the strength order to remain visible.
+    work_order:
+      heading: OpinionColossus has no composed threat sources
+      system: >-
+        Local remains strongest even when variants and references contribute to
+        the same prim.
+      body: |
+        reference_threat.usda provides a ThreatSource with threatLevel 40. The plaza's OpinionColossus is meant to combine that reusable source with a threatMode variant set and a direct city opinion at one destination.
+
+        The destination has none of those contributions, so there is no prim stack showing multiple sources and no local threatLevel to outrank the referenced value. The enraged choice is also absent, leaving no selected variant alongside the other opinions.
+
+        Define OpinionColossus as an Xform, reference reference_threat.usda, author threatMode variants calm and enraged with enraged selected, set a local threatLevel of 100 as the strongest property source, retain at least three prim specs, and set documentation to "Opinion Colossus: Resolve the Strongest Opinion cleared.".
+      points:
+        - "Local opinions outrank variants and references in LIVRPS."
+        - "A reference and a variant can remain authored beneath the local result."
+        - "Prim and property stacks expose the contributing sources in strength order."
+    apply: >-
+      Combine the reference and selected enraged variant, author local
+      threatLevel 100, retain all contributions, and stamp the exact documentation.
+
+  - quest: f4_hydra_of_choices
+    objective: >-
+      Consolidate stage conventions, model classification, activation, and a
+      constant display-color primvar on one composed hierarchy.
+    intro: >-
+      Beyond-Basics Gardens covered custom scene data, traversal state, stage
+      contracts, model roles, and resolved property sources. The overlook now
+      records those authored facts together under /World.
+    work_order:
+      heading: The World hierarchy lacks its authored garden state
+      system: >-
+        Each opinion has a separate role: entry point, spatial convention,
+        model role, activation, or geometric data.
+      body: |
+        /World is the intended root of the delivered garden hierarchy, with a Hero Mesh and a Draft sibling beneath it. The stage is intended to use centimeters and Y-up, classify /World as a component, and carry one constant warm display color on Hero.
+
+        Those authored facts are absent from the hierarchy. The stage has no declared default entry point or spatial contract, /World has no model role, Draft remains active, and Hero has no displayColor primvar or documentation.
+
+        Define Hero as a Mesh, set /World as the default prim and a component, author Y-up and metersPerUnit 0.01, leave Hero active while deactivating Draft, set Hero's constant displayColor to (1.0, 0.75, 0.25), and set its documentation to "Hydra of Choices: Primvars, Activation, and Units cleared.".
+      points:
+        - "Stage metadata declares the entry point, up axis, and linear units."
+        - "Kind classifies /World independently of its schema type."
+        - "Activation prunes Draft while the constant primvar supplies one color for Hero."
+    apply: >-
+      Author the complete /World contract, component role, active states, exact
+      Hero color, and exact Hero documentation.

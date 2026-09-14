@@ -1,0 +1,261 @@
+# A boss adapts no curriculum page of its own, because it introduces nothing.
+# Its lesson is assembled from the cards its run already taught; only the
+# framing and the work order are authored here.
+#
+# Floors 7 and 8: the Customs Terminal, where foreign data is parsed, declared,
+# and delivered, and the Prototype Wilds, where repetition is shared instead of
+# copied.
+reviews:
+  - quest: f8_extract_overseer
+    objective: >-
+      Bring an extracted mesh up to the intake contract: the type that carries geometry, the
+      positions the contract states, and a record that the prim was inspected.
+    intro: >-
+      The Intake Platform stamped provenance on the kiosk, filed the mapping between OBJ records
+      and USD schemas, and pulled the first vertices off the dock into a mesh. The Overseer reads
+      what those three left behind and accepts nothing vaguer than authored data.
+    work_order:
+      heading: The published cube carries the coordinates it arrived with
+      system: >-
+        The Overseer accepts eight corners and a note saying who put them there. Intentions are
+        filed in a different building.
+      body: |
+        The Dock Overseer inspects the city as it currently stands rather than a fresh stage.
+        /World/Cube is already in it, published when the cube came off the crate, and the kiosk
+        back on the intake platform carries the source stamp that says where the geometry came
+        from.
+
+        Those positions are the numbers parsed straight out of shapes.obj, so they describe the
+        crate as it arrived rather than the eight unit corners the extraction contract states.
+        Nothing on the prim records that it was ever inspected either, and unauthored metadata has
+        no fallback to stand in for it.
+
+        The cube needs typing as a Mesh, its points set to the eight unit corners in the order the
+        contract lists, and the clearance note stamped in documentation. Order is part of the
+        value: a points array is one ordered opinion, so a corner in the wrong position describes a
+        different shape rather than the same shape written differently.
+      points:
+        - "A points array resolves as one ordered value, so a corner out of position is different geometry."
+        - "extent is exactly two vectors, minimum then maximum, and goes stale the moment points change."
+        - "documentation is metadata describing the prim, not a property hanging off it."
+    apply: >-
+      Type /World/Cube as a Mesh, author the eight unit corners in the listed order, and stamp the
+      clearance note in documentation. The Overseer files discrepancies in triplicate.
+
+  - quest: f8_unit_gauge
+    objective: >-
+      Declare the linear unit a city's coordinates are written in, alongside the up axis it already
+      holds, without disturbing a single authored number.
+    intro: >-
+      Transform Junction separated the facts of the source from the choices made for the
+      destination, then pointed vertical at the ceiling. Linear units are the other half of that
+      same declaration, and the Gauge has noticed nobody made it.
+    work_order:
+      heading: The terminal declares which way is up and not what a unit is worth
+      system: >-
+        metersPerUnit converts nothing. It states what the numbers already in the file are worth.
+      body: |
+        The Meter Gauge works on the city the terminal has been assembling. Y is declared as the up
+        axis, the kiosk stands at (10, 0, -4) where the switchyard parked it, and the extracted
+        cube is published beneath /World. Nothing stands at /City/ExchangeTerminal/UnitMarker.
+
+        The crate arrived labelled in inches, and OBJ carries no linear unit at all, so every
+        coordinate in the city is a bare number with no declared scale behind it. A consumer
+        opening the terminal has to infer that scale from context or fall back on an assumption
+        this city never made explicit.
+
+        The marker needs defining as an Xform, metersPerUnit declared as 0.01 for centimeters, Y
+        left standing as the up axis, and the clearance note stamped on the marker. Declaring the
+        unit changes no coordinate, so inch-valued numbers under a 0.01 declaration are described
+        as centimeters rather than turned into them, and a units pass is exactly where the axis
+        tends to get overwritten on the way past.
+      points:
+        - "metersPerUnit states how many meters one scene unit represents and rescales nothing."
+        - "Up axis and linear units are independent declarations, and both have to stay honest."
+        - "Scale authored values exactly once, then declare the unit that describes what ended up in the file."
+    apply: >-
+      Define the UnitMarker as an Xform, declare metersPerUnit 0.01, leave Y-up as authored, and
+      stamp the marker's documentation. The Gauge wants one honest contract.
+
+  - quest: f8_customs_engine
+    objective: >-
+      Deliver a whole floor as one asset: parsed geometry, an interface a reference can resolve to,
+      honest geometric conventions, and provenance that travels with the file.
+    intro: >-
+      The Customs Terminal ran in three stretches: intake and mapping, extraction, and the
+      conventions the concourse reported missing. The Engine takes all of it at once and asks for a
+      single stage carrying every part.
+    work_order:
+      heading: The intake manifest is spread across the terminal in pieces
+      system: >-
+        One delivered file, one complete manifest. Every required opinion belongs on the same saved
+        stage.
+      body: |
+        The Customs Engine takes delivery of the whole city as one asset: /World and everything
+        published beneath it, including the cube that came off the crate and the kiosk stamped back
+        on the intake platform.
+
+        No single stage carries all of the manifest. The cube's positions are still the coordinates
+        parsed out of shapes.obj rather than the eight unit corners; the source stamp sits on the
+        intake kiosk instead of on /World, which is the prim a reference resolves to when it names
+        no prim path; and nothing classifies /World as a self-contained model.
+
+        The complete manifest belongs here: /World/Cube typed as Mesh with the eight unit corners
+        in order, /World named as the default prim carrying component kind and a customData entry
+        whose sourceFormat reads OBJ, Y as the up axis, metersPerUnit 0.01, and the clearance note
+        on the cube. Then save, because the file leaving the terminal is the asset. Provenance
+        belongs on /World, where downstream tools find it without knowing internal mesh paths, and
+        the root prim has to exist before it can be named the default prim.
+      points:
+        - "A default prim must be a root prim, so a nested prim cannot serve as the asset interface."
+        - "SetCustomDataByKey edits one entry, while writing the dictionary replaces every entry in it."
+        - "Declaring metersPerUnit leaves the authored coordinates exactly as they were written."
+    apply: >-
+      Author the whole manifest on one stage: /World as the default component prim stamped
+      sourceFormat OBJ, Y-up, centimeters, and /World/Cube as a Mesh holding the eight unit corners
+      with its clearance note.
+
+  - quest: f7_prototype_sentinel
+    objective: >-
+      Label one repetition without removing it from the arrangement it shares.
+    intro: >-
+      Scenegraph Thickets walked you through the modular lineup, named the four roles the technique
+      runs on, and put three benches on one prototype. The Sentinel asks for the single place a
+      per-copy label is allowed to land.
+    work_order:
+      heading: BenchB needs a readable name while it stays shared
+      system: >-
+        The shared descendants are read-only because they are shared. Per-copy data belongs on the
+        instance root.
+      body: |
+        The bench arrangement at the Scenegraph Thickets is already sharing. BenchA, BenchB, and
+        BenchC each reference bench.usda and each carry instanceable true, so all three draw on one
+        prototype derived from that arc, and the asset lineup they came out of is filed.
+
+        BenchB has no displayName, and the obvious places to put one are unavailable. Paths below an
+        active instance root resolve to instance proxies, which are read-only, so no descendant of
+        BenchB can hold the label. Clearing instanceable would open those descendants, and it would
+        also take BenchB out of the shared prototype and materialize its whole subgraph for the sake
+        of a string.
+
+        BenchB needs its Xform type and its bench.usda reference intact, instanceable left true, and
+        displayName authored as Shared Foundry Bench on the instance root itself. The root stays
+        mutable precisely because it sits above the shared subgraph, which is the same reason
+        per-copy transforms work there. Author against your own instance roots, since prototypes are
+        runtime objects whose paths shift between runs.
+      points:
+        - "An instance root stays mutable; the instance proxies beneath it do not."
+        - "Sharing needs both the composition arc and instanceable set to true."
+        - "Implicit prototype paths are unstable, so nothing should be authored against them."
+    apply: >-
+      Keep BenchB's bench.usda reference and instanceable true, and author displayName Shared
+      Foundry Bench on the instance root. Name the mirror by its frame.
+
+  - quest: f7_point_wastes_boss
+    objective: >-
+      Extend one instancer to a second kind of object through its ordered prototype roster.
+    intro: >-
+      The Point Wastes handed you the three arrays a PointInstancer runs on, a nesting survey, and
+      one deinstanced bench. The Cargo Foreman asks for two prototypes on one prim, chosen by
+      index.
+    work_order:
+      heading: A single prototype target cannot describe two kinds of object
+      system: >-
+        Crate is zero and Bench is one. The order of the roster is what those numbers mean.
+      body: |
+        The scatter in the Point Wastes holds crates only: /World/Scatter carries one prototype
+        target, four zero indices, and four positions along X. bench.usda is published in the
+        assets folder, and benches are meant to stand among those crates.
+
+        A single-entry prototypes list cannot express two kinds of object. Defining a bench prim
+        beneath Prototypes changes nothing on its own, because a prototype takes effect only once
+        the relationship targets it, and every existing index value means whatever position it
+        holds in that ordered list.
+
+        The scatter needs its PointInstancer type, both prototype prims with their references,
+        crate to cargo.usda and bench to bench.usda, the prototypes relationship targeting crate
+        first and bench second, at least four instances spread across the two prototypes, and a
+        documentation string on the scatter. Target order and index values are one contract, so
+        reordering the targets afterwards silently retypes existing instances, and arrays resolve
+        whole: changing a single index or position means authoring that entire array again.
+      points:
+        - "protoIndices values are zero-based positions in the ordered prototypes relationship."
+        - "A prototype prim contributes nothing until the prototypes relationship targets it."
+        - "Every authored per-instance array must describe the same instance population."
+    apply: >-
+      Target Crate first and Bench second, keep both references, and spread at least four instances
+      across the two prototypes with a documentation string on the scatter.
+
+  - quest: f7_warehouse_district
+    objective: >-
+      Build one district out of both instancing techniques, matching each population to the way it
+      will actually be used.
+    intro: >-
+      Both techniques are in hand now, along with the modular library they draw on and the
+      refinements that keep exceptions cheap. Warehouse Recapture is where you choose between them
+      twice in the same district.
+    work_order:
+      heading: Two populations with two different access patterns
+      system: >-
+        There is no universal instancer. Match the representation to how each population will be
+        used.
+      body: |
+        The Warehouse Recapture opens with bench.usda and cargo.usda both published and both
+        instancing techniques already practised. /City/InstanceWilds/Warehouse does not exist yet,
+        and neither does anything beneath it.
+
+        The district needs two populations that are not alike. The office benches are named,
+        selectable objects that carry per-copy root metadata and may want an occasional unique
+        refinement. The crate field is a uniform population whose members need no prim paths of
+        their own. Reaching for one technique for both would either give every crate a scenegraph
+        name or bury the benches in arrays where nothing can address them.
+
+        The district needs /City/InstanceWilds/Warehouse defined as an Xform; BenchA and BenchB
+        beneath Office, BenchA referencing bench.usda and both marked instanceable; CrateField
+        defined as a PointInstancer with a cargo prototype and at least six instances; and a
+        documentation string on the warehouse. The crate field reports no instances and no
+        prototypes until the prototypes relationship targets the crate prim.
+      points:
+        - "Prefer scenegraph instancing for named, selectable copies carrying per-copy root metadata."
+        - "Prefer point instancing for large uniform populations that arrays control naturally."
+        - "Keep assemblies composed, since flattening trades reusable structure for a shorter hierarchy."
+    apply: >-
+      Define the Warehouse Xform, make BenchA and BenchB instanceable from bench.usda, and stand a
+      six-copy cargo PointInstancer at CrateField. Recapture the district with both tools.
+
+  - quest: f7_mirror_forge
+    objective: >-
+      Share an aggregate at its own boundary, over content that already shares at the level below,
+      and restate the geometric conventions the city is authored in.
+    intro: >-
+      Two floors close here. Foreign data was parsed, declared, and delivered, then repetition was
+      shared rather than copied, refined where one copy needed an exception, and vectorized where
+      names stopped being useful. The Forge asks for one outer boundary over an asset whose inner
+      sharing is already finished.
+    work_order:
+      heading: The aggregate row is neither composed nor shared
+      system: >-
+        bench_row.usda already holds the inner arrangement. What is missing is one outer promise.
+      body: |
+        At the Mirror Furnace, bench_row.usda is published in the assets folder and already contains
+        its own instanceable bench descendants, so the inner level of sharing is finished.
+        /City/InstanceWilds/BenchRow does not exist on the stage at all.
+
+        The aggregate is not composed, which leaves exactly one boundary to author, and nothing
+        classifies the row as the aggregate it is meant to be. The tempting alternative is to open
+        the row and mark its individual seats instanceable, which repeats work the published asset
+        already did and adds no sharing the outer arrangement does not already provide.
+
+        The row needs /City/InstanceWilds/BenchRow defined as an Xform referencing bench_row.usda,
+        with assembly kind authored on it, instanceable set to true, and a documentation string,
+        plus Y as the stage up axis and metersPerUnit 0.01. Those last two facts belong to the city
+        itself and are authored separately from the prim. Marking the outer root leaves the inner
+        instances undisturbed, since each level derives its own prototypes, and root-level opinions
+        stay legal on a prim that remains instanceable.
+      points:
+        - "Instance boundaries belong at the asset boundaries that genuinely repeat."
+        - "Each nesting level derives its own prototypes, so an outer instance leaves inner sharing intact."
+        - "Composition differences can split otherwise similar aggregates into separate prototypes."
+    apply: >-
+      Reference bench_row.usda at BenchRow, author assembly kind and instanceable true with its
+      documentation, and declare Y-up and metersPerUnit 0.01 on the city.

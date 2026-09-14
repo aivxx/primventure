@@ -230,9 +230,6 @@ lessons:
       f4_custom_tag: >-
         Create the namespaced string attribute primvars:notes:warden on NorthGate and set the exact
         warning. Municipal gossip is admissible when it is typed.
-      f9_changeblock_sprint: >-
-        Create a, b, and c inside one Sdf.ChangeBlock and set them to 1, 2, and 3. The notice queue
-        has retained counsel and would like one consolidated event.
 
   - source: docs/beyond-basics/active-inactive-prims.md
     title: Active and Inactive Prims
@@ -329,7 +326,7 @@ lessons:
           Deactivation preserves authored specs, excludes the prim from default traversal, prunes
           its descendants, and remains reversible through a stronger active opinion.
     apply:
-      f4_two_faced_topiary: >-
+      f4_draft_topiary: >-
         Set Draft inactive and leave Hero active. Quiet Garden requested pruning, not vandalism,
         and for once the distinction is enforceable.
 
@@ -672,7 +669,7 @@ lessons:
           and assemblies organize models, components are reusable leaf assets, and subcomponents
           identify significant interior nodes.
     apply:
-      f4_kind_post: >-
+      f4_lamp_kind: >-
         Set LampPost to Kind.Tokens.component through Usd.ModelAPI. It is a reusable leaf asset,
         despite the assembly of regrets assigned to maintain it.
 
@@ -800,9 +797,6 @@ lessons:
         State the boundaries honestly: schema codegen and resolver plugins need a full toolchain,
         scene indexes process Hydra data, and value clips stream time samples. The basement accepts
         facts in lieu of compiled bravado.
-      f9_hydra_brief: >-
-        Name scene delegate, render index, and render delegate, then identify HdStorm as the shipped
-        real-time delegate. Three heads, two questions, one televised opportunity for precision.
 
   - source: docs/beyond-basics/value-resolution.md
     title: Value Resolution
@@ -946,13 +940,9 @@ lessons:
           fallbacks; stacks expose provenance, layer offsets map time across arcs, and flattening
           bakes the composed result for delivery.
     apply:
-      f4_hydra_of_choices: >-
-        Resolve the floor by authoring the strongest required facts: stage contract, model kind,
-        active Hero, inactive Draft, and constant Hero color. The boss has many choices; the
-        validator has exactly one opinion.
-      f9_stack_inspector: >-
-        Keep the weaker reference and author local signal 4 on /World/Probe. The property stack
-        will show why 4 wins, which is more persuasive than glaring at weaker.usda.
+      f4_value_resolution_probe: >-
+        Author signal 4 directly on /World/Probe while retaining the referenced signal 1, then
+        inspect the property stack to see the local source ordered first.
       f9_layer_offset_raid: >-
         Reference clip.usda with Sdf.LayerOffset(offset=10). Shift the performance, not the source
         samples; the animation union has been informed.

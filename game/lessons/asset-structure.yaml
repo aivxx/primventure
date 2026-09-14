@@ -1,4 +1,218 @@
 lessons:
+  - source: docs/asset-structure/asset-structure-principles/why-necessary.md
+    title: Judge an Asset Structure
+    objective: Define what an asset is in OpenUSD and weigh a structure against legibility, modularity, performance, and navigability.
+    intro: >-
+      Floor six opens with definitions, which the Foundry insists on before it stamps anything.
+      An asset is not a file that happens to be large. It is a named, versioned, structured
+      container, and four principles decide whether yours survives contact with collaborators.
+    beats:
+      - kind: concept
+        heading: An asset is a container, not a file
+        system: >-
+          Everyone in this building says "asset" and means something slightly different. I
+          stopped arbitrating and started charging admission.
+        body: |
+          An asset in OpenUSD is a named, versioned, and structured container of one or more
+          resources. Those resources may include composable layers, textures, volumetric data,
+          and whatever else the delivery has to travel with. The surrounding vocabulary is
+          crowded, since model, assembly, element, component, set, shot, file, and package all
+          describe organizations of production data, and none of them replaces the container.
+
+          Asset structure is what makes that persistent data reusable. It maps how content moves
+          through production and gives collaborators a shared set of conventions to work against,
+          instead of a fresh negotiation on every delivery. That is why it matters most at scale,
+          where the cost of an inconsistent structure is paid by everyone downstream of it.
+        points:
+          - A named, versioned container is what lets a later publish reach every context already using the asset.
+          - Consistent conventions reduce friction between teams working in different applications.
+          - There is no universally best layout, because usage and domain differ from one pipeline to the next.
+      - kind: concept
+        heading: Four principles decide whether it scales
+        system: >-
+          Legible, modular, performant, navigable. Four words, one of which the sponsors keep
+          trying to replace with their own product name.
+        body: |
+          Legibility asks whether names convey intent and type. Names for prims, properties, and
+          resources appear in queries, logs, arguments, and warnings, so their clarity helps long
+          before anyone opens a stage. What reads well is domain-dependent: a plain visual
+          description suits one pipeline and an explicit product code suits another.
+
+          Modularity asks whether the structure supports iterative improvement of reusable
+          content, through clear entry points, stable interfaces, and encapsulated local
+          dependencies. Performance asks whether reading and writing stay fast, which is driven
+          by the cost of resolving, opening, and composing the layers of a stage. Navigability
+          asks whether users can discover the elements they need, across resource identifiers,
+          prim paths, and model hierarchy, without memorizing fragile path conventions.
+        points:
+          - Choose naming conventions that survive database queries, file paths, and command-line arguments.
+          - Reference and payload pairs put a boundary between a light entry point and the heavy hierarchy behind it.
+          - Relationships and collections improve discovery without demanding a rigid naming scheme.
+          - Measurable metrics are what turn a claim of performance into something a pipeline can check.
+      - kind: api
+        heading: Read the interface before opening the stage
+        system: >-
+          A legible asset can be interrogated from the outside. So can I, but the answers cost
+          considerably more.
+        body: |
+          Much of what these principles promise is observable without composing anything heavy.
+          A layer reports its own default prim, and a composed stage reports the root prims a
+          consumer would encounter first. Both are the kind of inspection a downstream user
+          performs before deciding to trust a delivery.
+        code: |
+          from pxr import Sdf, Usd
+
+          layer = Sdf.Layer.FindOrOpen("lrg_bldgF.usd")
+          print(layer.defaultPrim)
+
+          stage = Usd.Stage.Open("lrg_bldgF.usd")
+          for prim in stage.GetPseudoRoot().GetChildren():
+              print(prim.GetPath(), prim.GetTypeName())
+      - kind: work_order
+        heading: A delivery arrives with no stated structure
+        system: >-
+          Four questions, asked in the same order every time. The Foundry finds this comforting
+          and the delivery drivers find it unbearable.
+        body: |
+          The Principles Ward takes in a building as a folder of layers with no stated entry
+          point. Filenames carry dates and identifiers that meant something to the exporter,
+          prims sit at the root of the layer in the order the exporter emitted them, and the
+          materials live in a second folder alongside.
+
+          Nothing about that arrangement answers the questions a downstream user has. There is no
+          way to tell which layer is the supported way in, no boundary between the cheap parts and
+          the expensive ones, and no shared convention that would let a second contributor add to
+          the building without renegotiating everything first. The delivery may compose perfectly
+          and still be unusable at scale.
+
+          Judging it means asking the four questions in turn. Do the names convey intent and type
+          well enough to survive a log line. Does the structure allow reusable content to improve
+          without disturbing the contexts that already consume it. Does reading it stay affordable
+          as the resolve, open, and compose costs accumulate. Can a user discover the parts they
+          need through inspection rather than guesswork. The answers are specific to the clients
+          and collaborators involved, which is exactly why a single template cannot supply them.
+        points:
+          - Flexibility is wider when OpenUSD is an intermediate representation than when the asset is itself the deliverable.
+          - A scalable structure enables parallel workstreams across several dimensions at once.
+          - Crate files are efficient across network and file systems, though a resolver that localizes a layer first can undo that.
+          - Avoid timestamps and unique identifiers in layer names where storage deduplication is expected to help.
+      - kind: recap
+        heading: What you now know
+        body: |
+          An OpenUSD asset is a named, versioned, structured container whose organization decides
+          how well it can be reused. Legibility, modularity, performance, and navigability are the
+          four questions worth asking of any candidate structure, and the right answers depend on
+          the clients, collaborators, and domain the asset serves.
+    apply:
+      f6_why_structure: >-
+        Take in the definition and the four principles before the Ward hands you a building. An
+        asset is a container with a name, a version, and a structure, and the Foundry grades all
+        three.
+
+  - source: docs/asset-structure/asset-structure-principles/asset-interface-pt1.md
+    title: Identify the Asset Interface
+    objective: Recognize the asset interface layer, the entry point prims it publishes, and the metadata that advertises the usual one.
+    intro: >-
+      Every asset has one layer the outside world is supposed to touch. Everything else is
+      implementation, and the Foundry would prefer you learned the difference here rather than
+      in a support ticket.
+    beats:
+      - kind: concept
+        heading: The root layer is the interface
+        system: >-
+          One supported way in. The building has fire exits too, and I would rather you did not
+          discover them during a live broadcast.
+        body: |
+          An asset designed to be opened as a stage, or added to a scene by referencing, has a
+          root layer that serves as its foundation. That root layer is the asset interface layer,
+          and it is structured deliberately as the primary means of interacting with the asset.
+
+          The interface is not only the layer. Key descendant prims that maintainers designate as
+          stable for downstream overrides are part of it as well. Materials and subcomponent prims
+          are the usual examples: a consumer may author against them because the maintainer has
+          published them as durable, not because they happen to exist at a convenient path today.
+        points:
+          - Anything not published as part of the interface is implementation and may be reorganized.
+          - Stability is a promise the maintainer makes, and a path that merely exists carries no such promise.
+          - Downstream layers author durable opinions against the interface, which is why its shape has to be deliberate.
+      - kind: concept
+        heading: Entry points advertise where to aim
+        system: >-
+          A reference has to land somewhere. Left unguided it lands wherever the layer happens to
+          begin, which is how a taxi ends up parented to a roof.
+        body: |
+          Most assets are organized around one or more defined entry point prims. Those entry
+          points act as the interface for downstream users of the composed stage, indicating
+          plainly which prims are intended to be the targets of references.
+
+          A single entry point is typically identified by the root layer's defaultPrim metadata,
+          which the composition engine respects when referencing. Domains may add their own ways
+          of naming domain-specific entry points, such as a render settings prim path, but the
+          general contract remains the same: the asset states where a consumer should aim, and the
+          consumer is spared from inferring it.
+        points:
+          - defaultPrim is what an external arc falls back to when it supplies an asset path and no prim path.
+          - An entry point prim is a defined prim, which is why the pseudo-root can never serve as one.
+          - Domain-specific conventions may identify additional entry points without displacing defaultPrim.
+      - kind: api
+        heading: Ask a layer what it publishes
+        system: >-
+          Two lines of inspection replace an afternoon of asking colleagues which file is the
+          real one.
+        body: |
+          The interface answers for itself. A layer reports its default prim as authored metadata,
+          and an opened stage resolves that metadata to a prim. A reference that omits a prim path
+          composes exactly that target, which is what makes the concise form of the arc safe.
+        code: |
+          from pxr import Sdf, Usd
+
+          layer = Sdf.Layer.FindOrOpen("lrg_bldgF.usd")
+          print(layer.defaultPrim)
+
+          stage = Usd.Stage.CreateNew("scene.usda")
+          building = stage.DefinePrim("/World/lrg_bldgF_01", "Xform")
+          building.GetReferences().AddReference("lrg_bldgF.usd")
+          assert stage.GetPrimAtPath("/World/lrg_bldgF_01")
+          stage.GetRootLayer().Save()
+      - kind: work_order
+        heading: The delivery states no supported way in
+        system: >-
+          When an asset declines to name its entry point, consumers invent one. Their inventions
+          are creative and none of them survive the next publish.
+        body: |
+          The building in the Principles Ward ships as several layers, one of which is clearly
+          meant to be opened and referenced by everyone else. Its contents compose correctly and
+          its geometry is complete.
+
+          What the delivery does not do is say any of that out loud. A consumer opening the folder
+          has no way to tell which layer is the foundation and which are workstream products
+          behind it, and once inside, no way to tell which prims are safe to override and which
+          are internal arrangement that may change with the next publish. Every consumer therefore
+          makes a private guess, and each guess becomes a dependency the maintainer never agreed
+          to.
+
+          Making the delivery legible means treating one root layer as the interface and saying so
+          through its metadata. The entry point prim becomes the target of references, defaultPrim
+          records it so an arc can omit the prim path, and the descendants that consumers are
+          invited to override are published as such. Everything else stays implementation, free to
+          be reorganized without breaking the contexts already downstream.
+        points:
+          - Publishing an interface is a maintenance commitment, not a description of the current layout.
+          - Materials and subcomponents are common published override points because downstream contexts need them.
+          - An asset may expose several explicit entry points while still naming one usual target.
+      - kind: recap
+        heading: What you now know
+        body: |
+          The asset interface is the root layer a consumer is meant to interact with, plus the
+          descendant prims the maintainer publishes as stable. Entry point prims mark where
+          references should aim, and defaultPrim metadata identifies the usual one so composition
+          can resolve an arc that names no prim path.
+    apply:
+      f6_interface_brief: >-
+        Learn which layer is the interface, which prims count as part of it, and which piece of
+        metadata does the advertising. The Ward hands out one door per building and expects it
+        labelled.
+
   - source: docs/asset-structure/asset-structure-principles/your-first-asset.md
     title: Build an Asset Entry Point
     objective: Build a referenceable asset around one default prim and safely move existing root prims beneath it.
@@ -109,6 +323,320 @@ lessons:
         Add the cargo payload and the exact portfolio documentation to /City/CrownDistrict. The
         gate is reviewing whether your asset carries both content and a comprehensible label.
 
+  - source: docs/asset-structure/asset-structure-principles/asset-interface-pt2.md
+    title: Publish Library Entry Points
+    objective: Recognize assets that expose many individually referenced entry points and state what encapsulation demands of each one.
+    intro: >-
+      A townhouse needs one door. A palette of materials is a corridor of them, and the Foundry
+      files that under organization rather than under chaos. Both arrangements are legitimate,
+      and both have to encapsulate what they publish.
+    beats:
+      - kind: concept
+        heading: Some assets publish many doors
+        system: >-
+          A library with one default prim is a shop that sells the building rather than the
+          paint. Popular with nobody.
+        body: |
+          A library asset, such as a palette of related materials, may have no single entry point
+          at all. Each defined material in it is meant to be referenced individually by downstream
+          assets, so nominating one of them as the usual target would misdescribe the layer.
+
+          When a library carries a large number of entry points, scope prims group and organize
+          them. The scope is navigation, not semantics: it gives the entries a shared parent so a
+          user can find them, without implying that the group is itself a referenceable unit.
+        points:
+          - A library layer may legitimately expose many individually referenced prims and no default prim.
+          - Grouping entries under scopes keeps a long list of published targets discoverable.
+          - Each published entry still has to be complete on its own, since a consumer references it alone.
+      - kind: concept
+        heading: An entry point can be pure convention
+        system: >-
+          The World prim has no special powers. It is a hallway, and it has never once asked for
+          more than that.
+        body: |
+          Sometimes an entry point is simply the convention for a type of asset. A World prim
+          holds no special role in OpenUSD; it is the agreed-upon parent that keeps the scene out
+          of the root namespace, and its authority comes from everyone using it the same way.
+
+          That is worth remembering because it removes the temptation to overthink the choice. An
+          entry point does not have to be marked as the default prim to be useful, and a prim does
+          not become an entry point by virtue of its name. What matters is that the asset states
+          which prims consumers should target, and that those prims actually contain the asset.
+        points:
+          - Convention carries weight only while collaborators apply it consistently.
+          - A prim may serve as an entry point without being recorded as the default prim.
+          - Keeping scene description out of the root namespace is the practical reason the convention exists.
+      - kind: api
+        heading: Group referenced entries under a scope
+        system: >-
+          One scope, several published targets, and no pretence that the scope itself is for
+          sale.
+        body: |
+          A library layer defines its entries as children of an organizational prim and lets each
+          one carry its own external arc. Downstream users reference the individual entries, so
+          the grouping prim exists to keep the namespace navigable rather than to be composed.
+        code: |
+          from pxr import Usd, UsdGeom
+
+          stage = Usd.Stage.CreateNew("library.usda")
+          UsdGeom.Scope.Define(stage, "/World")
+
+          city = stage.DefinePrim("/World/City")
+          city.GetReferences().AddReference("city.usd")
+          taxi = stage.DefinePrim("/World/TaxiCab")
+          taxi.GetReferences().AddReference("taxi_cab.usd")
+          stage.GetRootLayer().Save()
+      - kind: work_order
+        heading: The palette hides its entries under one root
+        system: >-
+          Encapsulation is the quiet half of this page, and the half that produces warnings at
+          three in the morning.
+        body: |
+          The Principles Ward keeps a palette layer holding a dozen related materials, each one
+          intended to be picked up on its own by a different building. The layer opens cleanly and
+          every material is present.
+
+          The entries sit as unrelated root prims, so a user browsing the layer sees a flat list
+          with no statement about what is published and what is scaffolding. Worse, two of the
+          materials reach outward for a shared texture prim that lives beside them rather than
+          beneath them. Referencing one of those materials brings in the namespace rooted at that
+          material and nothing else, so the outward target resolves to a path that does not exist
+          in the consuming stage.
+
+          A well-formed palette groups its published entries under a scope so they can be found,
+          and encapsulates each one so that everything it depends on, relationship targets
+          included, is a descendant of the prim being referenced. The grouping prim is for
+          navigation and the encapsulation is what makes each entry survive the trip.
+        points:
+          - Encapsulation means everything belonging to the asset is a descendant of the entry point being referenced.
+          - Relationship targets count, and a target outside the referenced namespace resolves to nothing downstream.
+          - A shared dependency that several entries need belongs inside each published entry or in an asset they all reference.
+      - kind: recap
+        heading: What you now know
+        body: |
+          Not every asset has one entry point. Library assets publish many, group them under
+          scopes for navigability, and rely on convention as much as on metadata. Whichever shape
+          an asset takes, each published entry point must encapsulate everything rooted beneath
+          it, relationship targets included, or the reference will arrive incomplete.
+    apply:
+      f6_library_entry_brief: >-
+        Read how a palette publishes many doors, why the World prim is only a convention, and what
+        encapsulation actually demands. The corridor is legitimate; the loose targets are not.
+
+  - source: docs/asset-structure/asset-structure-principles/encapsulating-your-asset.md
+    title: Encapsulate the Asset's Dependencies
+    objective: Move a dependency that sits outside the entry point back inside it, so a reference carries the whole asset.
+    intro: >-
+      The building references beautifully and arrives the wrong colour. Somewhere outside the
+      entry point, a material is standing in the street waving at a namespace that cannot see it.
+      Bring it indoors before the roof turns white again.
+    beats:
+      - kind: concept
+        heading: A reference brings only what is beneath its target
+        system: >-
+          Composition is not sentimental. It carries the namespace you targeted and leaves the
+          rest of the layer on the pavement.
+        body: |
+          When a layer is referenced, the composition engine brings in the namespace rooted at the
+          arc's target and nothing else. Prims that sit beside that target, however important they
+          are to the result, are simply not part of what the consumer receives.
+
+          This is why encapsulation is a structural requirement rather than a tidiness preference.
+          A dependency living outside the entry point works perfectly while the asset is opened
+          directly as a stage, because the whole layer is present. The same dependency disappears
+          the moment the asset is composed into somewhere else, and the failure looks like a
+          rendering problem rather than a structural one.
+        points:
+          - Opening a layer directly proves nothing about how it behaves when referenced.
+          - Everything intended to travel with the asset must be a descendant of the entry point.
+          - The symptom of a missing dependency is usually a wrong result, not an error.
+      - kind: concept
+        heading: Relationship targets are dependencies too
+        system: >-
+          A binding is a promise to a path. Move the path outside the reference and the promise
+          becomes a warning in someone else's terminal.
+        body: |
+          A material binding is a relationship, and a relationship names a path. When the bound
+          material sits outside the referenced namespace, the target refers to a path outside the
+          scope of the reference, so the composition engine reports it and ignores it. The mesh
+          composes, the binding does not, and the surface falls back to its default appearance.
+
+          Fixing it is the same operation used to create an entry point in the first place. The
+          dependency is reparented beneath the entry point so that the relationship target now
+          points at a path inside the referenced namespace, and the binding survives the arc.
+        points:
+          - A target outside the scope of a reference is ignored rather than remapped.
+          - Reparenting the dependency inside the entry point is what makes the target resolvable downstream.
+          - Namespace edits update relationship targets, so the binding follows the prim to its new path.
+      - kind: api
+        heading: Reparent a bound material inside the asset
+        system: >-
+          Queue the move, apply the edits, and let the editor rewrite the target it depends on.
+          Retyping the path by hand is how one of these becomes two.
+        body: |
+          Usd.NamespaceEditor performs the move and repairs the paths that depended on it.
+          ReparentPrim queues the change and ApplyEdits performs it, updating affected relationship
+          targets, including material bindings, as it goes.
+        code: |
+          from pxr import Usd, UsdGeom, UsdShade
+
+          stage = Usd.Stage.Open("lrg_bldgF.usd")
+          world = stage.GetDefaultPrim()
+          roof = stage.GetPrimAtPath("/roof")
+
+          editor = Usd.NamespaceEditor(stage)
+          editor.ReparentPrim(roof, world)
+          editor.ApplyEdits()
+
+          binding = stage.GetRelationshipAtPath(
+              "/World/large_buildingF.material:binding"
+          )
+          assert binding.GetTargets() == [world.GetPath().AppendChild("roof")]
+          stage.GetRootLayer().Save()
+      - kind: work_order
+        heading: The roof material stands outside the entry point
+        system: >-
+          Green in isolation, white in company. The building is telling you exactly where its
+          namespace ends.
+        body: |
+          The building at the Principles Ward has a working entry point. /World is defined as an
+          Xform and recorded as the stage default prim, and the mesh at /World/large_buildingF
+          lives properly inside it. The roof material, however, is defined at /roof, a root prim
+          beside the entry point, and the mesh binds to it from within.
+
+          Opened on its own the asset looks correct, because both prims are in the layer. Composed
+          into another scene by a reference to /World, only the descendants of /World arrive. The
+          material is left behind, the binding names a path outside the scope of the reference, and
+          the surface renders with its fallback appearance instead.
+
+          The encapsulated asset needs /roof living beneath /World, with nothing remaining at the
+          old path, and the binding on the mesh pointing at the material's new location. Move the
+          prim with Usd.NamespaceEditor rather than defining it again: ReparentPrim queues the
+          change, ApplyEdits performs it, and the relationship target is rewritten as part of the
+          same operation. Defining a fresh material at the new path would leave the old binding
+          aimed at a prim that is no longer there.
+        points:
+          - Redefining a prim at a new path leaves every dependent target pointing at the old one.
+          - Apply namespace edits before saving, and save the layer that owns the edited specs.
+          - A traversal of the finished asset should reach the new path and find nothing at the old one.
+          - The default prim is unaffected by the move, since encapsulation and entry point metadata are separate contracts.
+      - kind: recap
+        heading: What you now know
+        body: |
+          A reference carries only the namespace beneath its target, so any dependency outside the
+          entry point is silently absent downstream. Relationship targets such as material bindings
+          make that absence visible as a wrong result. Reparenting the dependency inside the entry
+          point with Usd.NamespaceEditor restores the binding and completes the encapsulation.
+    apply:
+      f6_encapsulate_material: >-
+        Reparent /roof beneath /World with Usd.NamespaceEditor so the binding travels with the
+        building. The roof is green in the asset and white in the scene, which is a namespace
+        problem wearing a paint problem's coat.
+
+  - source: docs/asset-structure/asset-structure-principles/asset-interface-pt3.md
+    title: Partition for Navigability
+    objective: Partition an asset hierarchy with scopes and agree the naming and access conventions that keep it legible.
+    intro: >-
+      What does it mean for a sphere to be parented to a material? Nobody knows, and the Foundry
+      has stopped accepting submissions on the subject. Partition the hierarchy so the question
+      never comes up.
+    beats:
+      - kind: concept
+        heading: Partitions remove ambiguous parentage
+        system: >-
+          Two collaborators, one undivided level, and a naming collision that will be discovered
+          by a render farm at capacity.
+        body: |
+          Partitioning an asset hierarchy is a navigability measure. Grouping geometry under one
+          organizational prim and materials under another prevents unintentional namespace
+          collisions between collaborators, and it removes parentage that has no agreed meaning.
+
+          The same reasoning applies at scene scale. Grouping actors under one partition and
+          environments under another aids navigation, and it also makes whole categories easy to
+          act on at once, since deactivating the root of a partition takes its entire branch with
+          it.
+        points:
+          - Partitions give each contribution a jurisdiction, which is what keeps collaborators out of each other's names.
+          - A partition root is a convenient handle for acting on an entire category at once.
+          - Common partitions include geometry, materials, actors, environments, and guides.
+      - kind: concept
+        heading: Conventions carry the access semantics
+        system: >-
+          There is no field OpenUSD will refuse to let you override. The underscores are a
+          request, and I have watched people ignore them on live television.
+        body: |
+          OpenUSD places no restriction on which fields may be overridden on a prim, so stable
+          editing is a matter of agreement rather than enforcement. Collaborators establish
+          conventions for it, commonly using single or double underscores to discourage authoring
+          against a prim or to mark it as internal.
+
+          Legibility depends on the same consistency. A prim hierarchy reads well when its naming
+          follows one scheme across the asset, and it reads badly when three exporters each brought
+          their own. Context embedded in the asset is part of that too: structure and naming can
+          hint that a piece of content is meant to be brought in by reference rather than edited
+          in place.
+        points:
+          - Underscore prefixes are a widely used signal for internal paths, though enforcement is left to the pipeline.
+          - Consistent naming across an asset is what makes a path readable in a log or a warning.
+          - Embedding context in the asset tells users how the content is meant to be consumed.
+      - kind: api
+        heading: Define partitions that carry no extra meaning
+        system: >-
+          Scope for the shelves, Xform for anything that has to move. Mixing the two is how a
+          folder acquires a rotation.
+        body: |
+          Scope is generally the best type for organizational prims, because it lacks the
+          additional semantics an Xform carries with its transform operations. Both can hold
+          children, so the choice is about what the prim claims to be rather than what it can do.
+        code: |
+          from pxr import Usd, UsdGeom
+
+          stage = Usd.Stage.CreateNew("asset.usda")
+          asset = UsdGeom.Xform.Define(stage, "/Asset").GetPrim()
+          stage.SetDefaultPrim(asset)
+
+          UsdGeom.Scope.Define(stage, "/Asset/Geometry")
+          UsdGeom.Scope.Define(stage, "/Asset/Materials")
+
+          assert stage.GetPrimAtPath("/Asset/Geometry").GetTypeName() == "Scope"
+          stage.GetRootLayer().Save()
+      - kind: work_order
+        heading: One level, two disciplines, no dividing wall
+        system: >-
+          The tour of an unpartitioned asset is short, and the questions afterwards are long.
+        body: |
+          The building in the Principles Ward is encapsulated. Everything it owns is beneath the
+          entry point, the bindings resolve, and a reference carries the whole thing. Inside that
+          entry point, geometry and surfacing sit side by side on one undivided level.
+
+          A user reading the namespace has only prim names to work from, and a name carries no
+          guarantee about type or ownership. Two contributors adding to the asset are authoring
+          into the same flat level, where a collision is a matter of timing. And there is no handle
+          for acting on a whole category, because no prim represents one.
+
+          A navigable asset gives each discipline its own organizational prim beneath the entry
+          point, typed as a scope so the partition claims nothing beyond organization, and names
+          them consistently enough to read in a path. Alongside that, the collaborators agree how
+          internal prims are marked and which parts of the hierarchy are considered stable to
+          author against, because OpenUSD itself will not enforce either.
+        points:
+          - Use an Xform where a prim must carry a transform, and a scope where it only organizes.
+          - Naming conventions have to be shared to be useful, since they are the only signal available.
+          - Deactivating a partition root is a cheap way to remove an entire category from the composed result.
+      - kind: recap
+        heading: What you now know
+        body: |
+          Partitioning an asset hierarchy improves navigability, prevents namespace collisions, and
+          removes parentage with no agreed meaning. Scope is the preferred type for organizational
+          prims because it adds no transform semantics, and the remaining questions of naming,
+          access, and stability are conventions collaborators agree on rather than rules OpenUSD
+          enforces.
+    apply:
+      f6_partition_brief: >-
+        Read why partitions exist, why scope is the type for them, and why the underscores are a
+        request rather than a lock. The Ward is about to hand you a building with no interior
+        walls.
+
   - source: docs/asset-structure/asset-structure-principles/organizing-prim-hierarchy.md
     title: Organize the Asset Namespace
     objective: Partition geometry and materials beneath an asset entry point using clear scope prims.
@@ -181,30 +709,32 @@ lessons:
           UsdShade.Material.Define(stage, "/World/Looks/Paint")
           stage.GetRootLayer().Save()
       - kind: work_order
-        heading: Materials sit outside the entry point
+        heading: Meshes and materials share one undivided level
         system: >-
-          Geometry moved into the building. The materials stayed at the curb and are now claiming
-          residency by adverse possession.
+          Geometry and surfacing under one roof with no interior walls. The tour is short and
+          nobody enjoys it.
         body: |
-          The accumulated city carries the townhouse forward with /World standing as its entry
-          point and the hull encapsulated beneath it. The surfacing contribution never made it
-          inside: the material prims sit out at the layer root as /Looks.
+          The building in the Principles Ward has an entry point that works. /World is defined as an
+          Xform and recorded as the stage default prim, and both contributions are already inside
+          it: a mesh at /World/large_buildingF and a material at /World/defaultMat, sitting side by
+          side directly beneath the root.
 
-          A reference to /World therefore carries geometry and nothing else, because /Looks is not
-          a descendant of the target. The prims already inside /World are unpartitioned as well, so
-          a downstream user reading the namespace has no signal about which contributions belong to
-          modeling and which belong to surfacing.
+          Nothing in that arrangement says which contribution belongs to modeling and which belongs
+          to surfacing. A downstream user reading the namespace, or an override authored against it,
+          has only prim names to go on, and a name carries no type guarantee. Recreating each prim
+          at a new path would look like a fix and quietly break every relationship that still points
+          at the old one.
 
-          The finished asset needs /World as an Xform and the stage default prim, /World/Looks
-          defined as a Scope, /World/Looks/Paint defined as the material inside it, and a
-          documentation string on /World. Scope is the deliberate choice for a partition because it
-          carries no transform operations. A traversal must reach /World/Looks/Paint and find no
-          /Looks, so the material has to end up under Looks with nothing left behind at the old
-          root path.
+          The organized asset needs /World/Geometry and /World/Looks defined as Scopes, the mesh
+          living under Geometry, and the material living under Looks, with nothing left behind at
+          either old path. Scope is the deliberate type for a partition because it carries no
+          transform operations. Classify each existing child with a schema predicate such as
+          prim.IsA(UsdGeom.Mesh), then move it with Usd.NamespaceEditor: ReparentPrim queues the
+          move and ApplyEdits performs it, updating affected targets as it goes.
         points:
-          - Keep Looks beneath the entry point so one reference to /World carries the materials along.
+          - Keep Geometry and Looks beneath the entry point so one reference to /World carries both.
           - Classify prims with schema predicates such as IsA, since a prim name carries no type guarantee.
-          - Keep materials in Looks and meshes in Geometry so the semantics stay unambiguous during navigation.
+          - Reparent with Usd.NamespaceEditor rather than redefining, so namespace-dependent targets travel with the prim.
           - Conventions such as leading underscores can signal internal paths, though enforcement is left to your pipeline.
       - kind: recap
         heading: What you now know
@@ -213,9 +743,9 @@ lessons:
           into semantically clear scopes. Geometry and Looks separate modeling from surfacing,
           while Scope avoids adding transform behavior to organizational nodes.
     apply:
-      f6_hierarchy_sort: >-
-        Define /World/Looks as a Scope and /World/Looks/Paint as a Material. The building already
-        has a front door; now stop filing its paint at the layer root.
+      f6_hierarchy_organize: >-
+        Define Geometry and Looks as Scopes, then reparent the mesh and the material into them with
+        Usd.NamespaceEditor. The building already has a front door; now give it interior walls.
 
   - source: docs/asset-structure/workstreams/modeling-workstreams.md
     title: Model Workstreams with Layers
@@ -319,6 +849,111 @@ lessons:
         still comes from geometry. The two departments are separated; the opinion order remains
         under my jurisdiction.
 
+  - source: docs/asset-structure/workstreams/adding-user-workstreams.md
+    title: Add a Surfacing Workstream
+    objective: Author a sparse surfacing layer over an existing geometry layer and order the two so the override wins.
+    intro: >-
+      Modeling has exported and left. Surfacing arrives next, and its export is not a second copy
+      of the building. It is a material, a binding, and nothing else, in a layer of its own that
+      sits above the geometry it decorates.
+    beats:
+      - kind: concept
+        heading: Each discipline exports its own layer
+        system: >-
+          Two artists, two applications, two layers. The alternative is one file and a rota,
+          which is how pipelines acquire folklore.
+        body: |
+          A workstream layer holds the product of one discipline. The modeler exports the model
+          from their application into a geometry layer, and the surfacing artist exports material
+          and binding information from theirs into a shading layer. Both layers describe the same
+          asset, and the layer stack composes them into one result.
+
+          The value of the split shows up in iteration. Each artist republishes their own layer
+          without touching the other, so neither blocks the other and neither can overwrite work
+          they did not author. A change to a material colour rewrites the shading layer alone and
+          the geometry layer is untouched by it.
+        points:
+          - A workstream layer is the export product of one discipline, not a copy of the asset.
+          - Independent layers let contributors iterate in parallel without conflicting edits.
+          - Republishing one workstream leaves every other workstream's specs exactly as they were.
+      - kind: concept
+        heading: A sparse export authors only its own opinions
+        system: >-
+          The surfacing export contains surfacing. This sounds obvious until you meet an exporter
+          that ships the whole building with it.
+        body: |
+          A surfacing export defines the materials it owns and authors bindings onto the prims the
+          modeler already defined. It does not redefine those prims. Over specs carry the new
+          opinions on existing paths, which keeps the defining specs in the geometry layer where
+          they belong.
+
+          Ordering decides which opinion wins. Sublayers are strongest first, so the shading layer
+          has to sit ahead of the geometry layer for its overrides to take effect. Reversed, the
+          defining layer becomes the stronger one and the surfacing work quietly does nothing.
+        points:
+          - An override on an existing path leaves the defining spec in place and adds an opinion above it.
+          - Sublayer paths are ordered strongest to weakest, so the overriding layer is listed first.
+          - Relative sublayer paths resolve against the layer that authors them.
+      - kind: api
+        heading: Write the shading layer, then place it
+        system: >-
+          Author, save, and only then hand the path to the layer stack. A sublayer that has not
+          been written yet is an unhelpful kind of promise.
+        body: |
+          The surfacing layer is a stage in its own right. Define the materials beneath the asset's
+          Looks partition, override the mesh to author its binding, and save. The asset's root
+          layer then lists that file ahead of the geometry it overrides.
+        code: |
+          from pathlib import Path
+          from pxr import Usd, UsdShade
+
+          folder = Path("asset")
+          shading = Usd.Stage.CreateNew(str(folder / "shading.usda"))
+          material = UsdShade.Material.Define(shading, "/World/Looks/roof").GetPrim()
+          mesh = shading.OverridePrim("/World/Geometry/large_buildingF")
+          mesh.CreateRelationship("material:binding").SetTargets([material.GetPath()])
+          shading.GetRootLayer().Save()
+
+          stage = Usd.Stage.Open(str(folder / "lrg_bldgF.usd"))
+          stage.GetRootLayer().subLayerPaths.insert(0, "shading.usda")
+          stage.GetRootLayer().Save()
+      - kind: work_order
+        heading: The building has geometry and no surfacing
+        system: >-
+          Grey is not a material choice here. It is the absence of one, filed under "later".
+        body: |
+          At the Workstream Forges the asset lists a single sublayer. geometry.usda defines /World
+          and the mesh at /World/Geometry/large_buildingF, exported by the modeler and complete as
+          far as modelling is concerned. Nothing in the asset assigns a material to that mesh.
+
+          The surfacing artist's contribution has nowhere to live. Authoring it into geometry.usda
+          would put two disciplines in one export, so the next model publish would overwrite it.
+          Authoring it into the asset's root layer would tie the material to the asset rather than
+          to a workstream that can be republished. And a shading layer listed after the geometry
+          layer would be the weaker opinion, which leaves the mesh exactly as it started.
+
+          The finished asset needs a second layer holding only surfacing: /World/Looks/roof defined
+          as a material, an over on the existing mesh carrying a material:binding relationship
+          aimed at it, and that layer saved to disk. The asset's root layer then lists shading.usda
+          ahead of geometry.usda, so the sparse export is the stronger opinion while the mesh
+          continues to be defined by the modeler.
+        points:
+          - Define materials in the surfacing layer and override the mesh rather than redefining it.
+          - Save a newly authored workstream layer before the layer stack tries to resolve it.
+          - Listing the geometry layer first would make the defining layer stronger than the override.
+          - The composed stage shows one asset, even though two disciplines authored it separately.
+      - kind: recap
+        heading: What you now know
+        body: |
+          Separate workstream layers let a modeler and a surfacing artist iterate on the same asset
+          without blocking one another. A surfacing export is sparse: it defines the materials it
+          owns and overrides existing prims to bind them. Listing that layer ahead of the geometry
+          layer is what makes its opinions the ones that compose.
+    apply:
+      f6_shading_workstream: >-
+        Author shading.usda with the material and the binding, save it, and place it ahead of
+        geometry.usda. Surfacing exports surfacing; the building stays where the modeler left it.
+
   - source: docs/asset-structure/reference-payload-pattern/what-is-ref-payload-pattern.md
     title: Build a Reference-Payload Asset
     objective: Publish a thin referenced interface that payloads heavy contents and keeps essential controls available while unloaded.
@@ -419,9 +1054,222 @@ lessons:
           variants, bounds, and previews keep essential functionality available before contents
           are loaded.
     apply:
-      f6_asset_interface: >-
-        Set /World as the default prim and payload contents.usda onto it while preserving Y-up.
-        The city boss wants a door to the warehouse, not the warehouse welded to the catalog.
+      f6_ref_payload_brief: >-
+        Read the pattern as two files with one supported way in: consumers reference the interface,
+        the interface payloads its own contents, and the cheap fields stay lofted above the gate.
+
+  - source: docs/asset-structure/reference-payload-pattern/exercise-ref-payload-pattern.md
+    title: Rebuild the Asset as Interface and Contents
+    objective: Export an authored asset as a contents layer and rebuild the root layer as a thin interface that payloads it.
+    intro: >-
+      The pattern is two files and one decision. Everything the asset has been accumulating moves
+      into contents, and the file consumers reference is built again from nothing: an entry point,
+      the stage conventions, and a payload.
+    beats:
+      - kind: concept
+        heading: The contents layer is the old root, saved elsewhere
+        system: >-
+          The warehouse keeps the stock. The shopfront keeps the address. Neither has ever
+          benefited from swapping roles.
+        body: |
+          Adopting the pattern on an existing asset starts by exporting the current root layer
+          under a new name. That exported file becomes the contents layer, and it arrives carrying
+          everything the asset already had, including the workstream sublayers it composed.
+
+          The asset root layer is then rebuilt from scratch. It lists none of those workstream
+          sublayers, because they are behind the payload now, and it holds only what a consumer
+          needs before deciding to load anything. Rebuilding rather than editing is the point:
+          starting empty is what guarantees the interface stays thin.
+        points:
+          - Exporting the root layer preserves the composed arrangement inside the new contents layer.
+          - The rebuilt interface lists no workstream sublayers, since the contents layer owns them.
+          - Building the interface from an empty layer keeps accumulated opinions from leaking into it.
+      - kind: concept
+        heading: The interface declares its own conventions
+        system: >-
+          A shopfront with no address, no orientation, and no units is not minimalism. It is a
+          missing person report.
+        body: |
+          Stage metadata belongs to the layer that declares it, so the interface authors its own.
+          The entry point prim is defined and recorded as the default prim, the linear unit is
+          stated, and the up axis is set. None of those are inherited from the payloaded layer,
+          and a consumer reading the interface with contents unloaded relies on all of them.
+
+          The payload itself is authored on that entry point. Because the contents layer exposes
+          its own default prim, the asset path alone is enough and no prim path is required. A
+          relative path is resolved against the layer that authors it, which is why an in-memory
+          stage may report that it cannot open the target until the layer is written to disk.
+        points:
+          - defaultPrim, metersPerUnit, and up axis are opinions on the interface layer itself.
+          - An asset path with no prim path relies on the contents layer exposing a default prim.
+          - A relative payload path only resolves once the authoring layer has a location on disk.
+      - kind: api
+        heading: Export the contents, then author the shell
+        system: >-
+          One export and four authored facts. The procurement office has asked whether the rest
+          of the city could be delivered this way.
+        body: |
+          Sdf.Layer.Export writes the current root layer out under the contents name. A fresh stage
+          then defines the entry point, records it as the default prim, states the stage
+          conventions, and adds the payload to the contents file.
+        code: |
+          from pathlib import Path
+          from pxr import Usd, UsdGeom
+
+          folder = Path("asset")
+          authored = Usd.Stage.Open(str(folder / "lrg_bldgF.usd"))
+          authored.GetRootLayer().Export(str(folder / "contents.usd"), args={"format": "usda"})
+
+          stage = Usd.Stage.CreateNew(str(folder / "lrg_bldgF.usd"))
+          world = UsdGeom.Xform.Define(stage, "/World").GetPrim()
+          stage.SetDefaultPrim(world)
+          UsdGeom.SetStageMetersPerUnit(stage, UsdGeom.LinearUnits.centimeters)
+          UsdGeom.SetStageUpAxis(stage, UsdGeom.Tokens.y)
+          world.GetPayloads().AddPayload("./contents.usd")
+          stage.GetRootLayer().Save()
+      - kind: work_order
+        heading: The asset root layer still carries the bulk
+        system: >-
+          Everything the asset owns, in the file everyone opens first. The building loads
+          admirably and the catalogue takes six seconds to read.
+        body: |
+          At the Workstream Forges the building composes correctly. Its root layer holds the entry
+          point and lists the workstream layers that supply the geometry and surfacing, and a
+          consumer referencing that file receives all of it.
+
+          Receiving all of it is the problem. There is no boundary between the parts a tool needs
+          in order to place the asset and the parts it only needs in order to draw it. A scene
+          holding a hundred of these has no way to defer any of the weight, and a tool that only
+          wanted to read the asset's conventions has to compose the entire building to do it.
+
+          The finished asset is two files. The authored layer is exported as contents.usda, keeping
+          the workstreams and the geometry together behind one boundary. The interface is then
+          built again from an empty layer: /World defined as an Xform, recorded as the stage
+          default prim, the stage set to centimeters and Y up, and a payload on /World aimed at
+          the contents file. No workstream sublayers appear in it, and the geometry still composes
+          into the stage because the payload brings it in when loaded.
+        points:
+          - The exported contents layer keeps its own default prim, which is what lets the payload omit a prim path.
+          - Consumers reference the interface and the interface owns the payload decision.
+          - Unloading the payload removes the contents from the composed stage and leaves the interface readable.
+          - Copying geometry into the interface would compose the same result and defeat the purpose of the split.
+      - kind: recap
+        heading: What you now know
+        body: |
+          Adopting the reference-payload pattern means exporting the authored asset as a contents
+          layer and rebuilding the root layer as a thin interface over it. The interface defines
+          the entry point, records the default prim, states the stage conventions, and carries the
+          payload, while every workstream stays behind that boundary.
+    apply:
+      f6_payload_split: >-
+        Export contents.usda, then rebuild the interface from nothing: entry point, default prim,
+        centimeters, Y up, and one payload. The bulk may sleep behind the door you just built.
+
+  - source: docs/asset-structure/reference-payload-pattern/lofting-primvars.md
+    title: Loft a Parameter Above the Payload
+    objective: Copy property specs from the contents layer onto the interface layer so an asset parameter stays discoverable while unloaded.
+    intro: >-
+      The accent parameter went behind the payload and took its discoverability with it. A tool
+      reading the unloaded asset now sees a door and no controls. Copy the properties up, using
+      an API that edits one layer and knows nothing about composition.
+    beats:
+      - kind: concept
+        heading: A payload hides the controls with the contents
+        system: >-
+          The switch is inside the warehouse. The warehouse is closed. This is the part of the
+          tour where consumers start improvising.
+        body: |
+          The payload boundary is deliberately opaque while unloaded, and it does not distinguish
+          between expensive geometry and a single inherited value. A parameter authored on the
+          entry point inside the contents layer disappears along with everything else, so a
+          consumer inspecting the unloaded asset cannot discover that the parameter exists.
+
+          Lofting republishes those inexpensive, important fields on the interface side of the
+          boundary. The parameter is then present whether or not the contents are loaded, which is
+          precisely when a tool most wants to know what the asset offers.
+        points:
+          - Unloading removes payloaded descendants from the composed stage but leaves interface opinions available.
+          - Good lofting candidates are cheap fields a tool needs before deciding to load contents.
+          - A lofted field has to stay synchronized with the contents it describes as the asset evolves.
+      - kind: concept
+        heading: The Sdf API edits one layer at a time
+        system: >-
+          Lower level, fewer opinions, no composition. It does exactly what you say, which is
+          both the feature and the warning.
+        body: |
+          Copying a property from one layer to another is a layer operation, not a stage one. The
+          Sdf API works on individual layers without considering composition, so it can move a spec
+          from the contents layer onto the interface layer at the same path, which is something the
+          composed stage view cannot express.
+
+          The move has two halves. Sdf.CopySpec writes the property spec onto the destination
+          layer, and removing it from the source prim spec leaves the parameter published in one
+          place instead of two. Both layers then need saving, since each one owns the specs that
+          changed in it.
+        points:
+          - A prim spec exposes its property specs directly, which is what makes the copy possible.
+          - Copying to the same path on the interface layer keeps the parameter on the entry point.
+          - Removing the source spec avoids maintaining the same public value in two layers.
+      - kind: api
+        heading: Copy the property specs onto the interface
+        system: >-
+          Two layers, one path, and a loop short enough to fit on the caption card.
+        body: |
+          Read the prim spec for the entry point out of the contents layer, then copy each property
+          spec onto the asset layer at the identical path before removing it from the source. The
+          composed value is unchanged; what changes is which layer publishes it.
+        code: |
+          from pxr import Sdf
+
+          asset_layer = Sdf.Layer.FindOrOpen("lrg_bldgF.usd")
+          contents_layer = Sdf.Layer.FindOrOpen("contents.usd")
+          prim_spec = contents_layer.GetPrimAtPath("/World")
+
+          for prop_spec in list(prim_spec.properties):
+              Sdf.CopySpec(contents_layer, prop_spec.path, asset_layer, prop_spec.path)
+              prim_spec.RemoveProperty(prop_spec)
+
+          asset_layer.Save()
+          contents_layer.Save()
+      - kind: work_order
+        heading: The accent parameter sits below the boundary
+        system: >-
+          A parameter nobody can find is a parameter nobody uses. The client will find it anyway,
+          by opening something they should not.
+        body: |
+          The building at the Parameter Loft now ships as an interface and a contents layer. The
+          interface defines /World, records it as the default prim, and payloads the contents. The
+          contents layer defines its own /World and carries the constant accentColor primvar that
+          drives the roof.
+
+          Composed with the payload loaded, everything works. Composed with the payload unloaded,
+          the interface offers a prim and nothing else. A tool building a control panel from the
+          asset, or a user deciding whether this asset is the one they want, has no way to learn
+          that an accent colour is available at all. The parameter is real and undiscoverable at
+          the same time.
+
+          The lofted interface needs the primvar published on /World in the interface layer itself,
+          so it survives with the contents unloaded. Read the prim spec for /World out of the
+          contents layer, copy each property spec onto the asset layer at the same path with
+          Sdf.CopySpec, remove it from the contents prim spec, and save both layers. The composed
+          value stays what it always was; what changes is which side of the boundary publishes it.
+        points:
+          - Work on the layers directly, because the composed stage cannot say which layer an opinion should live in.
+          - Copy to the identical path so the parameter stays on the asset's entry point.
+          - Save the contents layer too, since removing the source spec is an edit to that layer.
+          - With the parameter lofted, the property remains listed on the entry point while the payload is unloaded.
+      - kind: recap
+        heading: What you now know
+        body: |
+          Lofting moves a cheap, public field from behind the payload onto the interface, where it
+          stays discoverable while contents are unloaded. The Sdf API does the work, copying
+          property specs between layers at the same path and removing the originals, so the asset
+          publishes one control surface rather than a hidden one.
+    apply:
+      f6_loft_primvar: >-
+        Copy the property specs from the contents prim onto the interface layer with Sdf.CopySpec,
+        then clear them from the source. The accent belongs above the boundary, where a tool can
+        read it without waking the building.
 
   - source: docs/asset-structure/asset-parameterization/what-is-asset-parameterization.md
     title: Parameterize the Asset Interface
@@ -530,6 +1378,117 @@ lessons:
         Create constant Float3 primvar accentColor on /World and set it to red. The client may now
         change the awning without entering the shader district under an assumed name.
 
+  - source: docs/asset-structure/asset-parameterization/exercise-asset-parameterization.md
+    title: Drive an Asset With an Inherited Primvar
+    objective: Author a constant primvar on the asset entry point and observe how a nearer descendant opinion overrides the inherited value.
+    intro: >-
+      The roof shader already asks for an accent colour and settles for green when nobody answers.
+      Answer it from the entry point, where the value reaches everything beneath, then let one
+      prim disagree in writing.
+    beats:
+      - kind: concept
+        heading: A shader can read a parameter that may not exist
+        system: >-
+          A fallback is the shader admitting it will proceed without you. Generous, and not a
+          substitute for authoring the value.
+        body: |
+          A material graph can read a primvar by name rather than hard-coding a value. A primvar
+          reader node names the primvar it wants and carries a fallback for the case where no
+          prim in the ancestor chain authors one. Until the parameter is authored, every consumer
+          of the asset sees the fallback.
+
+          That indirection is what turns a material into a parameter. The surfacing work stays
+          inside the asset where it belongs, and the control a downstream context needs is a single
+          named value on the entry point. Nothing about the shading network has to be understood in
+          order to use it.
+        points:
+          - The reader names the primvar it wants and supplies a fallback when nothing authors it.
+          - Authoring the primvar is what replaces the fallback for the whole asset at once.
+          - The consumer interacts with the named parameter, not with the shading network behind it.
+      - kind: concept
+        heading: Primvars inherit, and the nearer opinion wins
+        system: >-
+          One value at the front door reaches every room. Any room may still repaint itself, and
+          one of them always does.
+        body: |
+          Primvars are attributes in the primvars namespace, and they inherit down the prim
+          hierarchy. A value authored on the asset entry point therefore reaches every descendant
+          that does not author the same primvar itself. Inspecting a descendant shows the value as
+          an inherited property rather than an authored one.
+
+          When a descendant does author the same primvar, its own opinion is the nearer one and
+          wins for that prim and everything beneath it. That is the mechanism behind per-placement
+          variation: the asset publishes a default at its entry point and a context overrides it
+          exactly where it needs something different.
+        points:
+          - Constant interpolation means one value applies to the whole prim rather than varying per element.
+          - A descendant authoring the same primvar name overrides the inherited ancestor value.
+          - Inherited primvar values differing between instances do not, by themselves, force separate prototypes.
+      - kind: api
+        heading: Create the primvar through PrimvarsAPI
+        system: >-
+          The API writes the namespace prefix for you, which spares everyone the attribute named
+          accentColor that nothing ever reads.
+        body: |
+          UsdGeom.PrimvarsAPI creates the attribute in the primvars namespace with the type and
+          interpolation given. Creating it on the entry point publishes the parameter; creating it
+          again on a descendant authors the nearer opinion for that branch.
+        code: |
+          from pxr import Sdf, Usd, UsdGeom
+
+          stage = Usd.Stage.Open("lrg_bldgF.usd")
+          world = stage.GetDefaultPrim()
+
+          accent = UsdGeom.PrimvarsAPI(world).CreatePrimvar(
+              "accentColor", Sdf.ValueTypeNames.Float3, UsdGeom.Tokens.constant
+          )
+          accent.Set((1.0, 0.0, 0.0))
+
+          awning = stage.GetPrimAtPath("/World/Geometry/awning")
+          local = UsdGeom.PrimvarsAPI(awning).CreatePrimvar(
+              "accentColor", Sdf.ValueTypeNames.Float3, UsdGeom.Tokens.constant
+          )
+          local.Set((0.0, 0.0, 1.0))
+          stage.GetRootLayer().Save()
+      - kind: work_order
+        heading: The building takes the fallback colour everywhere
+        system: >-
+          Green on every surface, chosen by nobody. The shader is not being stubborn, it is being
+          unanswered.
+        body: |
+          At the Parameter Loft the building has an entry point, a geometry partition holding the
+          roof and the awning, and a surfacing network whose accent reader is already wired to a
+          named primvar. Opened as it stands, both surfaces come out in the reader's fallback
+          colour.
+
+          Nothing on the asset authors the parameter, so there is no value to inherit and no
+          indication in the namespace that a colour choice exists. A downstream context that wants
+          a red building has no supported field to write to, and a context that wants a red
+          building with a blue awning has two problems rather than one.
+
+          The parameterized asset needs the constant Float3 primvar authored on the entry point and
+          set to red, so every descendant inherits it, and the same primvar authored on the awning
+          and set to blue, so the nearer opinion takes that prim alone. Create both through
+          UsdGeom.PrimvarsAPI, which writes the primvars namespace prefix, and use a single Float3
+          value rather than an array, since the parameter holds one colour and constant
+          interpolation applies it across the whole prim.
+        points:
+          - Publish the parameter on the entry point, where consumers expect to find supported controls.
+          - Use an array value type only when the parameter genuinely holds an array.
+          - The roof takes the entry-point value because it authors no opinion of its own.
+          - Inspecting a descendant shows an inherited value distinctly from an authored one.
+      - kind: recap
+        heading: What you now know
+        body: |
+          A named primvar turns surfacing into a supported asset parameter. Authored on the entry
+          point with constant interpolation, it inherits down the hierarchy and replaces the
+          shader's fallback everywhere at once, while a descendant authoring the same primvar
+          overrides it for that branch alone.
+    apply:
+      f6_parameter_inheritance: >-
+        Author accentColor red on /World so the building inherits it, then blue on the awning so
+        one prim disagrees. The reader stops falling back and the Loft stops asking.
+
   - source: docs/asset-structure/reference-payload-pattern/lofting-variant-sets.md
     title: Loft a Variant Set
     objective: Recreate an internal variant set on the asset entry point and make each public variant select its internal counterpart.
@@ -584,10 +1543,10 @@ lessons:
 
           default_prim = stage.GetDefaultPrim()
           looks = stage.GetPrimAtPath("/World/Looks")
-          internal = looks.GetVariantSets().GetVariantSet("paint")
+          internal = looks.GetVariantSets().GetVariantSet("exteriorType")
           variants = internal.GetVariantNames()
 
-          lofted = default_prim.GetVariantSets().AddVariantSet("paint")
+          lofted = default_prim.GetVariantSets().AddVariantSet("exteriorType")
           for name in variants:
               lofted.AddVariant(name)
               lofted.SetVariantSelection(name)
@@ -597,31 +1556,33 @@ lessons:
           lofted.SetVariantSelection("brick")
           stage.GetRootLayer().Save()
       - kind: work_order
-        heading: The finish switch lives only on Looks
+        heading: The exterior finish switch sits only on Looks
         system: >-
-          A variant edit context directs each finish into one branch. Confirm the selection before
-          authoring the material.
+          A variant edit context decides which branch an opinion lands in. Settle the selection
+          before authoring anything inside it.
         body: |
-          The accumulated city reaches the Parameter Loft with the paint variant set sitting on
-          /World/Looks, its brick and stucco branches owning the actual surfacing opinions. /World,
-          the entry point a consumer actually reaches, carries no variant set at all.
+          The building at the Parameter Loft has /World defined as an Xform and recorded as the
+          stage default prim, with a Looks Scope beneath it. The exteriorType variant set already
+          exists on Looks, carrying brick and stucco, and those branches own the actual surfacing
+          opinions.
 
-          The only switch for the exterior finish is therefore on an internal scope. A downstream
-          context has to author its selection inside implementation, and the set is unavailable
-          whenever the contents payload is left unloaded, which is exactly when a tool wants to
-          read the asset's options.
+          The entry point a consumer reaches carries no variant set at all, so the only control over
+          the exterior finish is on an internal scope. A downstream context has to author its
+          selection inside implementation that may be reorganized at any time, and the set is
+          unavailable whenever the contents payload is left unloaded, which is precisely when a tool
+          wants to read what the asset offers.
 
-          The finished interface needs a matching paint set on /World carrying both variant names
-          with brick selected. Build it one branch at a time: select each public branch and, inside
-          that branch's edit context, author the matching selection on the Looks set, then restore
-          brick as the public selection. A selection authored outside the edit context becomes a
-          direct opinion instead of the conditional link, and the Looks set must be left with no
-          selection of its own, so only those nested opinions may set it.
+          The parameterized interface needs a matching exteriorType set on /World carrying both
+          branch names, with brick selected once the wiring is in place. Build it one branch at a
+          time: add the variant, select it, and inside that branch's edit context author the
+          matching selection on the Looks set, so choosing brick on /World composes an opinion that
+          chooses brick inside. A selection authored outside the edit context becomes a direct
+          opinion instead of the conditional link the pattern depends on.
         points:
           - Copying names without authoring nested selections creates an advertised set that controls nothing.
           - Variant names and spelling must match the internal set exactly.
           - Author only the controlling selection on the interface and leave the heavy surfacing opinions inside Looks.
-          - Verify both the public selection and the resulting internal selection after authoring.
+          - Inspect both the public selection and the internal selection it produces once the branches are wired.
       - kind: recap
         heading: What you now know
         body: |
@@ -629,9 +1590,115 @@ lessons:
           variant conditionally selects its matching internal variant, preserving a stable,
           unload-visible control while implementation opinions remain in their proper scope.
     apply:
-      f6_loft_variant: >-
-        Add paint with brick and stucco to /World and leave brick selected, matching the internal
-        Looks set. The art director gets the lobby switch; Looks keeps its locks.
+      f6_loft_brief: >-
+        Recreate exteriorType on /World and wire each public branch to the matching Looks selection
+        inside its edit context. The art director gets the switch; Looks keeps its locks.
+
+  - source: docs/asset-structure/model-hierarchy/what-are-model-kinds.md
+    title: Read the Model Hierarchy
+    objective: Explain what model hierarchy is for and place the component and assembly kinds correctly within it.
+    intro: >-
+      A film shot and a factory line both produce scenegraphs nobody can navigate by hand. Model
+      hierarchy is the shallower map drawn over the top of them, and it works only if the kinds
+      are placed where the rules say.
+    beats:
+      - kind: concept
+        heading: Kind is a shallower view of the scenegraph
+        system: >-
+          A map of the city that fits on one page. It omits every doorknob, which is the entire
+          point and also the most common complaint.
+        body: |
+          Composition can build hierarchies deep enough that a single scenegraph becomes hard for
+          both algorithms and users to navigate. Model hierarchy, expressed through kind metadata,
+          offers a separate higher-level view over that underlying scenegraph.
+
+          Its purpose is pruning. Traversal without it passes through every prim in the scene,
+          which is costly at production scale. Model hierarchy is designed to stop at a relatively
+          shallow point, the component model boundary. Ancestors of component models, when
+          correctly grouped, are part of the hierarchy, and everything below a component is not.
+        points:
+          - Model hierarchy is a navigational view, independent of the schema type each prim carries.
+          - Pruning at the component boundary is what keeps a model traversal affordable.
+          - Correct grouping of ancestors is a precondition for the hierarchy being usable at all.
+      - kind: concept
+        heading: Components are products, assemblies are aggregates
+        system: >-
+          A pen and a house are both components. Scale is not a kind, however strongly the
+          architecture department feels about it.
+        body: |
+          It helps to think of component models as roughly corresponding to consumer-facing
+          products. A pen and a house differ enormously in scale and complexity, and both are
+          logical component models. The component kind marks a leaf asset and a pruning point, so
+          a component cannot contain another component as a descendant.
+
+          Assemblies are important groups that usually correspond to aggregate assets. If the house
+          is a component, its neighbourhood and its city are candidates for assembly. An assembly
+          may contain other assemblies, plain groups, and component models, and intermediate groups
+          are often used inside it to separate trees, street lights, and architecture.
+        points:
+          - Every ancestor of a component must carry group kind or a subkind of group such as assembly.
+          - The ancestor requirement exists so that component discovery stays efficient for composition.
+          - Notable prims below a component boundary are annotated subcomponent, and subcomponents may nest.
+      - kind: api
+        heading: Ask a prim what role it plays
+        system: >-
+          Four predicates and no guesswork. The Heights consider this the only honest way to
+          audit a district.
+        body: |
+          Kind is prim metadata authored through Usd.ModelAPI, and the resulting role is queried
+          through prim predicates. IsModel, IsGroup, IsComponent, and IsSubComponent answer what a
+          prim claims to be, independently of the schema type it carries.
+        code: |
+          from pxr import Kind, Usd, UsdGeom
+
+          stage = Usd.Stage.CreateNew("block.usda")
+          block = UsdGeom.Xform.Define(stage, "/World").GetPrim()
+          house = UsdGeom.Xform.Define(stage, "/World/House").GetPrim()
+
+          Usd.ModelAPI(block).SetKind(Kind.Tokens.assembly)
+          Usd.ModelAPI(house).SetKind(Kind.Tokens.component)
+
+          assert block.IsGroup() and block.IsModel()
+          assert house.IsComponent()
+          stage.GetRootLayer().Save()
+      - kind: work_order
+        heading: Two districts, one valid hierarchy between them
+        system: >-
+          Both diagrams look like buildings. Only one of them can be traversed by anything other
+          than optimism.
+        body: |
+          The Model Heights keep two example districts side by side for arriving crawlers. Each one
+          holds a city root, a block beneath it, and buildings beneath that, and the geometry in
+          both is identical. Their kind metadata is not.
+
+          In the first, the city and the block carry group and assembly, and each building carries
+          component, so every ancestor of a component is a group or a group subkind and traversal
+          ends cleanly at the buildings. In the second, a building has been tagged component and a
+          detail inside it has been tagged component as well, which puts a component inside a
+          component and leaves the inner one outside any valid hierarchy. A third arrangement, with
+          intermediate groups separating the north and south sides of the block, is equally valid
+          and easier to navigate.
+
+          Reading a district correctly means asking three questions in order. Which prims are the
+          products, and therefore the components. Are all of their ancestors groups or subkinds of
+          group. And is anything worth naming below a component boundary, in which case it is a
+          subcomponent rather than an extension of the model hierarchy.
+        points:
+          - Kinds derive from an abstract model kind, and a concrete token such as group, assembly, or component is what gets authored.
+          - Assembly is a subkind of group, which is why it is a valid ancestor of a component.
+          - Subcomponent annotates important prims outside the model hierarchy and supports kind-based workflows.
+      - kind: recap
+        heading: What you now know
+        body: |
+          Model hierarchy is a shallow, higher-level view over the scenegraph that exists so
+          traversal can prune at the component boundary. Components are leaf assets comparable to
+          consumer products, assemblies are groups corresponding to aggregate assets, every
+          ancestor of a component must be a group or a group subkind, and anything notable below
+          the boundary is a subcomponent.
+    apply:
+      f6_model_kinds_brief: >-
+        Take in what the kinds mean and where the boundary sits before the Heights issue a deed.
+        A pen and a house are both components; a component inside a component is neither.
 
   - source: docs/asset-structure/model-hierarchy/exercise-components.md
     title: Register a Component Model
@@ -800,26 +1867,28 @@ lessons:
           sign.GetReferences().AddReference("sign.usda")
           stage.GetRootLayer().Save()
       - kind: work_order
-        heading: Components with no aggregate above them
+        heading: An empty root where a block belongs
         system: >-
           A block that owns every mesh, every material, and every regret has graduated from
           assembly to hoarding.
         body: |
-          The accumulated city reaches the Model Heights with the house registered as a component
-          and sign.usda published in the world's asset folder with its own entry point. No block
-          prim stands above either of them.
+          The block layer in the Model Heights opens with /World defined as an Xform and recorded
+          as the stage default prim, and nothing beneath it. The large building is already
+          published in the asset library at lrg_bldgF/lrg_bldgF.usd with its own entry point and
+          its own component role.
 
-          The district therefore holds loose component models and no aggregate that arranges them.
-          The sign is not on the stage at all, and the shortest way to make it appear is to copy
-          its meshes into the block layer, which ends the sign's independent publishing and stops
-          later changes to it from reaching this placement.
+          So the district holds a published building and a root with no aggregate role and no
+          members. Nothing on /World announces that it arranges other models, and the six lots the
+          block is meant to fill are not on the stage at all. The shortest way to make them appear
+          is to copy the building's meshes six times, which ends its independent publishing and
+          stops later changes from reaching any of these placements.
 
-          The finished block needs /City/AssetFoundry/SkylineBlock defined as an Xform with
-          assembly kind authored on it through Usd.ModelAPI, SignA defined beneath it carrying a
-          reference to sign.usda, and a documentation string on the block. The reference omits a
-          prim path, so sign.usda must expose a default prim to target. Assembly belongs on the
-          aggregate root, because a component root would turn its referenced component descendants
-          into an invalid hierarchy.
+          The populated block needs assembly kind authored on /World through Usd.ModelAPI, then
+          /World/lrg_bldgF_01 through /World/lrg_bldgF_06 defined as prims that each carry a
+          reference to the building asset. The reference omits a prim path, so the asset's own
+          default prim is the target, and each lot inherits its component role from the metadata
+          composed across the arc. Assembly belongs on the aggregate root, because a component
+          root would turn those referenced component descendants into an invalid hierarchy.
         points:
           - Leave gprims inside the component assets and bring them in by reference.
           - Author assembly kind on the aggregate root so its referenced components remain valid descendants.
@@ -832,9 +1901,9 @@ lessons:
           assemblies. References preserve each member's published contract while the assembly
           owns placement and organization.
     apply:
-      f6_assembly_block: >-
-        Mark SkylineBlock as an assembly, define SignA beneath it, and reference sign.usda there.
-        The skyline needs an aggregate, not a flattened confession.
+      f6_assembly_brief: >-
+        Mark /World an assembly, then define six lots and reference lrg_bldgF.usd on each. The
+        skyline needs an aggregate, not a flattened confession.
 
   - source: docs/asset-structure/model-hierarchy/exercise-groups.md
     title: Organize Models with Groups
@@ -935,6 +2004,115 @@ lessons:
       f6_street_groups: >-
         Define /World/North and /World/South as Xforms and mark both as groups beneath the existing
         assembly. Six naked children are not a district plan, regardless of spreadsheet quality.
+
+  - source: docs/asset-structure/model-hierarchy/exercise-variation-workstream.md
+    title: Drive Variation From the Assembly
+    objective: Traverse an aggregate asset and set variant selections and asset parameters on the component models that publish them.
+    intro: >-
+      A surfacing artist working one building at a time cannot see the street. Working at the
+      block gives them the context and the whole set of choices at once, and it turns the
+      published interfaces of a dozen components into something a short loop can drive.
+    beats:
+      - kind: concept
+        heading: An assembly is a place to work, not only to arrange
+        system: >-
+          Choosing a finish while looking at the neighbours is how a street avoids becoming a
+          catalogue page.
+        body: |
+          An aggregate asset can carry its own workstream layers, exactly as a component does. A
+          shading workstream on a city block lets a surfacing artist make variation choices on
+          individual buildings while seeing them in the context of the block, and the resulting
+          opinions are authored sparsely into that layer.
+
+          The choices themselves are not new authoring on the buildings. Each referenced component
+          already publishes its controls, so the block-level work is selecting among options the
+          components offer. That is what makes the layer sparse: it holds selections and parameter
+          values, not geometry or materials.
+        points:
+          - Working in context is the reason to author variation at the aggregate rather than per asset.
+          - The aggregate's shading layer holds only the selections and values it authors.
+          - Each component keeps publishing its own controls, so the block never reaches inside them.
+      - kind: concept
+        heading: Traversal plus kind is how a loop finds its targets
+        system: >-
+          Ask each prim what it is before telling it what to do. The alternative is an error
+          message shaped like a building.
+        body: |
+          A block holds more than the buildings a surfacing pass cares about. Traversing the
+          composed stage reaches every prim, so the loop needs a way to select only the models
+          that are meant to be driven, and kind is exactly that signal.
+
+          Filtering on the component role narrows the traversal to the leaf assets, and asking
+          whether the prim carries the expected variant set narrows it again to those that
+          actually publish the control. A prim that offers neither is skipped rather than
+          handled, because reading a variant set or a primvar that was never published yields
+          nothing to set.
+        points:
+          - A prim predicate answers the component question without inspecting paths or names.
+          - Asking whether a variant set exists before selecting on it is what keeps the loop safe on mixed content.
+          - The same guard pattern scales to a block holding assets from several different libraries.
+      - kind: api
+        heading: Select and parameterize in one pass
+        system: >-
+          One traversal, two published controls, and no interest whatsoever in how either is
+          implemented inside the building.
+        body: |
+          Each qualifying prim gets a variant selection on its published set and a value on its
+          published primvar. Both are interface fields, so the loop never opens an internal scope
+          and never needs to know how the finish is built.
+        code: |
+          from pxr import Usd, UsdGeom
+
+          stage = Usd.Stage.Open("city_blockA.usd")
+
+          for prim in stage.Traverse():
+              if not prim.IsComponent():
+                  continue
+              if not prim.GetVariantSets().HasVariantSet("exteriorType"):
+                  continue
+              UsdGeom.PrimvarsAPI(prim).GetPrimvar("accentColor").Set((0.0, 0.0, 1.0))
+              prim.GetVariantSet("exteriorType").SetVariantSelection("brick")
+
+          stage.GetRootLayer().Save()
+      - kind: work_order
+        heading: The block wears one finish on every building
+        system: >-
+          Identical buildings in a row read as a rendering error even when they are exactly what
+          was authored.
+        body: |
+          The block in the Model Heights is an assembly holding several referenced buildings and a
+          kiosk. Each building is a component publishing an exteriorType variant set and an
+          accentColor parameter on its entry point. The kiosk is a component too, and publishes
+          neither.
+
+          Every building is currently sitting on the same finish and the same accent, because
+          nothing at the block level has expressed a choice. Authoring those choices one building
+          at a time means opening each asset without the street around it, and reaching into the
+          buildings' internal surfacing scopes from the block would tie the aggregate to
+          implementation that its components are free to reorganize.
+
+          The varied block needs a single pass over the composed stage that selects the exterior
+          finish and sets the accent on each building through the controls those buildings already
+          publish. The pass has to establish that a prim is a component and that it carries the
+          expected variant set before acting on it, so the kiosk is skipped rather than asked for a
+          variant set and a primvar it never offered. The assembly kind on the block is left as it
+          stands, since arranging the models and choosing among their options are separate jobs.
+        points:
+          - Drive components through their published interfaces and leave their internal scopes closed.
+          - Guard on both the model role and the presence of the control before authoring anything.
+          - The selections and values are sparse opinions, so the components stay reusable elsewhere.
+          - Rerunning the pass with different choices rewrites only the aggregate's own opinions.
+      - kind: recap
+        heading: What you now know
+        body: |
+          An aggregate asset can host its own variation workstream, letting choices be made in
+          context and authored sparsely at the block level. A traversal filtered by model kind and
+          by the presence of a published control finds exactly the components worth driving, and
+          the selections and parameter values it authors touch nothing inside them.
+    apply:
+      f6_variation_workstream: >-
+        Traverse the block, keep the components that publish exteriorType, and set the finish and
+        the accent on each. The kiosk publishes neither and should leave the pass untouched.
 
   - source: docs/asset-structure/model-hierarchy/model-hierarchy-considerations.md
     title: Enforce Model Hierarchy
@@ -1039,9 +2217,9 @@ lessons:
           extension. Groups and assemblies organize above component leaf boundaries, allowing
           composition and traversal to reason efficiently about complete reusable assets.
     apply:
-      f6_zoning_golem: >-
-        Correct the inverted metadata: AssetFoundry is group, SkylineBlock is assembly, and House
-        is component. The Golem will recite the order until urban planning regains consciousness.
+      f6_model_considerations_brief: >-
+        Read the four rules the Heights actually run on: operational, shallow, consistent,
+        extensible. Kind tagged down to a gprim is depth, not diligence.
 
   - source: docs/asset-structure/asset-structure-principles/index.md
     title: Apply Scalable Asset Structure
@@ -1087,33 +2265,32 @@ lessons:
           - Timeline endpoints are stage metadata that declare the intended playback interval.
           - Kind is authored on the prim with Usd.ModelAPI.SetKind.
       - kind: concept
-        heading: Reference and instance reusable assets
+        heading: Reference reusable assets into place
         system: >-
           The throne needs a sign, not ownership of the sign factory. Even monarchs face storage
           quotas.
         body: |
-          An external reference composes a published asset beneath a destination prim. When many
-          placements share equivalent composed structure, marking those roots instanceable lets
-          OpenUSD share a prototype and keep composed prim counts manageable.
+          An external reference composes a published asset beneath a destination prim. The
+          destination keeps its own placement opinions while the referenced asset keeps its
+          geometry, materials, and identity in the file that publishes them, so a later change
+          there reaches every context that composed it.
 
-          SetInstanceable is metadata on the referencing prim that requests sharing. The reference
-          itself is authored separately, and instances that compose differently still receive
-          distinct prototypes. Variant selections that change composition can produce those
-          distinct prototypes, while differing inherited primvar values keep instances on one
-          prototype.
+          The arc is what expresses reuse. Copying the sign's prims into the city layer would
+          compose the same picture once and then stop tracking the asset entirely, which is how a
+          district accumulates several diverging copies of content that was meant to be one thing.
         points:
           - A reference with no prim path relies on the source layer's default prim.
-          - Instanceability is a performance contract and should be used on reusable composition roots.
-          - Local opinions that make instances structurally different can prevent prototype sharing.
+          - Placement belongs on the referencing prim, and the referenced asset keeps its own contents.
+          - Reuse expressed through composition is what allows a published change to reach every placement.
       - kind: api
         heading: Reassert the capstone contract
         system: >-
-          Seven authored facts stand between the city and null. I have seen bosses defeated with
+          Six authored facts stand between the city and null. I have seen bosses defeated with
           less, though never by this procurement process.
         body: |
           Author each contract through its owning API: stage metadata on Usd.Stage, axis metadata
-          through UsdGeom, model kind through Usd.ModelAPI, and composition plus instanceability on
-          the destination Usd.Prim.
+          through UsdGeom, model kind through Usd.ModelAPI, and the composition arc on the
+          destination Usd.Prim.
         code: |
           from pxr import Kind, Usd, UsdGeom
 
@@ -1130,7 +2307,6 @@ lessons:
           Usd.ModelAPI(city).SetKind(Kind.Tokens.group)
 
           throne.GetReferences().AddReference("sign.usda")
-          throne.SetInstanceable(True)
           stage.GetRootLayer().Save()
       - kind: work_order
         heading: The stage contract is unauthored
@@ -1147,15 +2323,14 @@ lessons:
           so the civic sign asset is not present in the stage at all. Prims and geometry supply
           none of these facts; each one is a separate authored opinion or it is absent.
 
-          The finished city needs /City/CrownDistrict/RootThrone defined as an Xform, referencing
-          sign.usda and marked instanceable; /City recorded as the default prim and carrying group
-          kind; the up axis set to Y; the start and end time codes set to 1 and 48; and a
-          documentation string on the throne. The default prim call takes a Usd.Prim rather than a
-          path string, sign.usda must expose its own default prim because the reference omits one,
-          and instanceable metadata requests sharing without authoring the arc it shares.
+          The finished city needs /City/CrownDistrict/RootThrone defined as an Xform and
+          referencing sign.usda; /City recorded as the default prim and carrying group kind; the up
+          axis set to Y; the start and end time codes set to 1 and 48; and a documentation string
+          on the throne. The default prim call takes a Usd.Prim rather than a path string, and
+          sign.usda must expose its own default prim because the reference omits one.
         points:
           - SetDefaultPrim expects a Usd.Prim, not a path string.
-          - Instanceable metadata belongs on the prim carrying the reusable composition arc.
+          - Stage metadata, model kind, and composition arcs are four separate authored contracts.
           - Save the root layer after all stage, prim, and composition metadata is authored.
           - Verify the source asset has defaultPrim before omitting the reference prim path.
       - kind: recap
@@ -1163,10 +2338,4 @@ lessons:
         body: |
           Scalable assets expose legible and navigable interfaces, preserve modular reuse, and
           control composition cost. A complete contract explicitly authors entry point, axis,
-          timeline, kind, reference, and instanceability, leaving nothing to convention or
-          coincidence.
-    apply:
-      f9_null_monarch: >-
-        Make /City the default group, restore Y-up and time codes 1 through 48, then reference the
-        civic sign on RootThrone and mark it instanceable. The Monarch erased meaning; return all
-        seven facts before it discovers appeals.
+          timeline, kind, and composition arc, leaving nothing to convention or coincidence.

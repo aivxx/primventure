@@ -1,13 +1,171 @@
 floor: 8
 floor_name: Prototype Wilds
 quests:
+  - id: f7_modularity_doctrine
+    title: Read the Case for Building Out of Parts
+    floor: 8
+    floor_name: Prototype Wilds
+    neighborhood: Scenegraph Thickets
+    kind: room
+    prerequisites: [f6_zoning_golem]
+    level_required: 15
+    exam_tasks: [explain_content_reuse, separate_arcs_from_layer_stacks]
+    stats: {lore: 4, insight: 3}
+    brief: "SYSTEM: The Wilds run on reuse, and reuse is a decision you make before you make anything else. One rack asset, twenty-five placements, one team that never sees the bolts. Read the page, then answer."
+    starter: ''
+    language: none
+    validator:
+      assertions: []
+    cookbook: docs/asset-modularity-instancing/asset-modularity/what-is-asset-modularity.md
+    xp: 160
+    reward: Reuse Doctrine
+    world_target: /City/InstanceWilds
+    recipes: [Reference, Layer Stack]
+    questions:
+      - prompt: A scene composes through its root layer stack. Which layers make up that stack?
+        choices:
+          - The root layer plus every sublayer, including the sublayers of those sublayers
+          - The root layer plus every asset layer any prim references
+          - Only the layers the stage was asked to open by name
+        answer: 0
+        explanation: The root layer stack is the root layer and its full sublayer tree; composition arcs then compose other layer stacks into it.
+      - prompt: Four scenarios reference the same rack asset. A more advanced material model is authored once inside the rack. What reaches the scenarios?
+        choices:
+          - The change propagates through every assembly and scenario that references the rack
+          - Nothing, because a reference copies the rack's scene description when it is authored
+          - Only the scenarios whose layers are re-exported by hand afterwards
+        answer: 0
+        explanation: Centralized editing is the point of reuse, since one edit to a referenced asset resolves everywhere it is composed.
+      - prompt: The module treats layer stacks and composition arcs as separate operators rather than one idea. Which topic makes that distinction matter?
+        choices:
+          - Instancing, whose behavior depends on which operator supplied the shared structure
+          - Sublayering, which cannot be expressed as an arc at all
+          - Strength ordering, which ignores arcs entirely
+        answer: 0
+        explanation: LIVERPS orders local layer stacks against arcs, and instancing behavior turns on which of the two brought in the structure.
+
+  - id: f7_asset_lineup
+    title: Walk the Modular Asset Lineup
+    floor: 8
+    floor_name: Prototype Wilds
+    neighborhood: Scenegraph Thickets
+    kind: room
+    prerequisites: [f7_modularity_doctrine]
+    level_required: 15
+    exam_tasks: [identify_components_and_assemblies, trace_reuse_to_scale]
+    stats: {lore: 4, insight: 3}
+    brief: "SYSTEM: Five assets stand in a row: three leaf models and two that are assembled from them. Learn the lineup before the Wilds start repeating it forty thousand times."
+    starter: ''
+    language: none
+    validator:
+      assertions: []
+    cookbook: docs/asset-modularity-instancing/asset-modularity/exercise-assets-overview.md
+    xp: 170
+    reward: Asset Lineup Manifest
+    world_target: /City/InstanceWilds
+    recipes: [Component, Assembly]
+    questions:
+      - prompt: A rack asset holds three box-pallet assemblies, each holding eighteen boxes and one pallet. What makes the composed warehouse large while the library stays small?
+        choices:
+          - Each asset is referenced and arranged rather than copied into every placement
+          - Every box is authored again inside each pallet
+          - The warehouse flattens its assets into a single layer
+        answer: 0
+        explanation: References let a handful of reusable assets compose into tens of thousands of prims.
+      - prompt: Which classification describes a reusable leaf model such as a single box?
+        choices:
+          - Component
+          - Assembly
+          - Group
+        answer: 0
+        explanation: Components are leaf-level models; assemblies combine components and other assemblies.
+
+  - id: f7_dedup_declaration
+    title: Read What Instancing Actually Declares
+    floor: 8
+    floor_name: Prototype Wilds
+    neighborhood: Scenegraph Thickets
+    kind: room
+    prerequisites: [f7_asset_lineup]
+    level_required: 15
+    exam_tasks: [explain_declarative_deduplication, weigh_refinement_against_sharing]
+    stats: {lore: 4, insight: 4}
+    brief: "SYSTEM: Composition already lets you repeat an asset forty thousand times and override every copy. Instancing is you giving up that right on purpose, in writing. Read the page, then answer."
+    starter: ''
+    language: none
+    validator:
+      assertions: []
+    cookbook: docs/asset-modularity-instancing/what-is-instancing.md
+    xp: 165
+    reward: Deduplication Waiver
+    world_target: /City/InstanceWilds
+    recipes: [Reference, Instancing]
+    questions:
+      - prompt: A stage references one robot asset forty times and overrides a few copies. What must a runtime do before it can deduplicate the rest?
+        choices:
+          - Inspect each copy for overrides to learn whether it still matches the source
+          - Nothing, because copies that share an asset path are always shared automatically
+          - Flatten the composed stage into a single layer first
+        answer: 0
+        explanation: Deduplication after the fact costs time and algorithmic complexity, because every repetition has to be compared against the source.
+      - prompt: What does tagging part of a scene for instancing declare up front?
+        choices:
+          - That the tagged element is not open to refinement downstream, so its composed result can be shared
+          - That the element is drawn in a single batch by the renderer
+          - That the element's layer is stored only once on disk
+        answer: 0
+        explanation: Instancing is a declaration that per-instance customization is limited, which is what lets the composed result be shared without inspection.
+      - prompt: What is the trade you accept in exchange for that shared view of the scene?
+        choices:
+          - Sparse overrides on the shared content, given up in return for lower runtime cost
+          - Composition arcs, which instanced content can no longer use
+          - Modular layers, which must be merged before instancing applies
+        answer: 0
+        explanation: Sparse overrides are the capability being limited; modular layers and arcs are what instancing is built on top of.
+
+  - id: f7_shared_prototypes
+    title: Read the Instance and Prototype Roles
+    floor: 8
+    floor_name: Prototype Wilds
+    neighborhood: Scenegraph Thickets
+    kind: room
+    prerequisites: [f7_dedup_declaration]
+    level_required: 15
+    exam_tasks: [distinguish_instance_from_prototype, explain_instance_proxies]
+    stats: {lore: 4, insight: 4}
+    brief: "SYSTEM: Four words carry this whole technique: prototype, instance, instanceable prim, instance proxy. Learn which one you are allowed to author on before the Thickets hand you three benches."
+    starter: ''
+    language: none
+    validator:
+      assertions: []
+    cookbook: docs/asset-modularity-instancing/authoring-scenegraph-instancing/scenegraph-instancing-intro.md
+    xp: 180
+    reward: Prototype Glossary
+    world_target: /City/InstanceWilds
+    recipes: [Instancing, Instanceable]
+    questions:
+      - prompt: Three prims are marked instanceable, and each is defined locally with no reference, payload, or other composition arc. How many prototypes does OpenUSD generate?
+        choices:
+          - None, because prototypes are derived from composition arcs
+          - Three, one for each instanceable prim
+          - One, shared by all three
+        answer: 0
+        explanation: Instanceable metadata alone shares nothing; the composition arcs are what prototypes are derived from.
+      - prompt: Which part of an instance stays editable?
+        choices:
+          - The instanceable prim itself, which carries per-copy transforms and metadata
+          - The instance proxies below it
+          - The generated prototype hierarchy
+        answer: 0
+        explanation: The instance root is mutable, while the shared descendants are exposed read-only as instance proxies.
+
   - id: f7_repeat_benches
     title: Make the Benches Scenegraph Instances
     floor: 8
     floor_name: Prototype Wilds
     neighborhood: Scenegraph Thickets
     kind: room
-    prerequisites: [f6_zoning_golem]
+    prerequisites: [f7_shared_prototypes]
     level_required: 15
     exam_tasks: [author_scenegraph_instances, reuse_component]
     stats: {craft: 4, insight: 3}
@@ -81,13 +239,127 @@ quests:
         answer: 0
         explanation: Scenegraph instancing shares an implicit prototype.
 
+  - id: f7_nested_aggregates
+    title: Read Where Nesting Earns Its Keep
+    floor: 8
+    floor_name: Prototype Wilds
+    neighborhood: Scenegraph Thickets
+    kind: room
+    prerequisites: [f7_prototype_sentinel]
+    level_required: 16
+    exam_tasks: [explain_nested_instancing, choose_nesting_boundaries]
+    stats: {lore: 4, insight: 4}
+    brief: "SYSTEM: An instance can hold instances. Learn which boundaries repeat often enough to deserve it, because the Mirror Furnace at the end of this floor will ask you to author one."
+    starter: ''
+    language: none
+    validator:
+      assertions: []
+    cookbook: docs/asset-modularity-instancing/authoring-scenegraph-instancing/nested-instancing.md
+    xp: 190
+    reward: Furnace Survey
+    world_target: /City/InstanceWilds/BenchRow
+    recipes: [Instancing, Assembly]
+    questions:
+      - prompt: What is nested instancing?
+        choices:
+          - An instance whose shared subgraph itself contains further instances
+          - Two instancers stored in separate layers
+          - A prototype that has been flattened into its instance
+        answer: 0
+        explanation: Nesting stacks sharing at more than one boundary, such as an instanced assembly of instanced components.
+      - prompt: Besides geometry, which part of a component asset often benefits most from being instanced?
+        choices:
+          - A referenced material network, which can hold more prims than the geometry
+          - The prim's documentation metadata
+          - The stage's up axis
+        answer: 0
+        explanation: Material networks referenced from a library are common nested instancing candidates.
+
+  - id: f7_nested_rack_rows
+    title: Instance the Rows, Not the Seats
+    floor: 8
+    floor_name: Prototype Wilds
+    neighborhood: Scenegraph Thickets
+    kind: room
+    prerequisites: [f7_nested_aggregates]
+    level_required: 16
+    exam_tasks: [instance_the_aggregate_boundary, weigh_nesting_tradeoff]
+    stats: {craft: 4, insight: 4}
+    brief: "SYSTEM: bench_row.usda already shares its own seats. Move the promise up one level: reference the row twice and mark both rows instanceable. Fewer, larger prototypes. The seats inside stop taking requests."
+    starter: |
+      from pathlib import Path
+      from pxr import Usd, UsdGeom
+
+      row = (Path(WORLD_ROOT) / "assets" / "bench_row.usda").as_posix()
+      stage = Usd.Stage.CreateNew(STAGE_PATH)
+      UsdGeom.Xform.Define(stage, "/City/InstanceWilds/NestedRows")
+      for name in ("RowA", "RowB"):
+          prim = UsdGeom.Xform.Define(stage, f"/City/InstanceWilds/NestedRows/{name}").GetPrim()
+          # TODO: Reference bench_row.usda and set instanceable True on the row itself.
+      stage.GetRootLayer().Save()
+    language: python
+    validator:
+      assertions:
+        - has_reference: {path: /City/InstanceWilds/NestedRows/RowA, asset: bench_row.usda}
+        - has_reference: {path: /City/InstanceWilds/NestedRows/RowB, asset: bench_row.usda}
+        - instanceable: {path: /City/InstanceWilds/NestedRows/RowA, value: true}
+        - instanceable: {path: /City/InstanceWilds/NestedRows/RowB, value: true}
+    cookbook: docs/asset-modularity-instancing/authoring-scenegraph-instancing/exercise-nested-instancing.md
+    xp: 250
+    reward: Aggregate Boundary Gauge
+    world_target: /City/InstanceWilds/NestedRows
+    recipes: [Instancing, Assembly]
+
+  - id: f7_editability_rules
+    title: Read Which Instance Prims Accept an Edit
+    floor: 8
+    floor_name: Prototype Wilds
+    neighborhood: Scenegraph Thickets
+    kind: room
+    prerequisites: [f7_nested_rack_rows]
+    level_required: 16
+    exam_tasks: [apply_instance_editability_rules, define_refinement]
+    stats: {lore: 4, insight: 5}
+    brief: "SYSTEM: Three rules decide where an opinion lands: prototypes never, instance proxies never, instanceable prims always. Everything the Thickets call refinement is built on the third one. Read the page, then answer."
+    starter: ''
+    language: none
+    validator:
+      assertions: []
+    cookbook: docs/asset-modularity-instancing/refining-scenegraph-instances/scenegraph-instance-refinement.md
+    xp: 180
+    reward: Editability Rulebook
+    world_target: /City/InstanceWilds
+    recipes: [Instancing, Opinions]
+    questions:
+      - prompt: A developer sees a prototype path in a tree view and authors an over on it in the local layer stack. What is the result?
+        choices:
+          - A dangling override unrelated to the actual prototype, because prototypes are a runtime data model
+          - An edit applied to every instance that shares that prototype
+          - A second prototype containing the override
+        answer: 0
+        explanation: Prototype paths are generated at runtime and shift between runs, so an opinion authored at one composes against nothing.
+      - prompt: An over is authored on a path beneath an active instance root, such as /World/RobotArm_01/joint_1. What happens to that opinion?
+        choices:
+          - It is refused, because an instance proxy cannot receive a local opinion
+          - It applies to that one instance and leaves its siblings alone
+          - It is redirected onto the prototype and applies to every instance
+        answer: 0
+        explanation: Instance proxies are read-only stand-ins, so authoring to one is an error and any local opinion on shared content is discarded.
+      - prompt: What counts as refinement of an instance?
+        choices:
+          - A permissible edit on the instanceable prim, either natively inherited or triggering a new prototype
+          - Any edit OpenUSD silently forwards onto the existing prototype
+          - Any edit that keeps the total prototype count unchanged
+        answer: 0
+        explanation: Refinement works through the mutable instance root; some techniques inherit down and others cause OpenUSD to derive an additional prototype.
+
   - id: f7_deinstance_sticker
     title: Deinstance One Bench, Share the Rest
     floor: 8
     floor_name: Prototype Wilds
     neighborhood: Scenegraph Thickets
     kind: room
-    prerequisites: [f7_prototype_sentinel]
+    prerequisites: [f7_editability_rules]
     level_required: 16
     exam_tasks: [deinstance_selectively, preserve_other_instances]
     stats: {craft: 3, insight: 4}
@@ -117,13 +389,212 @@ quests:
     world_target: /City/InstanceWilds
     recipes: [Instancing]
 
+  - id: f7_status_variants
+    title: Refine Two Benches Through a Variant Selection
+    floor: 8
+    floor_name: Prototype Wilds
+    neighborhood: Scenegraph Thickets
+    kind: room
+    prerequisites: [f7_deinstance_sticker]
+    level_required: 16
+    exam_tasks: [author_variant_set_on_instance_root, refine_by_selection]
+    stats: {craft: 4, insight: 4}
+    brief: "SYSTEM: Two benches need different states and neither may leave the shared arrangement. Put the variant set on the instanceable prim, where selections are still legal, and let the selections do the refining."
+    starter: |
+      from pathlib import Path
+      from pxr import Usd, UsdGeom
+
+      bench = (Path(WORLD_ROOT) / "assets" / "bench.usda").as_posix()
+      stage = Usd.Stage.CreateNew(STAGE_PATH)
+      for name in ("BenchA", "BenchB"):
+          prim = UsdGeom.Xform.Define(stage, f"/City/InstanceWilds/{name}").GetPrim()
+          prim.GetReferences().AddReference(bench)
+          prim.SetInstanceable(True)
+      # TODO: On each bench, add a statusVariant set holding variants stored and allocated.
+      # TODO: Select stored on BenchA and allocated on BenchB, leaving both instanceable.
+      stage.GetRootLayer().Save()
+    language: python
+    validator:
+      assertions:
+        - instanceable: {path: /City/InstanceWilds/BenchA, value: true}
+        - instanceable: {path: /City/InstanceWilds/BenchB, value: true}
+        - has_variant_set:
+            path: /City/InstanceWilds/BenchA
+            name: statusVariant
+            variants: [stored, allocated]
+            selection: stored
+        - has_variant_set:
+            path: /City/InstanceWilds/BenchB
+            name: statusVariant
+            variants: [stored, allocated]
+            selection: allocated
+    cookbook: docs/asset-modularity-instancing/refining-scenegraph-instances/scenegraph-variant-set-refinement.md
+    xp: 250
+    reward: Status Selector
+    world_target: /City/InstanceWilds
+    recipes: [Variant Set, Instancing]
+
+  - id: f7_primvar_shade
+    title: Shade Three Benches Without a Second Prototype
+    floor: 8
+    floor_name: Prototype Wilds
+    neighborhood: Scenegraph Thickets
+    kind: room
+    prerequisites: [f7_status_variants]
+    level_required: 16
+    exam_tasks: [author_inherited_primvar, refine_without_new_prototypes]
+    stats: {craft: 4, insight: 4}
+    brief: "SYSTEM: The cheapest variety in the Thickets. Primvars inherit down the hierarchy, so an opinion on the instance root reaches the shared seat without composing anything new. Three benches, one prototype, two shades."
+    starter: |
+      from pathlib import Path
+      from pxr import Gf, Sdf, Usd, UsdGeom
+
+      bench = (Path(WORLD_ROOT) / "assets" / "bench.usda").as_posix()
+      stage = Usd.Stage.CreateNew(STAGE_PATH)
+      for name in ("BenchA", "BenchB", "BenchC"):
+          prim = UsdGeom.Xform.Define(stage, f"/City/InstanceWilds/{name}").GetPrim()
+          prim.GetReferences().AddReference(bench)
+          prim.SetInstanceable(True)
+      # TODO: With UsdGeom.PrimvarsAPI, CreatePrimvar a constant displayColor on BenchA and BenchB.
+      # TODO: Set BenchA to (0.5, 0.5, 0.5) and BenchB to (0.25, 0.25, 0.25). Leave BenchC alone.
+      stage.GetRootLayer().Save()
+    language: python
+    validator:
+      assertions:
+        - instanceable: {path: /City/InstanceWilds/BenchA, value: true}
+        - instanceable: {path: /City/InstanceWilds/BenchB, value: true}
+        - attribute_equals:
+            path: /City/InstanceWilds/BenchA.primvars:displayColor
+            value: [[0.5, 0.5, 0.5]]
+        - attribute_equals:
+            path: /City/InstanceWilds/BenchB.primvars:displayColor
+            value: [[0.25, 0.25, 0.25]]
+    cookbook: docs/asset-modularity-instancing/refining-scenegraph-instances/scenegraph-hierarchical-refinement.md
+    xp: 255
+    reward: Inheritance Swatch
+    world_target: /City/InstanceWilds
+    recipes: [Primvar, Instancing]
+
+  - id: f7_stamp_arc
+    title: Add One Arc to Two Instances
+    floor: 8
+    floor_name: Prototype Wilds
+    neighborhood: Scenegraph Thickets
+    kind: room
+    prerequisites: [f7_primvar_shade]
+    level_required: 16
+    exam_tasks: [author_ad_hoc_arc, share_a_refined_prototype]
+    stats: {craft: 4, insight: 5}
+    brief: "SYSTEM: Two benches need a placard and neither may be deinstanced for it. Add a second reference on the instanceable prims. Prototypes come from arcs, so a new arc buys a new prototype the pair can share."
+    starter: |
+      from pathlib import Path
+      from pxr import Usd, UsdGeom
+
+      bench = (Path(WORLD_ROOT) / "assets" / "bench.usda").as_posix()
+      sign = (Path(WORLD_ROOT) / "assets" / "sign.usda").as_posix()
+      stage = Usd.Stage.CreateNew(STAGE_PATH)
+      for name in ("BenchA", "BenchB", "BenchC"):
+          prim = UsdGeom.Xform.Define(stage, f"/City/InstanceWilds/{name}").GetPrim()
+          prim.GetReferences().AddReference(bench)
+          prim.SetInstanceable(True)
+      # TODO: Add a second reference to sign.usda on BenchA and BenchB only.
+      # TODO: Both must still be instanceable when you are done.
+      stage.GetRootLayer().Save()
+    language: python
+    validator:
+      assertions:
+        - has_reference: {path: /City/InstanceWilds/BenchA, asset: sign.usda}
+        - has_reference: {path: /City/InstanceWilds/BenchB, asset: sign.usda}
+        - instanceable: {path: /City/InstanceWilds/BenchA, value: true}
+        - instanceable: {path: /City/InstanceWilds/BenchB, value: true}
+    cookbook: docs/asset-modularity-instancing/refining-scenegraph-instances/scenegraph-ad-hoc-arcs-refinement.md
+    xp: 260
+    reward: Placard Mixin
+    world_target: /City/InstanceWilds
+    recipes: [Reference, Instancing]
+
+  - id: f7_broadcast_class
+    title: Broadcast One Opinion Across a Pallet
+    floor: 8
+    floor_name: Prototype Wilds
+    neighborhood: Scenegraph Thickets
+    kind: room
+    prerequisites: [f7_stamp_arc]
+    level_required: 16
+    exam_tasks: [author_specialize_target, broadcast_to_instances]
+    stats: {craft: 5, insight: 5}
+    brief: "SYSTEM: Adding the same arc bench by bench does not scale. Put a class prim inside the pallet, specialize every bench to it, and author the placard once. One opinion, whole pallet."
+    starter: |
+      from pathlib import Path
+      from pxr import Sdf, Usd, UsdGeom
+
+      bench = (Path(WORLD_ROOT) / "assets" / "bench.usda").as_posix()
+      sign = (Path(WORLD_ROOT) / "assets" / "sign.usda").as_posix()
+      stage = Usd.Stage.CreateNew(STAGE_PATH)
+      UsdGeom.Xform.Define(stage, "/City/InstanceWilds/BenchPallet")
+      for name in ("BenchA", "BenchB"):
+          prim = UsdGeom.Xform.Define(stage, f"/City/InstanceWilds/BenchPallet/{name}").GetPrim()
+          prim.GetReferences().AddReference(bench)
+          prim.SetInstanceable(True)
+      # TODO: Create a class prim at /City/InstanceWilds/BenchPallet/_PalletBench.
+      # TODO: Specialize both benches to it, then reference sign.usda on the class once.
+      stage.GetRootLayer().Save()
+    language: python
+    validator:
+      assertions:
+        - specifier_equals: {path: /City/InstanceWilds/BenchPallet/_PalletBench, value: class}
+        - has_reference: {path: /City/InstanceWilds/BenchPallet/_PalletBench, asset: sign.usda}
+        - has_specializes: {path: /City/InstanceWilds/BenchPallet/BenchA}
+        - has_specializes: {path: /City/InstanceWilds/BenchPallet/BenchB}
+    cookbook: docs/asset-modularity-instancing/refining-scenegraph-instances/scenegraph-broadcasted-refinement.md
+    xp: 270
+    reward: Broadcast Antenna
+    world_target: /City/InstanceWilds/BenchPallet
+    recipes: [Specializes, Class, Instancing]
+
+  - id: f7_vectorized_scatter
+    title: Read the PointInstancer's Three Arrays
+    floor: 8
+    floor_name: Prototype Wilds
+    neighborhood: Point Wastes
+    kind: room
+    prerequisites: [f7_broadcast_class]
+    level_required: 16
+    exam_tasks: [explain_point_instancing, order_instance_transforms]
+    stats: {lore: 4, insight: 5}
+    brief: "SYSTEM: The Wastes hold populations nobody wants named. Learn how prototypes, indices, and positions describe a hundred thousand objects on one prim, and what that compactness costs you later."
+    starter: ''
+    language: none
+    validator:
+      assertions: []
+    cookbook: docs/asset-modularity-instancing/authoring-point-instancing/point-instancing-intro.md
+    xp: 190
+    reward: Wastes Index Chart
+    world_target: /City/InstanceWilds/Warehouse
+    recipes: [Point Instancer]
+    questions:
+      - prompt: A PointInstancer targets prototypes in the order [Crate, Bench]. What does a protoIndices value of 1 select?
+        choices:
+          - Bench, the second entry in the ordered prototypes relationship
+          - Crate, because indices count from one
+          - The first instance rather than a prototype
+        answer: 0
+        explanation: protoIndices holds zero-based indices into the ordered prototypes relationship.
+      - prompt: You need to move one instance out of a hundred thousand. What must you author?
+        choices:
+          - The entire positions array again, since arrays resolve whole
+          - Only the single element that changed
+          - A sparse override on that instance's prim
+        answer: 0
+        explanation: There are no sparse array overrides, so a single point change means authoring the whole array.
+
   - id: f7_point_scatter
     title: Scatter Crates With a PointInstancer
     floor: 8
     floor_name: Prototype Wilds
     neighborhood: Point Wastes
     kind: room
-    prerequisites: [f7_deinstance_sticker]
+    prerequisites: [f7_vectorized_scatter]
     level_required: 16
     exam_tasks: [author_point_instancer, bind_prototypes]
     stats: {craft: 5, insight: 4}
@@ -151,13 +622,55 @@ quests:
     world_target: /City/InstanceWilds/Warehouse
     recipes: [Point Instancer]
 
+  - id: f7_promote_point
+    title: Hide One Point and Promote It
+    floor: 8
+    floor_name: Prototype Wilds
+    neighborhood: Point Wastes
+    kind: room
+    prerequisites: [f7_point_scatter]
+    level_required: 16
+    exam_tasks: [hide_point_instances, promote_a_point_instance]
+    stats: {craft: 5, insight: 4}
+    brief: "SYSTEM: One crate in the Wastes needs a name and an animator. Hide its index, then reference the real asset into the hole it left and place it where the point stood. Promotion is pruning plus a prim."
+    starter: |
+      from pathlib import Path
+      from pxr import Gf, Usd, UsdGeom
+
+      cargo = (Path(WORLD_ROOT) / "assets" / "cargo.usda").as_posix()
+      stage = Usd.Stage.CreateNew(STAGE_PATH)
+      field = UsdGeom.PointInstancer.Define(stage, "/City/InstanceWilds/CrateScatter")
+      crate = stage.DefinePrim("/City/InstanceWilds/CrateScatter/Prototypes/Crate", "Xform")
+      crate.GetReferences().AddReference(cargo)
+      field.CreatePrototypesRel().SetTargets([crate.GetPath()])
+      field.CreateProtoIndicesAttr([0, 0, 0, 0])
+      field.CreatePositionsAttr([Gf.Vec3f(x, 0.0, 0.0) for x in (0.0, 2.0, 4.0, 6.0)])
+      # TODO: Hide instance index 2 by authoring invisibleIds on the scatter.
+      # TODO: Define /City/InstanceWilds/PromotedCrate, reference cargo.usda, and AddTranslateOp
+      #       to (4, 0, 0), the position instance 2 held.
+      stage.GetRootLayer().Save()
+    language: python
+    validator:
+      assertions:
+        - point_instancer: {path: /City/InstanceWilds/CrateScatter, min_instances: 4, prototype_count: 1}
+        - attribute_equals: {path: /City/InstanceWilds/CrateScatter.invisibleIds, value: [2]}
+        - has_reference: {path: /City/InstanceWilds/PromotedCrate, asset: cargo.usda}
+        - attribute_equals:
+            path: /City/InstanceWilds/PromotedCrate.xformOp:translate
+            value: [4.0, 0.0, 0.0]
+    cookbook: docs/asset-modularity-instancing/refining-point-instances.md
+    xp: 275
+    reward: Promotion Warrant
+    world_target: /City/InstanceWilds/PromotedCrate
+    recipes: [Point Instancer, Reference]
+
   - id: f7_point_wastes_boss
     title: "Cargo Foreman: Two Prototypes, One Instancer"
     floor: 8
     floor_name: Prototype Wilds
     neighborhood: Point Wastes
     kind: neighborhood_boss
-    prerequisites: [f7_point_scatter]
+    prerequisites: [f7_promote_point]
     level_required: 16
     exam_tasks: [multi_prototype_instancer, author_proto_indices]
     stats: {insight: 5, craft: 4}
@@ -231,7 +744,7 @@ quests:
       - point_instancer: {path: /City/InstanceWilds/Warehouse/CrateField, min_instances: 6, prototype_count: 1}
       - metadata_equals: {path: /City/InstanceWilds/Warehouse, key: documentation, value: 'Warehouse District: Mix Both Instancing
             Types cleared.'}
-    cookbook: docs/asset-modularity-instancing/asset-modularity/exercise-assets-overview.md
+    cookbook: docs/asset-modularity-instancing/authoring-point-instancing/exercise-authoring-point-instancing.md
     xp: 400
     reward: {opinion_points: 2, achievement: "Warehouse recaptured. The crowd pretends they understood prototypes."}
     world_target: /City/InstanceWilds/Warehouse

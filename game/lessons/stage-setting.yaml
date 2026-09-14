@@ -286,11 +286,6 @@ lessons:
         A Sphere is a typed prim, so its radius arrives already declared and the schema accessor
         is right there. Define the globe, then set radius to 0.4. The alley has been dark since
         the last contestant, who is also still in there, and glass is as far as you get today.
-      f0_gatekeeper: >-
-        Everything the floor taught, in one submission. Define /City as an Xform with cityName still
-        reading Primventure, define /City/Threshold as an Xform, and give it a string attribute
-        districtName set to Prim Threshold. The Gatekeeper reads all four and grades none of them
-        generously.
 
   - source: docs/stage-setting/stage.md
     title: Stages
@@ -511,10 +506,6 @@ lessons:
         Stamp the record on /City/PropertyWard/LampGlobe: documentation set to "Alley lamp globe."
         and comment set to "Glass blown on floor one." Neither is an attribute, so neither goes
         through CreateAttribute. Punctuation included, because the Registrar reads it aloud.
-      f1_civic_record: >-
-        Restore the whole ledger. Both districts typed as Xform, documentation on /City/PropertyWard
-        and /City/Archive, comment on /City/Archive/Stacks, and an indexes relationship from the
-        stacks to the clock. The Registrar erased it, and unlike the Registrar, I keep receipts.
 
   - source: docs/stage-setting/timecodes-timesamples.md
     title: Timecodes and Time Samples
@@ -617,10 +608,6 @@ lessons:
         Define a Cube at /City/PropertyWard/Clock, then sample its size attribute twice: 1.0 at time
         code 1 and 10.0 at time code 48. Two samples, one attribute. Set it once without a time and
         the clock face simply sits there being confident.
-      f1_clockwork_crossing: >-
-        Bind the city clock from 1 to 48, then sample the Cube's size at both endpoints, 1.0 at
-        time code 1 and 10.0 at time code 48. The crossing has been looping outside time and the
-        commuters have opinions.
 
   - source: docs/stage-setting/properties/relationships.md
     title: Relationships
@@ -702,10 +689,6 @@ lessons:
         then create a relationship named feeds on the Canal targeting /City/PropertyWard/LampGlobe.
         The canal does not carry the lamp, it points at it, which is the entire lesson and also the
         entire room.
-      f2_relationship_bridge: >-
-        Define /City/PropertyWard/Bridge as an Xform, then author both links: destination
-        targeting the lamp globe and origin targeting the canal. A bridge that knows neither bank
-        is technically just an expensive opinion about air.
 
   - source: docs/stage-setting/usd-file-formats.md
     title: USD File Formats
@@ -813,10 +796,6 @@ lessons:
         No authoring here, only judgement. Be ready to say which extension is the readable text
         encoding, which one packages a scene with its assets for handoff, and why .usd deliberately
         refuses to tell you whether it is text or binary.
-      f2_schema_warden: >-
-        Define /City/Archive/WardenVault as an Xform, give it a string formatNote reading usda,
-        and point its archives relationship at the clock. Keep shelfCount reading 12 on the
-        stacks. The Warden rejects vague forms, untyped containers, and, historically, contestants.
 
   - source: docs/stage-setting/prim-property-paths.md
     title: Prim and Property Paths

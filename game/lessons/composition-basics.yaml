@@ -167,13 +167,6 @@ lessons:
         Define the StreetLamp as a SphereLight, then set its intensity to 750 through the schema
         accessor. The attribute being graded is inputs:intensity, namespace and all. Lumen Row has
         been dark for two seasons and the audience has stopped pretending to be surprised.
-      f2_blueprint_marshal: >-
-        Author the whole borough in one pass. Define /City/BlueprintBorough as an Xform, then
-        inside it a Cube named Stall with size 2, a Scope named Yard, an Xform named Crane
-        translated to (0, 12, 0), an Xform named Lift scaled to (2, 2, 2) through XformCommonAPI,
-        and a SphereLight named StreetLamp at intensity 750. Six prims, each declared by the
-        schema that owns its job. The Marshal reads the manifest top to bottom and has never once
-        been talked out of a line item.
 
   - source: docs/composition-basics/layers.md
     title: Layers and Sublayers
@@ -276,9 +269,6 @@ lessons:
       f3_layer_registry: >-
         Add district_registry.usda to the root layer's subLayerPaths, then save the root. City Hall
         requires a weaker, inspectable voice and has weaponized the filing deadline.
-      f3_layer_stack_boss: >-
-        Put commerce.usda before safety.usda so "open" wins. The Permit Desk respects list order,
-        unlike ordinances, testimony, or basic geometry.
 
   - source: docs/composition-basics/specifiers.md
     title: Prim Specifiers
@@ -391,10 +381,6 @@ lessons:
       f3_over_case: >-
         Use the existing appeal over to author size 8 locally. The evidence stays untouched, which
         disappoints the demolition sponsor.
-      f3_specifier_boss: >-
-        Define PermitBooth as a def. The System wires the inherit arc that carries the blueprint's
-        department opinion, because arcs are Floor 05's problem. The blueprint must remain class,
-        the booth must resolve def, and the traversal will serve as judge.
 
   - source: docs/composition-basics/references.md
     title: References
@@ -507,9 +493,6 @@ lessons:
       f3_reference_license: >-
         Add arcade_sign.usda to ArcadeSign's references and let its default prim supply the target.
         The licensing desk accepts arcs and rejects photocopies on aesthetic grounds.
-      f3_city_block: >-
-        Define three stall destinations, reference market_stall.usda on each, and author local
-        stallId values. Three addresses, one asset, and no tribute to the Duplicate Baron.
 
   - source: docs/composition-basics/default-prim.md
     title: Default Prim
@@ -725,12 +708,9 @@ lessons:
           opinions override reusable source data, and supports non-destructive collaboration
           without modifying weaker layers.
     apply:
-      f3_reference_arcade: >-
-        Author "THE CITY OWNS ITSELF" directly on the referencing BaronSign. Local defeats
-        reference, and the Baron's immutable-asset speech has been cut for time.
-      f3_opinion_colossus: >-
-        Set threatLevel to 100 as a direct local opinion, then let LIVRPS bury every weaker threat.
-        The Colossus requests a recount; the property stack declines.
+      f3_strength_briefing: >-
+        Read LIVRPS strongest to weakest and identify the local destination opinion as stronger
+        than the marquee introduced through a reference.
 
   - source: docs/composition-basics/variant-sets.md
     title: Variant Sets
@@ -841,6 +821,3 @@ lessons:
       f3_variant_switch: >-
         Add day and night, author modeName inside each selected variant's edit context, and leave
         night active. The marquee has confused noon with midnight for the final broadcast.
-      f3_variant_boss: >-
-        Select blue without clearing either authored choice. The Curator promised free will, then
-        hid it behind one method call and a merchandise table.

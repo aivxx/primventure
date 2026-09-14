@@ -18,7 +18,7 @@ from .benefits import (
     preview_boss_debt,
     preview_boss_fee,
 )
-from .models import LessonCard, PlayerState, Quest
+from .models import BossReview, LessonBeat, LessonCard, PlayerState, Quest
 
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -36,6 +36,12 @@ WORLD_DIR = STATE_DIR / "world"
 
 SAVE_LINE = "stage.GetRootLayer().Save()"
 STEP_COMMENT = re.compile(r"^\s*#\s*\d+[.)]\s")
+# Boss ranks nest: a floor boss reviews back past the neighborhoods its floor
+# already closed out, while a neighborhood boss stays inside its own run.
+BOSS_RANK = {"neighborhood_boss": 1, "city_boss": 2, "floor_boss": 3}
+# A review is a study sheet, not a re-teach, so each page contributes a few
+# lines rather than its whole recap.
+REVIEW_POINTS = 3
 
 
 def space_out_steps(starter: str, language: str) -> str:
@@ -141,10 +147,23 @@ def content_stamp(directory: Path, recursive: bool = False) -> tuple[tuple[str, 
     return tuple(stamped)
 
 
+def _listed(raw: Any, key: str) -> list[Any]:
+    """The records under one top-level key, tolerating a single unwrapped record."""
+    if not isinstance(raw, dict):
+        return list(raw or []) if key == "lessons" else []
+    if key not in raw:
+        # A bare card with no wrapper key is still a card, but only `lessons`
+        # ever appeared unwrapped, so reviews must be asked for by name.
+        return [raw] if key == "lessons" and "source" in raw else []
+    records = raw[key]
+    return [records] if isinstance(records, dict) else list(records or [])
+
+
 class LessonStore:
     def __init__(self, lesson_dir: Path = LESSON_DIR):
         self.lesson_dir = lesson_dir
         self._lessons: dict[str, LessonCard] = {}
+        self._reviews: dict[str, BossReview] = {}
         self._stamp: tuple[tuple[str, int, int], ...] = ()
         self._lock = threading.Lock()
         self.reload()
@@ -157,21 +176,28 @@ class LessonStore:
     def reload(self) -> None:
         self._stamp = content_stamp(self.lesson_dir, recursive=True)
         lessons: dict[str, LessonCard] = {}
+        reviews: dict[str, BossReview] = {}
         if self.lesson_dir.exists():
             for path in sorted(self.lesson_dir.rglob("*.y*ml")):
                 raw = yaml.safe_load(path.read_text()) or {}
-                records = raw.get("lessons", raw) if isinstance(raw, dict) else raw
-                if isinstance(records, dict):
-                    records = [records]
-                for record in records or []:
+                for record in _listed(raw, "lessons"):
                     lesson = LessonCard.model_validate(record)
                     if lesson.source in lessons:
                         raise ValueError(f"Duplicate lesson source {lesson.source!r}")
                     lessons[lesson.source] = lesson
+                for record in _listed(raw, "reviews"):
+                    review = BossReview.model_validate(record)
+                    if review.quest in reviews:
+                        raise ValueError(f"Duplicate boss review {review.quest!r}")
+                    reviews[review.quest] = review
         self._lessons = lessons
+        self._reviews = reviews
 
     def all(self) -> dict[str, LessonCard]:
         return dict(self._lessons)
+
+    def reviews(self) -> dict[str, BossReview]:
+        return dict(self._reviews)
 
     def resolve(self, source: str, quest_id: str) -> dict[str, Any] | None:
         lesson = self._lessons.get(source)
@@ -180,6 +206,46 @@ class LessonStore:
         data = lesson.model_dump(exclude={"apply"})
         data["apply"] = lesson.apply.get(quest_id, "")
         return data
+
+    def review(self, quest: Quest, pages: list[str]) -> dict[str, Any] | None:
+        """Assemble a boss's lesson: the run's cards recapped, then its work order.
+
+        Each reviewed page contributes its own card's objective and recap, so
+        rewriting a room's lesson updates every boss that reviews it.
+        """
+        authored = self._reviews.get(quest.id)
+        if authored is None:
+            return None
+        beats: list[LessonBeat] = []
+        for page in pages:
+            card = self._lessons.get(page)
+            if card is None:
+                continue
+            recap = next((beat for beat in card.beats if beat.kind == "recap"), None)
+            beats.append(
+                LessonBeat(
+                    kind="recap",
+                    heading=card.title,
+                    body=card.objective,
+                    points=(recap.points if recap else [])[:REVIEW_POINTS],
+                )
+            )
+        beats.append(LessonBeat(kind="work_order", **authored.work_order.model_dump()))
+        # A neighborhood boss caps one neighborhood; the ranks above it close out
+        # the floor, so naming the floor there is what distinguishes them.
+        scope = (
+            quest.neighborhood
+            if quest.kind == "neighborhood_boss"
+            else (quest.floor_name or quest.neighborhood)
+        )
+        return {
+            "source": quest.cookbook,
+            "title": f"Review: {scope}",
+            "objective": authored.objective,
+            "intro": authored.intro,
+            "beats": [beat.model_dump() for beat in beats],
+            "apply": authored.apply,
+        }
 
 
 class QuestStore:
@@ -228,7 +294,42 @@ class QuestStore:
         except KeyError as exc:
             raise KeyError(f"Unknown quest {quest_id!r}") from exc
 
+    def review_window(self, quest: Quest) -> list[str]:
+        """The lessons a boss caps: what its rooms taught since the last peer boss.
+
+        Ranks nest, so a floor boss whose own run is empty still reviews every
+        room on its floor, reaching back through the neighborhood bosses it
+        outranks.
+        """
+        rank = BOSS_RANK.get(quest.kind)
+        if rank is None:
+            return []
+        ordered = self.all()
+        index = next(
+            (position for position, other in enumerate(ordered) if other.id == quest.id),
+            None,
+        )
+        if index is None:
+            return []
+        start = 0
+        for position in range(index - 1, -1, -1):
+            if BOSS_RANK.get(ordered[position].kind, 0) >= rank:
+                start = position + 1
+                break
+        pages: list[str] = []
+        for other in ordered[start:index]:
+            # Bosses teach nothing, so only the rooms in the run place a lesson
+            # in the review.
+            if other.kind in BOSS_RANK or not other.cookbook:
+                continue
+            if other.cookbook not in pages:
+                pages.append(other.cookbook)
+        return pages
+
     def lesson_for(self, quest: Quest) -> dict[str, Any] | None:
+        review = self.lessons.review(quest, self.review_window(quest))
+        if review is not None:
+            return review
         return self.lessons.resolve(quest.cookbook, quest.id)
 
 

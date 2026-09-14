@@ -1,13 +1,96 @@
 floor: 6
 floor_name: Hierarchy Foundry
 quests:
+  - id: f6_why_structure
+    title: Read the Case for Asset Structure
+    floor: 6
+    floor_name: Hierarchy Foundry
+    neighborhood: Principles Ward
+    kind: room
+    prerequisites: [f5_liverps_labyrinth]
+    level_required: 12
+    exam_tasks: [define_asset, judge_structure_principles]
+    stats: {lore: 4, insight: 3}
+    brief: "SYSTEM: Floor six opens with paperwork. An asset is a named, versioned, structured container, and the Foundry will not stamp a pile of layers with ambitions. Four principles decide whether yours scales. Read the page, then answer."
+    starter: ""
+    language: none
+    validator:
+      assertions: []
+    cookbook: docs/asset-structure/asset-structure-principles/why-necessary.md
+    xp: 160
+    reward: Foundry Charter
+    world_target: /City/AssetFoundry
+    recipes: [Asset, Composition]
+    questions:
+      - prompt: What does a well-designed asset structure exist to make possible?
+        choices:
+          - Reuse of persistent data, with conventions that keep content flowing between collaborators
+          - One universal layout every pipeline is expected to adopt
+          - A guarantee that any layer opens without an asset resolver
+        answer: 0
+        explanation: Asset structure maps content through production and lowers the friction of working together on it.
+      - prompt: Which principle governs the cost of resolving, opening, and composing an asset's layers?
+        choices: [Performance, Legibility, Navigability]
+        answer: 0
+        explanation: Read and write speed is the performance question, which is why reference/payload pairs and instancing appear under it.
+      - prompt: Why does the page refuse to name one best asset structure?
+        choices:
+          - Clients, domain, and whether OpenUSD is the deliverable all change the right answer
+          - The composition engine resolves each layout differently
+          - Naming conventions cannot be shared between file formats
+        answer: 0
+        explanation: A structure is tailored to its clients and collaborators; an intermediate representation has more slack than a delivered asset.
+
+  - id: f6_interface_brief
+    title: Read What an Asset Interface Is
+    floor: 6
+    floor_name: Hierarchy Foundry
+    neighborhood: Principles Ward
+    kind: room
+    prerequisites: [f6_why_structure]
+    level_required: 12
+    exam_tasks: [identify_asset_interface, explain_entry_points]
+    stats: {lore: 4, insight: 3}
+    brief: "SYSTEM: Every asset has one root layer that downstream users are meant to touch. That layer is the interface, and a few named descendants are part of the deal. Read the page, then answer."
+    starter: ""
+    language: none
+    validator:
+      assertions: []
+    cookbook: docs/asset-structure/asset-structure-principles/asset-interface-pt1.md
+    xp: 160
+    reward: Interface Notice
+    world_target: /City/AssetFoundry
+    recipes: [Asset, Default Prim]
+    questions:
+      - prompt: Which layer of an asset is the asset interface layer?
+        choices:
+          - Its root layer, structured as the primary means of interacting with the asset
+          - The strongest sublayer inside the asset's layer stack
+          - Whichever layer holds the most geometry
+        answer: 0
+        explanation: The root layer is the foundation an asset is opened or referenced through.
+      - prompt: How does an asset advertise its single entry point prim?
+        choices:
+          - Through the root layer's defaultPrim metadata, which composition respects when referencing
+          - Through a prim named World, which composition treats specially
+          - Through a relationship authored on the pseudo-root
+        answer: 0
+        explanation: defaultPrim is the metadata the composition engine reads when a reference omits a prim path.
+      - prompt: Besides the root layer, what else counts as part of an asset's interface?
+        choices:
+          - Descendant prims maintainers designate as stable for downstream overrides
+          - Every prim in the asset, since a reference carries all of them
+          - Only prims that carry kind metadata
+        answer: 0
+        explanation: Materials and subcomponent prims are commonly published as stable override points.
+
   - id: f6_entry_point
     title: Give the Asset a World Entry Point
     floor: 6
     floor_name: Hierarchy Foundry
     neighborhood: Principles Ward
     kind: room
-    prerequisites: [f5_liverps_labyrinth]
+    prerequisites: [f6_interface_brief]
     level_required: 12
     exam_tasks: [set_default_prim, encapsulate_entry]
     stats: {lore: 3, craft: 3}
@@ -32,13 +115,174 @@ quests:
     world_target: /City/AssetFoundry/Townhouse
     recipes: [Default Prim, Asset]
 
+  - id: f6_library_entry_brief
+    title: Read the Library Asset's Many Doors
+    floor: 6
+    floor_name: Hierarchy Foundry
+    neighborhood: Principles Ward
+    kind: room
+    prerequisites: [f6_entry_point]
+    level_required: 12
+    exam_tasks: [explain_library_entry_points, define_encapsulation]
+    stats: {lore: 4, insight: 3}
+    brief: "SYSTEM: One door suits a townhouse. A material palette is a corridor of doors, and the Foundry has opinions about how those are labelled. Read the page, then answer."
+    starter: ""
+    language: none
+    validator:
+      assertions: []
+    cookbook: docs/asset-structure/asset-structure-principles/asset-interface-pt2.md
+    xp: 170
+    reward: Palette Directory
+    world_target: /City/AssetFoundry
+    recipes: [Asset, Encapsulation]
+    questions:
+      - prompt: Why might a library asset expose no single entry point?
+        choices:
+          - Each defined element in it is meant to be referenced individually by downstream assets
+          - defaultPrim accepts only Xform prims
+          - Library layers are always payloaded
+        answer: 0
+        explanation: A palette of related materials publishes many targets rather than one.
+      - prompt: What organizes a large number of entry points inside one layer?
+        choices:
+          - Scope prims that group the entries under a shared parent
+          - A variant set holding one variant per entry
+          - One Xform per entry, each carrying a transform offset
+        answer: 0
+        explanation: Scope groups entry points without implying anything about placement.
+      - prompt: What does encapsulation require of an entry point prim?
+        choices:
+          - Everything intended to be part of the asset, relationship targets included, is a descendant of it
+          - The entry point authors no properties of its own
+          - The entry point is the strongest opinion in its layer stack
+        answer: 0
+        explanation: Anything outside the entry point's namespace is left behind when the asset is referenced.
+
+  - id: f6_encapsulate_material
+    title: Bring the Roof Material Inside the Asset
+    floor: 6
+    floor_name: Hierarchy Foundry
+    neighborhood: Principles Ward
+    kind: room
+    prerequisites: [f6_library_entry_brief]
+    level_required: 12
+    exam_tasks: [encapsulate_dependencies, retarget_relationships]
+    stats: {craft: 3, insight: 4}
+    brief: "SYSTEM: Guild job. The building references cleanly and arrives grey. Its roof material is parked outside the entry point, so the binding points at a path the reference never brings along. Move the material in."
+    starter: |
+      from pxr import Usd, UsdGeom, UsdShade
+
+      stage = Usd.Stage.CreateNew(STAGE_PATH)
+      world = UsdGeom.Xform.Define(stage, "/World").GetPrim()
+      stage.SetDefaultPrim(world)
+      building = UsdGeom.Mesh.Define(stage, "/World/large_buildingF").GetPrim()
+      roof = UsdShade.Material.Define(stage, "/roof").GetPrim()
+      building.CreateRelationship("material:binding").SetTargets([roof.GetPath()])
+      # TODO: Move /roof beneath /World with Usd.NamespaceEditor so the binding
+      #       travels with the asset: ReparentPrim, then ApplyEdits.
+      stage.GetRootLayer().Save()
+    language: python
+    validator:
+      assertions:
+        - default_prim: /World
+        - traversal_contains: {paths: [/World/roof], excluded: [/roof]}
+        - relationship_targets:
+            path: /World/large_buildingF.material:binding
+            targets: [/World/roof]
+    cookbook: docs/asset-structure/asset-structure-principles/encapsulating-your-asset.md
+    xp: 220
+    reward: Encapsulation Clamp
+    world_target: /City/AssetFoundry/Townhouse
+    recipes: [Namespace, Encapsulation]
+
+  - id: f6_partition_brief
+    title: Read the Partitioning Conventions
+    floor: 6
+    floor_name: Hierarchy Foundry
+    neighborhood: Principles Ward
+    kind: room
+    prerequisites: [f6_encapsulate_material]
+    level_required: 12
+    exam_tasks: [explain_partitioning, judge_access_conventions]
+    stats: {lore: 4, insight: 3}
+    brief: "SYSTEM: A sphere parented to a material is not a hierarchy, it is a riddle. Partitions answer the riddle before anyone has to ask it out loud. Read the page, then answer."
+    starter: ""
+    language: none
+    validator:
+      assertions: []
+    cookbook: docs/asset-structure/asset-structure-principles/asset-interface-pt3.md
+    xp: 170
+    reward: Partition Notice
+    world_target: /City/AssetFoundry
+    recipes: [Namespace, UsdGeom.Scope.Define]
+    questions:
+      - prompt: Why is Scope generally the best type for an organizational prim?
+        choices:
+          - It carries no additional semantics such as the transform operations an Xform implies
+          - It composes faster than an Xform
+          - It cannot be overridden by downstream layers
+        answer: 0
+        explanation: An organizational node should not quietly acquire transform behavior.
+      - prompt: What does partitioning a prim hierarchy prevent?
+        choices:
+          - Unintentional namespace collisions between collaborators and ambiguous parentage
+          - Variant selections from composing
+          - Materials from binding across scopes
+        answer: 0
+        explanation: Partitions give each contribution its own jurisdiction and make parentage mean something.
+      - prompt: How do collaborators signal that a prim is internal rather than public?
+        choices:
+          - By convention, such as leading underscores, because no field is protected from being overridden
+          - By leaving the prim out of stage traversal
+          - By authoring the prim as a class rather than a def
+        answer: 0
+        explanation: OpenUSD places no restriction on which fields may be overridden, so access semantics are a naming agreement.
+
+  - id: f6_hierarchy_organize
+    title: Sort the Meshes and Materials Into Scopes
+    floor: 6
+    floor_name: Hierarchy Foundry
+    neighborhood: Principles Ward
+    kind: room
+    prerequisites: [f6_partition_brief]
+    level_required: 12
+    exam_tasks: [partition_prim_hierarchy, classify_by_schema]
+    stats: {craft: 3, lore: 3}
+    brief: "SYSTEM: Guild job. The building keeps everything inside World and says nothing about what any of it is. Give meshes a Geometry scope, materials a Looks scope, and move the existing prims with Usd.NamespaceEditor rather than redefining them."
+    starter: |
+      from pxr import Usd, UsdGeom, UsdShade
+
+      stage = Usd.Stage.CreateNew(STAGE_PATH)
+      world = UsdGeom.Xform.Define(stage, "/World").GetPrim()
+      stage.SetDefaultPrim(world)
+      UsdGeom.Mesh.Define(stage, "/World/large_buildingF")
+      UsdShade.Material.Define(stage, "/World/defaultMat")
+      # TODO: Define /World/Geometry and /World/Looks as Scopes.
+      # TODO: Sort each existing child of /World with prim.IsA(UsdGeom.Mesh) and
+      #       prim.IsA(UsdShade.Material), then move it with ReparentPrim and ApplyEdits.
+      stage.GetRootLayer().Save()
+    language: python
+    validator:
+      assertions:
+        - prim_type: {path: /World/Geometry, value: Scope}
+        - prim_type: {path: /World/Looks, value: Scope}
+        - prim_type: {path: /World/Geometry/large_buildingF, value: Mesh}
+        - traversal_contains:
+            paths: [/World/Geometry/large_buildingF, /World/Looks/defaultMat]
+            excluded: [/World/large_buildingF, /World/defaultMat]
+    cookbook: docs/asset-structure/asset-structure-principles/organizing-prim-hierarchy.md
+    xp: 230
+    reward: Partition Stencil
+    world_target: /City/AssetFoundry/Townhouse
+    recipes: [Namespace, UsdGeom.Scope.Define]
+
   - id: f6_hierarchy_sort
     title: "Filing Clerk: Organize Geometry and Looks"
     floor: 6
     floor_name: Hierarchy Foundry
     neighborhood: Principles Ward
     kind: neighborhood_boss
-    prerequisites: [f6_entry_point]
+    prerequisites: [f6_hierarchy_organize]
     level_required: 12
     exam_tasks: [organize_prim_hierarchy, encapsulate_materials]
     stats: {insight: 3, lore: 3}
@@ -119,13 +363,168 @@ quests:
     world_target: /City/AssetFoundry/Townhouse
     recipes: [Sublayer, Layer Stack]
 
+  - id: f6_shading_workstream
+    title: Publish the Surfacing Workstream Layer
+    floor: 6
+    floor_name: Hierarchy Foundry
+    neighborhood: Workstream Forges
+    kind: room
+    prerequisites: [f6_workstream_split]
+    level_required: 13
+    exam_tasks: [author_sparse_shading_layer, order_workstream_sublayers]
+    stats: {craft: 4, lore: 3}
+    brief: "SYSTEM: Guild job. Modeling has published geometry.usda and gone home. Surfacing exports next, and it exports only what surfacing owns: a material and a binding, in its own layer, stronger than the geometry it decorates."
+    starter: |
+      from pathlib import Path
+      from pxr import Sdf, Usd, UsdGeom, UsdShade
+
+      folder = Path(STAGE_PATH).parent
+      geometry = Usd.Stage.CreateNew(str(folder / "geometry.usda"))
+      geometry.DefinePrim("/World", "Xform")
+      UsdGeom.Mesh.Define(geometry, "/World/Geometry/large_buildingF")
+      geometry.GetRootLayer().Save()
+
+      stage = Usd.Stage.CreateNew(STAGE_PATH)
+      stage.GetRootLayer().subLayerPaths.append("geometry.usda")
+      shading = Usd.Stage.CreateNew(str(folder / "shading.usda"))
+      # TODO: In shading.usda author only surfacing: define /World/Looks/roof as a
+      #       UsdShade.Material, OverridePrim the existing mesh, and give it a
+      #       material:binding with CreateRelationship targeting /World/Looks/roof.
+      # TODO: Save shading.usda, then place it ahead of geometry.usda in the root
+      #       layer's subLayerPaths so the sparse export is the stronger opinion.
+      stage.GetRootLayer().Save()
+    language: python
+    validator:
+      assertions:
+        - sublayer_order: {layers: [shading.usda, geometry.usda]}
+        - prim_type: {path: /World/Looks/roof, value: Material}
+        - prim_type: {path: /World/Geometry/large_buildingF, value: Mesh}
+        - relationship_targets:
+            path: /World/Geometry/large_buildingF.material:binding
+            targets: [/World/Looks/roof]
+    cookbook: docs/asset-structure/workstreams/adding-user-workstreams.md
+    xp: 240
+    reward: Surfacing Export Slip
+    world_target: /City/AssetFoundry/Townhouse
+    recipes: [Sublayer, Over]
+
+  - id: f6_accent_parameter
+    title: Parameterize the Accent Color on the Interface
+    floor: 6
+    floor_name: Hierarchy Foundry
+    neighborhood: Parameter Loft
+    kind: room
+    prerequisites: [f6_shading_workstream]
+    level_required: 13
+    exam_tasks: [author_interface_primvar, parameterize_asset]
+    stats: {craft: 3, lore: 3}
+    brief: "SYSTEM: The client will change the awning color 400 times. Put accentColor on the default prim, not buried in a shader."
+    starter: |
+      from pxr import Sdf, Usd, UsdGeom
+
+      stage = Usd.Stage.CreateNew(STAGE_PATH)
+      world = UsdGeom.Xform.Define(stage, "/World")
+      stage.SetDefaultPrim(world.GetPrim())
+      # TODO: Create constant primvar accentColor = (1, 0, 0) on /World.
+      stage.GetRootLayer().Save()
+    language: python
+    validator:
+      assertions:
+        - default_prim: /World
+        - attribute_equals: {path: /World.primvars:accentColor, value: [1.0, 0.0, 0.0]}
+    cookbook: docs/asset-structure/asset-parameterization/what-is-asset-parameterization.md
+    xp: 230
+    reward: Accent Swatch
+    world_target: /City/AssetFoundry/Townhouse
+    recipes: [Primvar, Asset]
+
+  - id: f6_parameter_inheritance
+    title: Inherit the Accent Down the Building
+    floor: 6
+    floor_name: Hierarchy Foundry
+    neighborhood: Parameter Loft
+    kind: room
+    prerequisites: [f6_accent_parameter]
+    level_required: 13
+    exam_tasks: [author_inherited_primvar, override_nearer_opinion]
+    stats: {craft: 4, insight: 3}
+    brief: "SYSTEM: Guild job. The roof shader reads primvars:accentColor and falls back to green when nobody authors one. Author it on the entry point so the whole building takes the colour, then let the awning disagree in writing."
+    starter: |
+      from pxr import Sdf, Usd, UsdGeom
+
+      stage = Usd.Stage.CreateNew(STAGE_PATH)
+      world = UsdGeom.Xform.Define(stage, "/World").GetPrim()
+      stage.SetDefaultPrim(world)
+      UsdGeom.Mesh.Define(stage, "/World/Geometry/roof")
+      awning = UsdGeom.Mesh.Define(stage, "/World/Geometry/awning").GetPrim()
+      # TODO: With UsdGeom.PrimvarsAPI, create the constant Float3 primvar
+      #       accentColor on /World and set it to red, so every descendant
+      #       inherits that value.
+      # TODO: Create the same primvar on the awning and set it to blue, so the
+      #       nearer opinion wins on that prim alone.
+      stage.GetRootLayer().Save()
+    language: python
+    validator:
+      assertions:
+        - default_prim: /World
+        - attribute_equals: {path: /World.primvars:accentColor, value: [1.0, 0.0, 0.0]}
+        - attribute_equals: {path: /World/Geometry/awning.primvars:accentColor, value: [0.0, 0.0, 1.0]}
+    cookbook: docs/asset-structure/asset-parameterization/exercise-asset-parameterization.md
+    xp: 240
+    reward: Inheritance Chit
+    world_target: /City/AssetFoundry/Townhouse
+    recipes: [Primvar, Interpolation]
+
+  - id: f6_ref_payload_brief
+    title: Read the Reference-Payload Pattern
+    floor: 6
+    floor_name: Hierarchy Foundry
+    neighborhood: Workstream Forges
+    kind: room
+    prerequisites: [f6_parameter_inheritance]
+    level_required: 13
+    exam_tasks: [explain_ref_payload_pattern, identify_lofted_fields]
+    stats: {lore: 4, insight: 3}
+    brief: "SYSTEM: A consumer references one file and should never have to ask whether the asset is heavy. The interface answers that internally and keeps the cheap facts above the payload. Read the page, then answer."
+    starter: ""
+    language: none
+    validator:
+      assertions: []
+    cookbook: docs/asset-structure/reference-payload-pattern/what-is-ref-payload-pattern.md
+    xp: 160
+    reward: Interface Placard
+    world_target: /City/AssetFoundry/Townhouse
+    recipes: [Payload, Asset]
+    questions:
+      - prompt: In the reference-payload pattern, which file does a downstream scene reference?
+        choices:
+          - The asset's interface layer, which payloads its own contents internally
+          - The contents layer, so the geometry is guaranteed present
+          - Whichever layer the resolver reports as smallest
+        answer: 0
+        explanation: Consumers reference one stable interface and the interface owns the payload decision.
+      - prompt: What makes a field worth lofting above the payload?
+        choices:
+          - It is inexpensive and needed before deciding whether to load the contents
+          - It changes on every publish of the contents layer
+          - It can only be authored inside a variant
+        answer: 0
+        explanation: Lofting exposes cheap, important fields such as variant sets, asset metadata, and bounds hints.
+      - prompt: Where do the interface's defaultPrim and up axis come from?
+        choices:
+          - They are authored on the interface layer itself
+          - They are inherited from the payloaded contents layer
+          - They are supplied by the referencing scene
+        answer: 0
+        explanation: Stage metadata belongs to the layer that declares it, so the interface authors its own contract.
+
   - id: f6_asset_interface
     title: "Thin Asset Shell: The Reference-Payload Pattern"
     floor: 6
     floor_name: Hierarchy Foundry
     neighborhood: Workstream Forges
     kind: city_boss
-    prerequisites: [f6_workstream_split]
+    prerequisites: [f6_ref_payload_brief]
     level_required: 13
     exam_tasks: [reference_payload_pattern, set_default_prim, split_workstreams]
     stats: {craft: 4, resolve: 4, lore: 3}
@@ -173,35 +572,142 @@ quests:
         answer: 0
         explanation: The reference/payload pattern keeps a thin interface over deferred contents.
 
-  - id: f6_accent_parameter
-    title: Parameterize the Accent Color on the Interface
+  - id: f6_payload_split
+    title: Split the Asset Into Interface and Contents
     floor: 6
     floor_name: Hierarchy Foundry
-    neighborhood: Parameter Loft
+    neighborhood: Workstream Forges
     kind: room
     prerequisites: [f6_asset_interface]
     level_required: 13
-    exam_tasks: [author_interface_primvar, parameterize_asset]
-    stats: {craft: 3, lore: 3}
-    brief: "SYSTEM: The client will change the awning color 400 times. Put accentColor on the default prim, not buried in a shader."
+    exam_tasks: [export_contents_layer, rebuild_asset_interface]
+    stats: {craft: 4, resolve: 3}
+    brief: "SYSTEM: Guild job. The authored asset is exported to contents.usda, and the file consumers reference gets rebuilt from nothing: an entry point, the stage conventions, and a payload. No workstream sublayers survive the move."
     starter: |
+      from pathlib import Path
       from pxr import Sdf, Usd, UsdGeom
 
+      folder = Path(STAGE_PATH).parent
+      authored = Usd.Stage.CreateNew(str(folder / "authored.usda"))
+      inner = UsdGeom.Xform.Define(authored, "/World").GetPrim()
+      authored.SetDefaultPrim(inner)
+      UsdGeom.Mesh.Define(authored, "/World/Geometry/large_buildingF")
+      authored.GetRootLayer().Export(str(folder / "contents.usda"), args={"format": "usda"})
+
       stage = Usd.Stage.CreateNew(STAGE_PATH)
-      world = UsdGeom.Xform.Define(stage, "/World")
-      stage.SetDefaultPrim(world.GetPrim())
-      # TODO: Create constant primvar accentColor = (1, 0, 0) on /World.
+      # TODO: Rebuild the interface from scratch. Define /World as an Xform, pass it
+      #       to stage.SetDefaultPrim, then set centimeters with
+      #       UsdGeom.SetStageMetersPerUnit and Y up with UsdGeom.SetStageUpAxis.
+      # TODO: AddPayload ./contents.usda on /World and list no sublayers, because
+      #       the workstreams now live behind the payload.
       stage.GetRootLayer().Save()
     language: python
     validator:
       assertions:
+        - prim_type: {path: /World, value: Xform}
         - default_prim: /World
-        - attribute_equals: {path: /World.primvars:accentColor, value: [1.0, 0.0, 0.0]}
-    cookbook: docs/asset-structure/asset-parameterization/what-is-asset-parameterization.md
-    xp: 230
-    reward: Accent Swatch
+        - meters_per_unit: 0.01
+        - up_axis: Y
+        - has_payload: {path: /World, asset: contents.usda}
+        - prim_exists: /World/Geometry/large_buildingF
+    cookbook: docs/asset-structure/reference-payload-pattern/exercise-ref-payload-pattern.md
+    xp: 260
+    reward: Payload Hinge
     world_target: /City/AssetFoundry/Townhouse
-    recipes: [Primvar, Asset]
+    recipes: [Payload, Load and Unload]
+
+  - id: f6_loft_primvar
+    title: Loft the Accent Above the Payload
+    floor: 6
+    floor_name: Hierarchy Foundry
+    neighborhood: Parameter Loft
+    kind: room
+    prerequisites: [f6_payload_split]
+    level_required: 13
+    exam_tasks: [loft_asset_parameter, copy_property_specs]
+    stats: {craft: 4, insight: 4}
+    brief: "SYSTEM: Guild job. The accent parameter went behind the payload and took its discoverability with it. Copy the property specs up onto the interface layer with the Sdf API, which edits one layer at a time and ignores composition entirely."
+    starter: |
+      from pathlib import Path
+      from pxr import Sdf, Usd, UsdGeom
+
+      folder = Path(STAGE_PATH).parent
+      contents = Usd.Stage.CreateNew(str(folder / "contents.usda"))
+      inner = UsdGeom.Xform.Define(contents, "/World").GetPrim()
+      contents.SetDefaultPrim(inner)
+      UsdGeom.PrimvarsAPI(inner).CreatePrimvar(
+          "accentColor", Sdf.ValueTypeNames.Float3, UsdGeom.Tokens.constant
+      ).Set((1.0, 0.0, 0.0))
+      contents.GetRootLayer().Save()
+
+      stage = Usd.Stage.CreateNew(STAGE_PATH)
+      world = UsdGeom.Xform.Define(stage, "/World").GetPrim()
+      stage.SetDefaultPrim(world)
+      world.GetPayloads().AddPayload("./contents.usda")
+      asset_layer = stage.GetRootLayer()
+      contents_layer = contents.GetRootLayer()
+      # TODO: Take contents_layer.GetPrimAtPath("/World") and, for every property
+      #       spec on it, Sdf.CopySpec that spec onto asset_layer at the same path
+      #       and RemoveProperty it from the contents prim spec.
+      # TODO: Save contents_layer as well, so the moved specs persist on disk.
+      stage.GetRootLayer().Save()
+    language: python
+    validator:
+      assertions:
+        - has_payload: {path: /World, asset: contents.usda}
+        - attribute_equals: {path: /World.primvars:accentColor, value: [1.0, 0.0, 0.0]}
+        - attribute_source: {path: /World.primvars:accentColor, layer: submission.usd}
+    cookbook: docs/asset-structure/reference-payload-pattern/lofting-primvars.md
+    xp: 260
+    reward: Lofting Caliper
+    world_target: /City/AssetFoundry/Townhouse
+    recipes: [Primvar, Sdf]
+
+  - id: f6_loft_brief
+    title: Loft the Exterior Finish to the Entry Point
+    floor: 6
+    floor_name: Hierarchy Foundry
+    neighborhood: Parameter Loft
+    kind: room
+    prerequisites: [f6_loft_primvar]
+    level_required: 13
+    exam_tasks: [loft_variant_set, wire_nested_selection]
+    stats: {craft: 4, insight: 3}
+    brief: "SYSTEM: Guild job. The exteriorType set lives on Looks, where no consumer belongs. Recreate it on the entry point and let each public branch author the matching selection inside."
+    starter: |
+      from pxr import Usd, UsdGeom
+
+      stage = Usd.Stage.CreateNew(STAGE_PATH)
+      world = UsdGeom.Xform.Define(stage, "/World").GetPrim()
+      stage.SetDefaultPrim(world)
+      looks = UsdGeom.Scope.Define(stage, "/World/Looks").GetPrim()
+      internal = looks.GetVariantSets().AddVariantSet("exteriorType")
+      for name in ("brick", "stucco"):
+          internal.AddVariant(name)
+
+      # TODO: Add a matching exteriorType variant set on /World.
+      # TODO: For each name, add the variant, select it, and inside
+      #       lofted.GetVariantEditContext() author internal.SetVariantSelection(name).
+      # TODO: Leave brick as the public selection on /World.
+      stage.GetRootLayer().Save()
+    language: python
+    validator:
+      assertions:
+        - has_variant_set:
+            path: /World
+            name: exteriorType
+            variants: [brick, stucco]
+            selection: brick
+        - has_variant_set:
+            path: /World/Looks
+            name: exteriorType
+            variants: [brick, stucco]
+            selection: brick
+    cookbook: docs/asset-structure/reference-payload-pattern/lofting-variant-sets.md
+    xp: 260
+    reward: Lofting Jig
+    world_target: /City/AssetFoundry/Townhouse
+    recipes: [Variant Set, Variant Selection]
 
   - id: f6_loft_variant
     title: "Art Director: Loft the Variant Set"
@@ -209,7 +715,7 @@ quests:
     floor_name: Hierarchy Foundry
     neighborhood: Parameter Loft
     kind: neighborhood_boss
-    prerequisites: [f6_accent_parameter]
+    prerequisites: [f6_loft_brief]
     level_required: 13
     exam_tasks: [loft_variant_set, keep_internal_selection]
     stats: {insight: 4, craft: 3}
@@ -221,8 +727,8 @@ quests:
       stage = Usd.Stage.Open(STAGE_PATH)
       # This boss opens your accumulated city. Author every graded opinion below.
       # 1. Define /World with type Xform.
-      # 2. On /World, author variant set 'paint' with variants ['brick', 'stucco'] and selection 'brick'.
-      # 3. On /World/Looks, author variant set 'paint' with variants ['brick', 'stucco'] and selection None.
+      # 2. On /World, author variant set 'exteriorType' with variants ['brick', 'stucco'] and selection 'brick'.
+      # 3. On /World/Looks, author variant set 'exteriorType' with variants ['brick', 'stucco'].
       # 4. Set /World metadata documentation to 'Art Director: Loft the Variant Set cleared.'.
       stage.GetRootLayer().Save()
     language: python
@@ -231,12 +737,12 @@ quests:
       - prim_type: {path: /World, value: Xform}
       - has_variant_set:
           path: /World
-          name: paint
+          name: exteriorType
           variants: [brick, stucco]
           selection: brick
       - has_variant_set:
           path: /World/Looks
-          name: paint
+          name: exteriorType
           variants: [brick, stucco]
       - metadata_equals: {path: /World, key: documentation, value: 'Art Director: Loft the Variant Set
             cleared.'}
@@ -254,13 +760,56 @@ quests:
         answer: 0
         explanation: The asset interface is the supported place to parameterize an asset.
 
+  - id: f6_model_kinds_brief
+    title: Read the Model Kinds Refresher
+    floor: 6
+    floor_name: Hierarchy Foundry
+    neighborhood: Model Heights
+    kind: room
+    prerequisites: [f6_loft_variant]
+    level_required: 14
+    exam_tasks: [explain_model_kinds, place_component_boundary]
+    stats: {lore: 4, insight: 3}
+    brief: "SYSTEM: A pen and a house are both components, which annoys everyone who thinks hierarchy is about size. Before the Heights hand out deeds, learn where the boundary sits. Read the page, then answer."
+    starter: ""
+    language: none
+    validator:
+      assertions: []
+    cookbook: docs/asset-structure/model-hierarchy/what-are-model-kinds.md
+    xp: 180
+    reward: Zoning Primer
+    world_target: /City/AssetFoundry
+    recipes: [Kind, Model Hierarchy]
+    questions:
+      - prompt: Where is model hierarchy designed to prune traversal?
+        choices:
+          - At the component model boundary, so descendants below it stay out of the traversal
+          - At the stage default prim
+          - At the first prim that carries a payload
+        answer: 0
+        explanation: Ancestors of components are part of model hierarchy and components end it, which keeps the traversal shallow.
+      - prompt: What kind must every ancestor of a component model carry?
+        choices:
+          - Group, or a subkind of group such as assembly
+          - Component, so the chain stays consistent
+          - No kind at all, so discovery stops at the component
+        answer: 0
+        explanation: The requirement exists so composition can discover components efficiently.
+      - prompt: How is an important prim below the component boundary annotated?
+        choices:
+          - As a subcomponent, which sits outside model hierarchy and may contain further subcomponents
+          - As a component, since scale does not decide the kind
+          - As an assembly, so kind-based tools can find it
+        answer: 0
+        explanation: A component cannot contain component descendants, so subcomponent supports kind-based workflows without extending the hierarchy.
+
   - id: f6_component_house
     title: Register the House as a Component Model
     floor: 6
     floor_name: Hierarchy Foundry
     neighborhood: Model Heights
     kind: room
-    prerequisites: [f6_loft_variant]
+    prerequisites: [f6_model_kinds_brief]
     level_required: 14
     exam_tasks: [author_model_kind, set_asset_name]
     stats: {lore: 3, craft: 4}
@@ -284,13 +833,52 @@ quests:
     world_target: /City/AssetFoundry/House
     recipes: [Kind, Component, Asset Info]
 
+  - id: f6_assembly_brief
+    title: Aggregate the Block From One Component
+    floor: 6
+    floor_name: Hierarchy Foundry
+    neighborhood: Model Heights
+    kind: room
+    prerequisites: [f6_component_house]
+    level_required: 14
+    exam_tasks: [author_assembly_kind, reference_components]
+    stats: {craft: 4, lore: 3}
+    brief: "SYSTEM: Guild job. city_blockA needs six buildings and owns none of them. Mark the root an assembly and reference lrg_bldgF once per lot. Copying its meshes is how a block becomes a landfill."
+    starter: |
+      from pathlib import Path
+      from pxr import Kind, Sdf, Usd, UsdGeom
+
+      building = (
+          Path(ASSET_LIBRARY) / "envir" / "city" / "lrg_bldgF" / "lrg_bldgF.usd"
+      ).as_posix()
+
+      stage = Usd.Stage.CreateNew(STAGE_PATH)
+      world = UsdGeom.Xform.Define(stage, "/World").GetPrim()
+      stage.SetDefaultPrim(world)
+      # TODO: Usd.ModelAPI(world).SetKind(Kind.Tokens.assembly).
+      # TODO: Define /World/lrg_bldgF_01 through /World/lrg_bldgF_06 and call
+      #       AddReference on each with the building asset path.
+      stage.GetRootLayer().Save()
+    language: python
+    validator:
+      assertions:
+        - kind_equals: {path: /World, value: assembly}
+        - has_reference: {path: /World/lrg_bldgF_01, asset: lrg_bldgF.usd}
+        - has_reference: {path: /World/lrg_bldgF_06, asset: lrg_bldgF.usd}
+        - kind_equals: {path: /World/lrg_bldgF_01, value: component}
+    cookbook: docs/asset-structure/model-hierarchy/exercise-assemblies.md
+    xp: 270
+    reward: Block Survey
+    world_target: /City/AssetFoundry/SkylineBlock
+    recipes: [Assembly, Reference]
+
   - id: f6_assembly_block
     title: "Skyline Assembly: Aggregate the Components"
     floor: 6
     floor_name: Hierarchy Foundry
     neighborhood: Model Heights
     kind: neighborhood_boss
-    prerequisites: [f6_component_house]
+    prerequisites: [f6_assembly_brief]
     level_required: 14
     exam_tasks: [author_assembly, aggregate_components]
     stats: {craft: 4, insight: 4}
@@ -328,13 +916,56 @@ quests:
         answer: 0
         explanation: Assemblies aggregate models through composition and preserve shared geometry.
 
+  - id: f6_model_considerations_brief
+    title: Read the Model Hierarchy Rules
+    floor: 6
+    floor_name: Hierarchy Foundry
+    neighborhood: Model Heights
+    kind: room
+    prerequisites: [f6_assembly_block]
+    level_required: 14
+    exam_tasks: [explain_model_hierarchy_rules, judge_kind_extensions]
+    stats: {lore: 4, insight: 3}
+    brief: "SYSTEM: Four words govern a model hierarchy: operational, shallow, consistent, extensible. The Golem down the hall has heard all four and applied none. Read the page, then answer."
+    starter: ""
+    language: none
+    validator:
+      assertions: []
+    cookbook: docs/asset-structure/model-hierarchy/model-hierarchy-considerations.md
+    xp: 170
+    reward: Zoning Digest
+    world_target: /City/AssetFoundry
+    recipes: [Model Hierarchy, Kind]
+    questions:
+      - prompt: A gprim carrying component kind usually indicates what about the model hierarchy?
+        choices:
+          - It has been extended too deeply and loses the benefit of pruned traversal
+          - It is missing a default prim
+          - It needs an additional assembly above it
+        answer: 0
+        explanation: Model hierarchy is meant to be shallow, so a component boundary on a gprim is a sign it runs too deep.
+      - prompt: Why does deep kind tagging carry a composition cost?
+        choices:
+          - Kind metadata is read during composition for every member of the model hierarchy
+          - Kind metadata is stored separately from the layer and resolved over the network
+          - Each kind token adds a composition arc
+        answer: 0
+        explanation: Composition reads kind for model hierarchy members, so a shallow structure minimizes that work.
+      - prompt: Where should a pipeline's own taxonomy live when it is not a model role?
+        choices:
+          - In custom properties, user properties, or schemas rather than the Kind library
+          - In the Kind library, prefixed to avoid collisions
+          - In the prim names, so tools can pattern-match them
+        answer: 0
+        explanation: Mixing internal taxonomies into kind risks invalid hierarchies for clients without the plugin info.
+
   - id: f6_street_groups
     title: Group the Lots in the Model Hierarchy
     floor: 6
     floor_name: Hierarchy Foundry
     neighborhood: Model Heights
     kind: room
-    prerequisites: [f6_assembly_block]
+    prerequisites: [f6_model_considerations_brief]
     level_required: 14
     exam_tasks: [author_group_kind, nest_model_hierarchy]
     stats: {lore: 4, craft: 3}
@@ -360,13 +991,69 @@ quests:
     world_target: /City/AssetFoundry/SkylineBlock
     recipes: [Group, Model Hierarchy]
 
+  - id: f6_variation_workstream
+    title: Vary the Block From the Assembly Context
+    floor: 6
+    floor_name: Hierarchy Foundry
+    neighborhood: Model Heights
+    kind: room
+    prerequisites: [f6_street_groups]
+    level_required: 14
+    exam_tasks: [drive_variation_from_assembly, filter_by_model_kind]
+    stats: {craft: 4, insight: 4}
+    brief: "SYSTEM: Guild job. Surfacing is working at block level now, choosing finishes on whole buildings while seeing them in context. Traverse the block and drive only the components that actually publish an exteriorType switch."
+    starter: |
+      from pxr import Kind, Sdf, Usd, UsdGeom
+
+      stage = Usd.Stage.CreateNew(STAGE_PATH)
+      block = UsdGeom.Xform.Define(stage, "/World").GetPrim()
+      stage.SetDefaultPrim(block)
+      Usd.ModelAPI(block).SetKind(Kind.Tokens.assembly)
+      for name in ("bldg_01", "bldg_02"):
+          building = UsdGeom.Xform.Define(stage, f"/World/{name}").GetPrim()
+          Usd.ModelAPI(building).SetKind(Kind.Tokens.component)
+          exterior = building.GetVariantSets().AddVariantSet("exteriorType")
+          for finish in ("brick", "stucco"):
+              exterior.AddVariant(finish)
+          UsdGeom.PrimvarsAPI(building).CreatePrimvar(
+              "accentColor", Sdf.ValueTypeNames.Float3, UsdGeom.Tokens.constant
+          )
+      kiosk = UsdGeom.Xform.Define(stage, "/World/kiosk").GetPrim()
+      Usd.ModelAPI(kiosk).SetKind(Kind.Tokens.component)
+      # TODO: Traverse the stage. For each prim where prim.IsComponent() and
+      #       prim.GetVariantSets().HasVariantSet("exteriorType") holds, select
+      #       brick on that set and set its accentColor primvar to blue.
+      # TODO: The kiosk publishes neither, so the guard has to skip it.
+      stage.GetRootLayer().Save()
+    language: python
+    validator:
+      assertions:
+        - kind_equals: {path: /World, value: assembly}
+        - has_variant_set:
+            path: /World/bldg_01
+            name: exteriorType
+            variants: [brick, stucco]
+            selection: brick
+        - has_variant_set:
+            path: /World/bldg_02
+            name: exteriorType
+            variants: [brick, stucco]
+            selection: brick
+        - attribute_equals: {path: /World/bldg_01.primvars:accentColor, value: [0.0, 0.0, 1.0]}
+        - attribute_equals: {path: /World/bldg_02.primvars:accentColor, value: [0.0, 0.0, 1.0]}
+    cookbook: docs/asset-structure/model-hierarchy/exercise-variation-workstream.md
+    xp: 280
+    reward: Variation Ledger
+    world_target: /City/AssetFoundry/SkylineBlock
+    recipes: [Variant Selection, Stage Traversal]
+
   - id: f6_zoning_golem
     title: "Zoning Golem: Enforce the Model Hierarchy"
     floor: 6
     floor_name: Hierarchy Foundry
     neighborhood: Hierarchy Hall
     kind: floor_boss
-    prerequisites: [f6_street_groups]
+    prerequisites: [f6_variation_workstream]
     level_required: 14
     exam_tasks: [enforce_model_hierarchy, inspect_kinds]
     stats: {lore: 5, resolve: 5, insight: 3}

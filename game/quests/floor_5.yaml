@@ -1,13 +1,99 @@
 floor: 5
 floor_name: Composition Highlands
 quests:
+  - id: f5_composition_brief
+    title: Read How Specs Compose One Prim
+    floor: 5
+    floor_name: Composition Highlands
+    neighborhood: Sublayer Yards
+    kind: room
+    prerequisites: [f4_hydra_of_choices]
+    level_required: 10
+    exam_tasks: [explain_prim_composition, distinguish_specs_from_prims]
+    stats: {lore: 3, insight: 3}
+    brief: "SYSTEM: The Highlands hand out composition arcs. Before that, settle what an arc argues over. A prim on a stage is a resolved result; the specs sitting in each layer are the opinions behind it. Read the page, then answer."
+    starter: ""
+    language: none
+    validator:
+      assertions: []
+    cookbook: docs/creating-composition-arcs/prim-composition.md
+    xp: 150
+    reward: Composition Ledger
+    world_target: /City/ArcHighlands
+    recipes: [Opinions, Prim Spec]
+    questions:
+      - prompt: What does a layer actually hold for a prim the stage presents at /World/Hull?
+        choices:
+          - A prim spec carrying that layer's own authored opinions
+          - A copy of the composed prim the stage will present
+          - Nothing, because prims exist only on stages
+        answer: 0
+        explanation: Layers store sparse prim specs and property specs; a stage composes them into one prim.
+      - prompt: Two layers in the same stack both author a prim spec at /World/Hull. What does the stage present?
+        choices:
+          - One composed prim assembled from both specs, resolved field by field
+          - Two sibling prims sharing one path
+          - Only the spec from whichever layer was saved most recently
+        answer: 0
+        explanation: Composition gathers every applicable spec and resolves each field by strength into a single prim.
+      - prompt: Why can one property resolve from a weaker layer than the one supplying its prim's type?
+        choices:
+          - Resolution runs per field, so a weaker spec supplies whatever nothing stronger authored
+          - Types and values are resolved on separate stages
+          - Weaker layers always win for properties and lose for metadata
+        answer: 0
+        explanation: Each field and property is resolved independently, so a weaker spec fills gaps the stronger ones leave.
+
+  - id: f5_sublayer_brief
+    title: Read the Sublayer Strength Order
+    floor: 5
+    floor_name: Composition Highlands
+    neighborhood: Sublayer Yards
+    kind: room
+    prerequisites: [f5_composition_brief]
+    level_required: 10
+    exam_tasks: [explain_sublayer_inclusion, order_competing_opinions]
+    stats: {lore: 3, insight: 3}
+    brief: "SYSTEM: Sublayer Yards runs on one list and one rule. Every listed layer arrives unremapped, and the order is the entire negotiation. Answer before you touch a stack."
+    starter: ""
+    language: none
+    validator:
+      assertions: []
+    cookbook: docs/creating-composition-arcs/sublayers/what-are-sublayers.md
+    xp: 150
+    reward: Yard Order Sheet
+    world_target: /City/ArcHighlands
+    recipes: [Sublayer, Layer Stack]
+    questions:
+      - prompt: A sublayer defines a Cube at /World/Geometry/Cube. Where does it contribute on the composed stage?
+        choices:
+          - At /World/Geometry/Cube, because sublayers include content without remapping paths
+          - Beneath whichever prim the root layer nominates as its default
+          - At a path the root layer chooses when it lists the sublayer
+        answer: 0
+        explanation: Sublayer composition adds every spec at the path it was authored, unlike references and payloads.
+      - prompt: sublayerB is listed before sublayerA and both author the cube's size. What happens to sublayerA's value?
+        choices:
+          - It stays in the stack and returns if sublayerB's opinion is removed
+          - It is erased from sublayerA when the stack composes
+          - It is averaged with sublayerB's value
+        answer: 0
+        explanation: Strength ordering picks a winner per opinion; the weaker opinion remains authored in its own layer.
+      - prompt: Where do opinions authored directly in the root layer sit relative to the sublayers it lists?
+        choices:
+          - Stronger than every sublayer in the stack
+          - Weaker than the first listed sublayer only
+          - Equal to the first listed sublayer
+        answer: 0
+        explanation: Within a layer stack the root layer is strongest, and listed sublayers follow first to last.
+
   - id: f5_sublayer_workstreams
     title: Sublayer the Geometry and Shading Workstreams
     floor: 5
     floor_name: Composition Highlands
     neighborhood: Sublayer Yards
     kind: room
-    prerequisites: [f4_hydra_of_choices]
+    prerequisites: [f5_sublayer_brief]
     level_required: 10
     exam_tasks: [author_sublayers, separate_workstreams]
     stats: {craft: 3, lore: 3}
@@ -94,13 +180,56 @@ quests:
         answer: 0
         explanation: Sublayers are ordered strongest to weakest.
 
+  - id: f5_reference_brief
+    title: Read What a Reference Grafts
+    floor: 5
+    floor_name: Composition Highlands
+    neighborhood: Reference Docks
+    kind: room
+    prerequisites: [f5_workstream_clerk]
+    level_required: 11
+    exam_tasks: [explain_reference_grafting, distinguish_internal_and_external_references]
+    stats: {lore: 3, insight: 3}
+    brief: "SYSTEM: The docks sign for one building and stand it up three times. Before the paperwork clears, settle what an arc grafts and what happens to the names on the way in. Read the page, then answer."
+    starter: ""
+    language: none
+    validator:
+      assertions: []
+    cookbook: docs/creating-composition-arcs/references-payloads/what-are-references.md
+    xp: 160
+    reward: Docks Grafting Notice
+    world_target: /City/ArcHighlands/Skyline
+    recipes: [Reference, Path Translation]
+    questions:
+      - prompt: Why can sublayering one sphere layer three times not produce three spheres?
+        choices:
+          - Every inclusion contributes at the authored path, so the three arrive as one prim
+          - A layer stack refuses to list the same layer more than once
+          - Each inclusion after the first drops the layer's prim specs
+        answer: 0
+        explanation: Sublayers never remap paths, so repeating one only redefines the same prim rather than creating siblings.
+      - prompt: What happens to a referenced prim's name and descendant paths at the destination?
+        choices:
+          - They are translated into the destination prim's namespace
+          - They stay exactly as the source layer authored them
+          - They are copied into the destination's root layer as new specs
+        answer: 0
+        explanation: A reference grafts the source hierarchy onto the destination prim, so the root takes the destination's name and its descendants are re-pathed beneath it.
+      - prompt: A layer defines blue_cube_01 and two sibling prims that reference blue_cube_01 in that same layer. What kind of reference is that?
+        choices:
+          - Internal, because the target is a prim in the current layer stack
+          - External, because each destination is its own prim
+          - Invalid, because a layer cannot target a prim it authored itself
+        answer: 0
+        explanation: References targeting a prim in the current layer stack are internal; external references name a prim in a different layer.
+
   - id: f5_skyline_references
     title: Reference One Tower Asset Twice
     floor: 5
     floor_name: Composition Highlands
     neighborhood: Reference Docks
     kind: room
-    prerequisites: [f5_workstream_clerk]
+    prerequisites: [f5_reference_brief]
     level_required: 11
     exam_tasks: [author_external_references, reuse_city_assets]
     stats: {craft: 4, lore: 2}
@@ -131,55 +260,48 @@ quests:
     world_target: /City/ArcHighlands/Skyline
     recipes: [Reference, Asset]
 
-  - id: f5_encapsulation_raid
-    title: "Stranded Looks: Encapsulate the Bindings"
+  - id: f5_payload_brief
+    title: Read the Payload Load Gate
     floor: 5
     floor_name: Composition Highlands
-    neighborhood: Reference Docks
-    kind: neighborhood_boss
+    neighborhood: Payload Berth
+    kind: room
     prerequisites: [f5_skyline_references]
     level_required: 11
-    exam_tasks: [encapsulate_default_prim, keep_bindings_inside]
-    stats: {insight: 4, resolve: 3}
-    brief: "SYSTEM: The material lives outside World. Referencing the asset will strand the binding. Move Looks under the default prim before the crowd notices."
-    starter: |
-      from pathlib import Path
-      from pxr import Gf, Kind, Sdf, Usd, UsdGeom, UsdLux, UsdShade
-
-      stage = Usd.Stage.Open(STAGE_PATH)
-      # This boss opens your accumulated city. Author every graded opinion below.
-      # 1. Define /World with type Xform.
-      # 2. Set the stage default prim to /World.
-      # 3. Define or override /World/Looks/Red.
-      # 4. Define or override /World/Cube.
-      # 5. Traversal must include ['/World/Looks/Red'] and exclude ['/Looks'].
-      # 6. Set /World metadata documentation to 'Stranded Looks: Encapsulate the Bindings cleared.'.
-      stage.GetRootLayer().Save()
-    language: python
+    exam_tasks: [explain_deferred_loading, compare_payload_and_reference]
+    stats: {lore: 3, insight: 3}
+    brief: "SYSTEM: Payload Berth defers cargo for a living. A payload targets a source the same way a reference does and adds the one thing a reference will never offer: contents that can be sent back to sleep. Answer before the crates arrive."
+    starter: ""
+    language: none
     validator:
-      assertions:
-      - prim_type: {path: /World, value: Xform}
-      - {default_prim: /World}
-      - {prim_exists: /World/Looks/Red}
-      - {prim_exists: /World/Cube}
-      - traversal_contains:
-          paths: [/World/Looks/Red]
-          excluded: [/Looks]
-      - metadata_equals: {path: /World, key: documentation, value: 'Stranded Looks: Encapsulate the
-            Bindings cleared.'}
-    cookbook: docs/creating-composition-arcs/encapsulation/what-is-encapsulation.md
-    xp: 280
-    reward: {opinion_points: 1, achievement: "New achievement! You put Looks where a reference can actually find them."}
-    world_target: /City/ArcHighlands/EncapsulatedKiosk
-    recipes: [Default Prim, Encapsulation]
+      assertions: []
+    cookbook: docs/creating-composition-arcs/references-payloads/what-are-payloads.md
+    xp: 160
+    reward: Berth Manifest
+    world_target: /City/ArcHighlands/PayloadBlock
+    recipes: [Payload, Load and Unload]
     questions:
-      - prompt: Why does a material sibling of World fail when you reference World?
+      - prompt: A city stage opens with every payload unloaded. What is still there to inspect?
         choices:
-          - Referencing World leaves unencapsulated siblings behind
-          - Materials cannot be referenced
-          - Default prims ignore scopes
+          - The payload prims and their local opinions, without the deferred contents
+          - Nothing at all until a payload is loaded
+          - The entire hierarchy, simply left unrendered
         answer: 0
-        explanation: Only descendants of the referenced target are composed.
+        explanation: An unloaded payload keeps its destination prim and local opinions composed while excluding what lies across the arc.
+      - prompt: Where does a payload opinion sit relative to a reference opinion and a specialized one?
+        choices:
+          - Weaker than the reference, stronger than the specialize
+          - Stronger than both
+          - Weaker than both
+        answer: 0
+        explanation: LIVRPS runs Local, Inherits, Variant sets, References, Payloads, Specializes.
+      - prompt: Unloading a prim's payload changes what, exactly?
+        choices:
+          - The scene description composed across the arc is excluded while the authored arc remains
+          - The payload arc is deleted from the layer that authored it
+          - The destination prim is deactivated
+        answer: 0
+        explanation: Load state is runtime stage state; unloading recomposes the subtree and leaves the arc authored.
 
   - id: f5_sealed_crate
     title: Payload the Building Pack as Cargo
@@ -187,7 +309,7 @@ quests:
     floor_name: Composition Highlands
     neighborhood: Payload Berth
     kind: room
-    prerequisites: [f5_encapsulation_raid]
+    prerequisites: [f5_payload_brief]
     level_required: 11
     exam_tasks: [author_payload, defer_heavy_content]
     stats: {craft: 3, insight: 3}
@@ -252,13 +374,240 @@ quests:
         answer: 0
         explanation: Payloads participate in composition but can be loaded and unloaded.
 
+  - id: f5_encapsulation_brief
+    title: Read What a Reference Actually Carries
+    floor: 5
+    floor_name: Composition Highlands
+    neighborhood: Reference Docks
+    kind: room
+    prerequisites: [f5_harbor_master]
+    level_required: 11
+    exam_tasks: [explain_encapsulation, trace_a_remapped_binding]
+    stats: {lore: 3, insight: 3}
+    brief: "SYSTEM: A cube arrived at the docks with a material binding and no material. Reference Docks would like that explained before it signs for another shipment. Read the page, then answer."
+    starter: ""
+    language: none
+    validator:
+      assertions: []
+    cookbook: docs/creating-composition-arcs/encapsulation/what-is-encapsulation.md
+    xp: 160
+    reward: Docks Inspection Slip
+    world_target: /City/ArcHighlands/EncapsulatedKiosk
+    recipes: [Encapsulation, Reference]
+    questions:
+      - prompt: A prim is encapsulated relative to a referenced target when it
+        choices:
+          - lies beneath that target in namespace
+          - carries the same schema type as that target
+          - is listed in the same layer as that target
+        answer: 0
+        explanation: Encapsulation is a namespace relationship, so a reference carries the target and its descendants.
+      - prompt: /World/Cube binds to /Looks/Red and a consumer references /World. What arrives at the destination?
+        choices:
+          - The cube, still carrying a binding whose target is absent from the new context
+          - The cube and the material, because bindings travel with the prim that holds them
+          - Neither, because an external target makes the reference invalid
+        answer: 0
+        explanation: Relationship targets are paths, so a target outside the referenced subtree resolves to nothing once remapped.
+      - prompt: Which prims belong beneath an asset root for the asset to travel intact?
+        choices:
+          - Every prim the asset's own properties and relationships depend on, support scopes included
+          - Only the prims a renderer will image
+          - Only the prims that carry a schema type
+        answer: 0
+        explanation: Asset encapsulation means all scene description the asset requires sits beneath the root intended for composition.
+
+  - id: f5_encapsulation_survey
+    title: Inspect a Good and a Bad Asset Root
+    floor: 5
+    floor_name: Composition Highlands
+    neighborhood: Reference Docks
+    kind: room
+    prerequisites: [f5_encapsulation_brief]
+    level_required: 11
+    exam_tasks: [inspect_encapsulated_assets, choose_a_reference_target]
+    stats: {insight: 3, lore: 3}
+    brief: "SYSTEM: Two kiosk packs sit on the inspection bench. Both look correct in their own file, and only one survives being referenced. Read the page, then answer for the layer and for the prim a consumer names."
+    starter: ""
+    language: none
+    validator:
+      assertions: []
+    cookbook: docs/creating-composition-arcs/encapsulation/experimenting-with-encapsulation.md
+    xp: 170
+    reward: Bench Inspection Report
+    world_target: /City/ArcHighlands/EncapsulatedKiosk
+    recipes: [Encapsulation, Namespace]
+    questions:
+      - prompt: Reading an asset layer's hierarchy, what marks it as well encapsulated?
+        choices:
+          - Every prim the asset depends on sits beneath its default prim
+          - The prims beneath the root are sorted alphabetically
+          - The layer authors exactly one material
+        answer: 0
+        explanation: The clue is structural, since the default prim is the root a consumer references and everything the asset needs has to sit inside it.
+      - prompt: A layer binds /World/Cube to /Looks/RedMaterial, a sibling of World. A consumer references /World. What arrives?
+        choices:
+          - The cube alone, its binding aimed at a path outside the scope of the reference
+          - The cube and the material, because a binding carries its target along
+          - Nothing, because the unresolved binding invalidates the arc
+        answer: 0
+        explanation: USD reports the target as outside the scope of the reference and ignores it, so the cube composes with a binding that resolves to nothing.
+      - prompt: A consumer references the well-encapsulated layer but names its Cube as the source prim instead of World. What composes?
+        choices:
+          - The cube without the material, because the material is not beneath the prim named
+          - Both, because the layer as a whole keeps its dependencies inside
+          - Both, because the default prim is used whenever a source prim is named
+        answer: 0
+        explanation: Encapsulation is measured against the prim the reference targets, so targeting a descendant leaves that prim's siblings behind.
+
+  - id: f5_encapsulation_raid
+    title: "Stranded Looks: Encapsulate the Bindings"
+    floor: 5
+    floor_name: Composition Highlands
+    neighborhood: Reference Docks
+    kind: neighborhood_boss
+    prerequisites: [f5_encapsulation_survey]
+    level_required: 11
+    exam_tasks: [encapsulate_default_prim, keep_bindings_inside]
+    stats: {insight: 4, resolve: 3}
+    brief: "SYSTEM: The material lives outside World. Referencing the asset will strand the binding. Move Looks under the default prim before the shipping order goes out."
+    starter: |
+      from pathlib import Path
+      from pxr import Gf, Kind, Sdf, Usd, UsdGeom, UsdLux, UsdShade
+
+      stage = Usd.Stage.Open(STAGE_PATH)
+      # This boss opens your accumulated city. Author every graded opinion below.
+      # 1. Define /World with type Xform.
+      # 2. Set the stage default prim to /World.
+      # 3. Define or override /World/Looks/Red.
+      # 4. Define or override /World/Cube.
+      # 5. Traversal must include ['/World/Looks/Red'] and exclude ['/Looks'].
+      # 6. Set /World metadata documentation to 'Stranded Looks: Encapsulate the Bindings cleared.'.
+      stage.GetRootLayer().Save()
+    language: python
+    validator:
+      assertions:
+      - prim_type: {path: /World, value: Xform}
+      - {default_prim: /World}
+      - {prim_exists: /World/Looks/Red}
+      - {prim_exists: /World/Cube}
+      - traversal_contains:
+          paths: [/World/Looks/Red]
+          excluded: [/Looks]
+      - metadata_equals: {path: /World, key: documentation, value: 'Stranded Looks: Encapsulate the
+            Bindings cleared.'}
+    cookbook: docs/creating-composition-arcs/encapsulation/what-is-encapsulation.md
+    xp: 280
+    reward: {opinion_points: 1, achievement: "New achievement! You put Looks where a reference can actually find them."}
+    world_target: /City/ArcHighlands/EncapsulatedKiosk
+    recipes: [Default Prim, Encapsulation]
+    questions:
+      - prompt: Why does a material sibling of World fail when you reference World?
+        choices:
+          - Referencing World leaves unencapsulated siblings behind
+          - Materials cannot be referenced
+          - Default prims ignore scopes
+        answer: 0
+        explanation: Only descendants of the referenced target are composed.
+
+  - id: f5_variant_brief
+    title: Read What a Variant Set Controls
+    floor: 5
+    floor_name: Composition Highlands
+    neighborhood: Variant Wardrobe
+    kind: room
+    prerequisites: [f5_encapsulation_raid]
+    level_required: 11
+    exam_tasks: [explain_variant_selection, scope_a_variant_set]
+    stats: {lore: 3, insight: 3}
+    brief: "SYSTEM: The wardrobe wants one lamp with a switch on it, not two lamps filed separately. Read what a variant set controls, what a single variant may author, and which switches cost more to flip. Then answer."
+    starter: ""
+    language: none
+    validator:
+      assertions: []
+    cookbook: docs/creating-composition-arcs/variant-sets/what-are-variant-sets.md
+    xp: 170
+    reward: Wardrobe Options Sheet
+    world_target: /City/ArcHighlands/StreetLamp
+    recipes: [Variant Set, Variant]
+    questions:
+      - prompt: A prim carries a variant set with three variants. What does the stage compose?
+        choices:
+          - The opinions of the selected variant alone
+          - Every variant's opinions, merged into one result
+          - Whichever variant was authored last
+        answer: 0
+        explanation: A variant set is a controller of variations, and only the selected variant's opinions are composed.
+      - prompt: What may a variant authored on a prim change?
+        choices:
+          - That prim and any descendant, including new descendant prims and new arcs
+          - Only attribute values already authored on that prim
+          - Only descendants, never the prim holding the variant set
+        answer: 0
+        explanation: A variant can sparsely override properties, define new descendant prims, and author arcs that exist only within that variant.
+      - prompt: Which variant switch is the cheaper one to flip repeatedly?
+        choices:
+          - Changing an attribute value or visibility, which only re-resolves values
+          - Swapping which layer a reference targets
+          - Activating and deactivating prims
+        answer: 0
+        explanation: Value and visibility changes leave the composition index intact, while swapping references or changing activation makes USD rebuild part of it.
+
+  - id: f5_lamp_variants
+    title: Wire the Lamp's Lights Variant Set
+    floor: 5
+    floor_name: Composition Highlands
+    neighborhood: Variant Wardrobe
+    kind: room
+    prerequisites: [f5_variant_brief]
+    level_required: 11
+    exam_tasks: [author_variant_set, select_a_variant]
+    stats: {craft: 4, insight: 2}
+    brief: "SYSTEM: Guild job. The lamp burns around the clock and night scenes have filed for relief. Give it one switch with two settings, and leave it parked on off."
+    starter: |
+      from pxr import Sdf, Usd, UsdGeom, UsdLux
+
+      stage = Usd.Stage.CreateNew(STAGE_PATH)
+      UsdGeom.SetStageUpAxis(stage, UsdGeom.Tokens.y)
+      UsdGeom.Xform.Define(stage, "/World")
+      lamp = UsdGeom.Xform.Define(stage, "/World/StreetLamp").GetPrim()
+      globe = UsdLux.SphereLight.Define(stage, "/World/StreetLamp/Globe")
+
+
+      def dress_lamp(intensity, state):
+          """Author the globe intensity and the lamp placard one setting wants."""
+          globe.CreateIntensityAttr(intensity)
+          lamp.CreateAttribute("lampState", Sdf.ValueTypeNames.String).Set(state)
+
+
+      # TODO: Add a variant set named 'lights' on the lamp, holding variants 'on' and 'off'.
+      # TODO: Select 'on' and call dress_lamp(1000.0, "lit") inside its variant edit context.
+      # TODO: Select 'off' and call dress_lamp(0.0, "dark") inside its variant edit context.
+      # TODO: Leave 'off' selected.
+      stage.GetRootLayer().Save()
+    language: python
+    validator:
+      assertions:
+        - has_variant_set:
+            path: /World/StreetLamp
+            name: lights
+            variants: ["on", "off"]
+            selection: "off"
+        - attribute_equals: {path: '/World/StreetLamp/Globe.inputs:intensity', value: 0.0}
+        - attribute_equals: {path: /World/StreetLamp.lampState, value: dark}
+    cookbook: docs/creating-composition-arcs/variant-sets/working-with-variant-sets.md
+    xp: 250
+    reward: Wardrobe Switch Plate
+    world_target: /City/ArcHighlands/StreetLamp
+    recipes: [Variant Set, Variant]
+
   - id: f5_inherit_lamps
     title: Inherit the Street-Lamp Class
     floor: 5
     floor_name: Composition Highlands
     neighborhood: Inherit Street
     kind: room
-    prerequisites: [f5_harbor_master]
+    prerequisites: [f5_lamp_variants]
     level_required: 12
     exam_tasks: [author_class, add_inherit]
     stats: {craft: 3, insight: 3}
@@ -286,13 +635,217 @@ quests:
     world_target: /City/ArcHighlands/StreetLamp
     recipes: [Inherit, Class]
 
+  - id: f5_inherit_broadcast
+    title: Broadcast a Tint Through the Lamp Class
+    floor: 5
+    floor_name: Composition Highlands
+    neighborhood: Inherit Street
+    kind: room
+    prerequisites: [f5_inherit_lamps]
+    level_required: 12
+    exam_tasks: [override_an_inherit_source, scope_a_broadcast_to_one_context]
+    stats: {insight: 4, craft: 3}
+    brief: "SYSTEM: Guild job. Night crew wants every lamp on this street amber, and only on this street. The published asset says white and stays that way. Two lamps, one shared source, one opinion."
+    starter: |
+      from pathlib import Path
+      from pxr import Sdf, Usd, UsdGeom
+
+      folder = Path(STAGE_PATH).parent
+      asset = Usd.Stage.CreateNew(str(folder / "street_lamp_dbl.usda"))
+      lamp_class = asset.CreateClassPrim("/_street_lamp_dbl")
+      asset_root = asset.DefinePrim("/World", "Xform")
+      asset_root.GetInherits().AddInherit(lamp_class.GetPath())
+      asset_root.CreateAttribute("tint", Sdf.ValueTypeNames.String).Set("white")
+      asset.SetDefaultPrim(asset_root)
+      asset.GetRootLayer().Save()
+
+      stage = Usd.Stage.CreateNew(STAGE_PATH)
+      UsdGeom.SetStageUpAxis(stage, UsdGeom.Tokens.y)
+      UsdGeom.Xform.Define(stage, "/World")
+      # TODO: Define /World/Lamp_01 and /World/Lamp_02, each referencing street_lamp_dbl.usda.
+      # TODO: Override /_street_lamp_dbl on this stage.
+      # TODO: Author tint = "amber" on that override and let both lamps compose it.
+      stage.GetRootLayer().Save()
+    language: python
+    validator:
+      assertions:
+        - has_reference: {path: /World/Lamp_01, asset: street_lamp_dbl.usda}
+        - has_reference: {path: /World/Lamp_02, asset: street_lamp_dbl.usda}
+        - specifier_equals: {path: /_street_lamp_dbl, value: over}
+        - attribute_equals: {path: /World/Lamp_01.tint, value: amber}
+        - attribute_equals: {path: /World/Lamp_02.tint, value: amber}
+    cookbook: docs/creating-composition-arcs/inherits-specializes/experimenting-with-inherits.md
+    xp: 270
+    reward: Night Crew Work Slip
+    world_target: /City/ArcHighlands/StreetLamp
+    recipes: [Inherits, Over]
+
+  - id: f5_road_defaults
+    title: Post a Limit Over the Imported Road Default
+    floor: 5
+    floor_name: Composition Highlands
+    neighborhood: Inherit Street
+    kind: room
+    prerequisites: [f5_inherit_broadcast]
+    level_required: 12
+    exam_tasks: [author_specializes]
+    stats: {insight: 3, craft: 3}
+    brief: "SYSTEM: Imported road data says 30. Main Street was surveyed at 20. Keep the shared default for every unsurveyed road and let the local posting outrank it. Specializes yields on purpose."
+    starter: |
+      from pxr import Sdf, Usd
+
+      stage = Usd.Stage.CreateNew(STAGE_PATH)
+      road = stage.DefinePrim("/World/MainStreet", "Mesh")
+      # TODO: CreateClassPrim /_osm_street_data carrying osm:street:maxspeed = 30.
+      # TODO: Author the arc with road.GetSpecializes().AddSpecialize on the class path.
+      # TODO: Set a local osm:street:maxspeed = 20 on /World/MainStreet.
+      stage.GetRootLayer().Save()
+    language: python
+    validator:
+      assertions:
+        - specifier_equals: {path: /_osm_street_data, value: class}
+        - has_specializes: {path: /World/MainStreet}
+        - attribute_equals: {path: '/World/MainStreet.osm:street:maxspeed', value: 20}
+    cookbook: docs/creating-composition-arcs/inherits-specializes/what-is-specializes.md
+    xp: 250
+    reward: Survey Posting
+    world_target: /City/ArcHighlands/MainStreet
+    recipes: [Specialize, Class]
+
+  - id: f5_specializes_survey
+    title: Raise the Shared Road Default to Forty
+    floor: 5
+    floor_name: Composition Highlands
+    neighborhood: Inherit Street
+    kind: room
+    prerequisites: [f5_road_defaults]
+    level_required: 12
+    exam_tasks: [broadcast_a_fallback, keep_a_refined_value]
+    stats: {craft: 3, insight: 3}
+    brief: "SYSTEM: Guild job. Traffic engineering raised the imported default to 40 across the district. The side street was surveyed at 20 and keeps it. Both roads read from the same shared source."
+    starter: |
+      from pxr import Sdf, Usd, UsdGeom
+
+      stage = Usd.Stage.CreateNew(STAGE_PATH)
+      UsdGeom.SetStageUpAxis(stage, UsdGeom.Tokens.y)
+      UsdGeom.Xform.Define(stage, "/World")
+      fallback = stage.CreateClassPrim("/_osm_street_data")
+      fallback.CreateAttribute(
+          "osm:street:maxspeed", Sdf.ValueTypeNames.Int, custom=True
+      ).Set(30)
+      main = stage.DefinePrim("/World/road_main_01", "Mesh")
+      side = stage.DefinePrim("/World/road_side_01", "Mesh")
+
+      # TODO: Specialize both roads from /_osm_street_data.
+      # TODO: Refine the side road with a local osm:street:maxspeed of 20.
+      # TODO: Broadcast the new default by setting osm:street:maxspeed to 40 on the class.
+      stage.GetRootLayer().Save()
+    language: python
+    validator:
+      assertions:
+        - has_specializes: {path: /World/road_main_01}
+        - has_specializes: {path: /World/road_side_01}
+        - attribute_equals: {path: '/World/road_main_01.osm:street:maxspeed', value: 40}
+        - attribute_equals: {path: '/World/road_side_01.osm:street:maxspeed', value: 20}
+    cookbook: docs/creating-composition-arcs/inherits-specializes/experimenting-with-specializes.md
+    xp: 270
+    reward: District Speed Bulletin
+    world_target: /City/ArcHighlands/MainStreet
+    recipes: [Specialize, Fallback]
+
+  - id: f5_refinement_brief
+    title: Read Where a Refinement Source Belongs
+    floor: 5
+    floor_name: Composition Highlands
+    neighborhood: Inherit Street
+    kind: room
+    prerequisites: [f5_specializes_survey]
+    level_required: 12
+    exam_tasks: [place_an_arc_source, predict_broadcast_reach]
+    stats: {lore: 3, insight: 4}
+    brief: "SYSTEM: Both arcs on this street point at a source prim, and where that prim sits decides how far a later correction travels. Read the page, then answer before anything gets referenced again."
+    starter: ""
+    language: none
+    validator:
+      assertions: []
+    cookbook: docs/creating-composition-arcs/inherits-specializes/encapsulation-refinement.md
+    xp: 170
+    reward: Street Refinement Memo
+    world_target: /City/ArcHighlands/StreetLamp
+    recipes: [Inherits, Encapsulation]
+    questions:
+      - prompt: What may an inherits or specializes arc use as its source prim?
+        choices:
+          - Either an encapsulated prim or one outside the asset's namespace
+          - Only a prim outside every asset root
+          - Only a prim beneath the destination prim
+        answer: 0
+        explanation: Both arcs accept either, and that choice is what varies the broadcast behavior rather than the validity of the arc.
+      - prompt: Why does the placement of the source prim change anything at all?
+        choices:
+          - Referencing the destination into another layer stack re-paths encapsulated sources and leaves unencapsulated ones alone
+          - An encapsulated source prim stops being abstract once referenced
+          - Only unencapsulated sources may carry properties
+        answer: 0
+        explanation: The broadcasting behavior changes because path translation applies to the target only when the target sits inside the referenced subtree.
+      - prompt: A shared source sits outside the asset root, and a consumer authors an opinion on it. Which prims receive it?
+        choices:
+          - Every prim in that consuming context whose arc names that source
+          - Only the first prim that was authored with the arc
+          - Only prims in the layer that published the asset
+        answer: 0
+        explanation: An unencapsulated source keeps one path in the consuming context, so the opinion broadcasts to all prims pointing at it there.
+
+  - id: f5_refinement_survey
+    title: Compare Global and Local Refinement
+    floor: 5
+    floor_name: Composition Highlands
+    neighborhood: Inherit Street
+    kind: room
+    prerequisites: [f5_refinement_brief]
+    level_required: 12
+    exam_tasks: [contrast_global_and_local_refinement, limit_a_refinement_to_one_aggregate]
+    stats: {insight: 4, lore: 3}
+    brief: "SYSTEM: One correction turned every cube in the city magenta. Another turned exactly one pyramid cyan. Same arc, different source prim. Read the page, then answer."
+    starter: ""
+    language: none
+    validator:
+      assertions: []
+    cookbook: docs/creating-composition-arcs/inherits-specializes/experimenting-with-encapsulation-refinement.md
+    xp: 180
+    reward: Refinement Comparison Slip
+    world_target: /City/ArcHighlands/StreetLamp
+    recipes: [Inherits, Path Translation]
+    questions:
+      - prompt: What makes a refinement global?
+        choices:
+          - The arc targets a path outside encapsulation, which a reference never re-paths
+          - The opinion is authored in the strongest layer of the stack
+          - The source prim is authored as a class rather than an over
+        answer: 0
+        explanation: An unencapsulated target keeps the same path through every reference, so one opinion on it reaches every prim inheriting it.
+      - prompt: An arc targets /World/cube_pyramid_01/_local_cube and that class is refined to cyan. What changes?
+        choices:
+          - Only the cubes inheriting that repathed source inside cube_pyramid_01
+          - Every cube in the scene that inherits any class
+          - Nothing, because an encapsulated class cannot carry opinions
+        answer: 0
+        explanation: An encapsulated source is re-pathed per reference, so the refinement stays inside the aggregate that owns that copy.
+      - prompt: A cube inherits both an asset class outside its root and a local class inside the aggregate. Which refinement is available?
+        choices:
+          - Both, because the two sources are separate arcs at separate paths
+          - Only the global one, since the outer source wins
+          - Only the local one, since the nearer source wins
+        answer: 0
+        explanation: The cube carries both arcs, so a correction can be broadcast to every consumer through the unencapsulated source or held to one aggregate through the encapsulated one.
+
   - id: f5_specializes_fallback
     title: "Traffic Cop: Specializes as the Weakest Arc"
     floor: 5
     floor_name: Composition Highlands
     neighborhood: Inherit Street
     kind: neighborhood_boss
-    prerequisites: [f5_inherit_lamps]
+    prerequisites: [f5_refinement_survey]
     level_required: 12
     exam_tasks: [author_specializes, contrast_with_inherits]
     stats: {insight: 4, resolve: 4}
@@ -375,13 +928,99 @@ quests:
         answer: 0
         explanation: Payloads defer bulk while references keep the towers in the composed interface.
 
+  - id: f5_liverps_brief
+    title: Read the LIVERPS Order and Its Recursion
+    floor: 5
+    floor_name: Composition Highlands
+    neighborhood: LIVERPS Labyrinth
+    kind: room
+    prerequisites: [f5_city_block]
+    level_required: 12
+    exam_tasks: [order_livrps_categories, scope_local_to_a_layer_stack]
+    stats: {lore: 4, insight: 4}
+    brief: "SYSTEM: Every arc on this floor has now argued with something. The Labyrinth posts the law they were all obeying. Read the order, read what Local actually spans, then answer."
+    starter: ""
+    language: none
+    validator:
+      assertions: []
+    cookbook: docs/creating-composition-arcs/strength-ordering/what-is-liverps.md
+    xp: 180
+    reward: Labyrinth Order Tablet
+    world_target: /City/ArcHighlands/LabyrinthSign
+    recipes: [LIVERPS Strength Ordering, Layer Stack]
+    questions:
+      - prompt: An opinion authored in a deeply nested sublayer competes with a reference opinion. Which category holds each?
+        choices:
+          - The sublayer opinion is Local, so it outranks the reference from another layer stack
+          - The nested sublayer is its own category, weaker than references
+          - Both are Local, so the more recently saved file wins
+        answer: 0
+        explanation: A layer stack is a layer plus its recursively gathered sublayers, and every direct opinion in it is local to that stack.
+      - prompt: sublayer1.usda is listed before sublayer2.usda and itself sublayers sublayer1A.usda. Where does sublayer1A's opinion sit?
+        choices:
+          - Stronger than sublayer2, because sublayers are gathered depth first
+          - Weaker than sublayer2, because it is one level deeper
+          - Equal to sublayer2, because both are indirect
+        answer: 0
+        explanation: The strength-ordered list is populated by gathering sublayers recursively in depth-first order, so an earlier branch and its descendants precede the next sibling.
+      - prompt: What does it mean that LIVRPS applies recursively?
+        choices:
+          - Each layer stack reached across a reference or payload evaluates its own arcs in its own context
+          - The acronym is applied twice to every prim
+          - Specializes is re-evaluated as Local inside referenced layers
+        answer: 0
+        explanation: Composition operations are considered in the context of a layer stack, so arcs authored there are interpreted relative to that stack as composition traverses.
+
+  - id: f5_trace_brief
+    title: Trace One Property Through the Stack
+    floor: 5
+    floor_name: Composition Highlands
+    neighborhood: LIVERPS Labyrinth
+    kind: room
+    prerequisites: [f5_liverps_brief]
+    level_required: 12
+    exam_tasks: [trace_composition_per_property, read_prim_and_property_stacks]
+    stats: {insight: 4, lore: 3}
+    brief: "SYSTEM: The Labyrinth debugs by trace, not by instinct. A prim stack lists every spec contributing to a prim; a property stack narrows to the one property currently arguing. Read the page, then answer."
+    starter: ""
+    language: none
+    validator:
+      assertions: []
+    cookbook: docs/creating-composition-arcs/strength-ordering/tracing-through-liverps.md
+    xp: 170
+    reward: Trace Lantern
+    world_target: /City/ArcHighlands/LabyrinthSign
+    recipes: [Prim Stack, Property Stack]
+    questions:
+      - prompt: A weak sublayer holds a local value for a property no stronger layer authors. What resolves?
+        choices:
+          - The weak sublayer's value, because composition resolves one property at a time
+          - Nothing, because only the strongest layer may supply a value
+          - The schema fallback, because the winning layer authored nothing
+        answer: 0
+        explanation: Strength is evaluated per field, so a weaker spec supplies any property the stronger ones leave unauthored.
+      - prompt: Which call narrows to the specs competing for one attribute's value?
+        choices:
+          - GetPropertyStack on the attribute
+          - GetPrimStack on the prim
+          - GetChildren on the prim
+        answer: 0
+        explanation: GetPrimStack is the broad view; GetPropertyStack returns the property specs in strength order.
+      - prompt: Why not remove the weaker arcs to simplify tracing an unexpected value?
+        choices:
+          - Removing them changes the composition and hides the sources a trace exists to identify
+          - Weaker arcs cannot be re-authored once removed
+          - Removing them promotes the next arc to Local
+        answer: 0
+        explanation: A trace has to read the composition as authored, and every arc removed changes the result being investigated.
+
   - id: f5_liverps_labyrinth
     title: "Highland Labyrinth: Trace LIVERPS Strength Order"
     floor: 5
     floor_name: Composition Highlands
     neighborhood: LIVERPS Labyrinth
     kind: floor_boss
-    prerequisites: [f5_city_block]
+    prerequisites: [f5_trace_brief]
     level_required: 12
     exam_tasks: [trace_liverps, debug_composed_opinions]
     stats: {insight: 5, resolve: 5, craft: 3}

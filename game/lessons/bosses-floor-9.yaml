@@ -1,0 +1,200 @@
+# Boss reviews for Floor 9, the Certification Colosseum.
+#
+# A boss adapts no curriculum page of its own, because it introduces nothing.
+# Its lesson is assembled from the cards its run already taught; only the
+# framing and the work order are authored here.
+reviews:
+  - quest: f9_stack_inspector
+    objective: >-
+      Author a local opinion that outranks the same property arriving through a reference, and
+      read the stack that explains the resolved value.
+    intro: >-
+      The Promenade gate gave the crown district a single entry point, and the edit target room
+      showed that a correct value can still land in the wrong layer. The Debug Gauntlet asks for
+      both at once: a prim composed from more than one spec, with the strongest opinion on it
+      authored where you meant to put it.
+    work_order:
+      heading: The probe resolves its signal from the referenced layer
+      system: >-
+        Two specs contribute to one prim. Only one of them is yours.
+      body: |
+        The Debug Gauntlet opens onto the crown district you composed at the Promenade gate, on the
+        city stage you have been authoring into. A small fixture layer already stands beside it,
+        holding a probe with a signal of 1 and naming that probe as its entry point, so the
+        referenced value is complete and available.
+
+        Nothing stands at /World/Probe on the city stage. With no prim spec at that path there is
+        at most one site contributing to the prim, and signal has no local opinion to resolve from,
+        so the only value anywhere in the composition is the 1 arriving through the fixture layer.
+        The prim carries no documentation either.
+
+        The probe needs /World/Probe defined as an Xform, a reference on it to weaker.usda, a
+        signal of 4 authored locally in the layer you are working in, and documentation reading
+        'Stack Inspector: Read the Property Stack cleared.'. Keep the reference in place. A local 4
+        only outranks anything while the weaker 1 is still part of the composition, and the prim
+        stack should report two contributing prim specs rather than one.
+      points:
+        - "A local opinion outranks the same property arriving across a reference."
+        - "GetPropertyStack lists the property specs contributing to one property, strongest first; GetPrimStack lists every prim spec on the prim."
+        - "Dropping the reference would leave 4 as the only opinion, which is a different composition from 4 outranking 1."
+    apply: >-
+      Define /World/Probe as an Xform, reference weaker.usda, author a local signal of 4, and stamp
+      the documentation, leaving the referenced 1 in place beneath it.
+
+  - quest: f9_changeblock_sprint
+    objective: >-
+      Author a group of related attributes on one prim as a single batch of scene description
+      edits, without changing what any of them resolves to.
+    intro: >-
+      The offset room moved a clip through an arc without touching one of its samples, and the
+      delivery room folded a composed stage into a single layer. Both rearranged a great deal of
+      scene description at once. The Notice Marshal asks for the same thing at prim scale: three
+      attributes and a piece of metadata that arrive together.
+    work_order:
+      heading: The batch prim and its three attributes are unauthored
+      system: >-
+        Three attributes, one entrance. Sdf.ChangeBlock is how the stage hears about them once.
+      body: |
+        The Debug Gauntlet ends where the clip work and the delivery layer left off. The clip's
+        samples now map ten frames later through the arc that brings them in, the flattened
+        delivery layer stands on its own with no arcs left in it, and the city stage is still the
+        one you author into.
+
+        Nothing stands at /World/Batch. With no prim spec at that path, none of a, b, or c has a
+        location to resolve at, and an attribute nobody has authored has no value to read rather
+        than a zero. The prim carries no documentation either.
+
+        The batch needs /World/Batch defined as an Xform, integer a, b, and c authored as 1, 2, and
+        3, and documentation reading 'Notice Marshal: Batch Edits in a ChangeBlock cleared.', with
+        the authoring wrapped in one Sdf.ChangeBlock. Each attribute still resolves on its own,
+        because value resolution runs per property and on demand, so the block changes when the
+        stage is notified and never what any of the three resolves to.
+      points:
+        - "Value resolution runs per property and is not cached, so three attributes on one prim resolve independently."
+        - "Sdf.ChangeBlock coalesces change notification while many specs are authored; it does not alter the authored result."
+        - "An attribute with no authored value and no schema fallback has nothing to resolve, which is not the same as resolving to zero."
+    apply: >-
+      Define /World/Batch as an Xform, author a, b, and c as 1, 2, and 3 inside one
+      Sdf.ChangeBlock, and stamp the documentation.
+
+  - quest: f9_hydra_brief
+    objective: >-
+      Record Hydra's three-part architecture as scene description, in the order the data moves
+      through it.
+    intro: >-
+      The Customizing Colosseum trades in explanations rather than authored prims: schema
+      generation, asset resolution, scene indexes, and value clips all sit outside what this stage
+      composes. The Hydra Herald asks for the one part of that material the city keeps, which is
+      the architecture written down and in order.
+    work_order:
+      heading: The crown district holds no marker naming the architecture
+      system: >-
+        Scene delegate, render index, render delegate. In that order, spelled the way the string
+        asks for it.
+      body: |
+        The crown district is standing. The Promenade gate gave it its payload and its label, and
+        the Colosseum room behind you added no prims to it at all, because naming an architecture
+        is not the same work as authoring one.
+
+        Nothing stands at /City/CrownDistrict/HydraMarker, so there is no prim for an architecture
+        string to hang on and nowhere for the district's record of this material to live. Nothing
+        here produces an image either: this stage composes scene description, while a render index
+        and a render delegate belong to an application with imaging support and a delegate
+        selected.
+
+        The record needs HydraMarker defined as a Scope under /City/CrownDistrict, an architecture
+        attribute reading scene delegate -> render index -> render delegate, and documentation
+        reading 'Hydra Herald: Name the Hydra Architecture cleared.'. Two details are exact. A
+        Scope is the type that groups without transforming, which is what a marker prim wants, and
+        the architecture value is a string, so its order, spacing, and arrows are all part of it.
+      points:
+        - "A scene delegate adapts source scene data, the render index tracks the renderable primitives, and a render delegate implements one backend."
+        - "HdStorm is the real-time render delegate shipped with OpenUSD and used by usdview."
+        - "A string value is exact, so the order and the separators are part of the answer."
+    apply: >-
+      Define /City/CrownDistrict/HydraMarker as a Scope, author its architecture string in scene
+      delegate, render index, render delegate order, and stamp the documentation.
+
+  - quest: f9_archivist_prime
+    objective: >-
+      File the floor's composition work on a prim of its own, and state the stage-level metadata
+      the city is oriented, measured, and timed by.
+    intro: >-
+      The Colosseum has covered an asset's entry point, the specs a prim composes from, how those
+      opinions resolve once composition has ordered them, and where a renderer would pick the
+      result up. The Certification Archive files the composition half of that, and asks for the
+      stage's own contract alongside it: which way is up, what one unit measures, and where the
+      timeline starts.
+    work_order:
+      heading: The archive has no shelf, and the stage states neither its units nor its start
+      system: >-
+        The archive files composition, not conclusions. Bring the stage metadata with it.
+      body: |
+        The Certification Archive sits inside the crown district, on the city stage every room on
+        this floor has composed into. The district carries its payload and its label, the probe
+        further down the stage resolves a local opinion over a referenced one, and the marker
+        naming the rendering architecture is standing beside it.
+
+        Nothing stands at /City/CrownDistrict/CertificationArchive, so the floor's composition work
+        has no prim to be recorded on. The stage itself is no better documented. With no up axis,
+        no metersPerUnit, and no start time code authored, nothing declares which axis points up,
+        what one unit measures, or where the timeline begins, and stage metadata has no property to
+        hang off and nothing standing in for it, so an unauthored field is genuinely absent from
+        the record rather than defaulted into it.
+
+        The archive needs CertificationArchive defined as a Scope under the crown district with
+        documentation reading Composition knowledge verified., the stage's up axis set to Y, its
+        metersPerUnit set to 0.01, and its start time code set to 1. Keep the three stage fields
+        separate from the prim: each is authored on the stage through its own call, and none of
+        them is a property on the archive Scope.
+      points:
+        - "Local opinions are the strongest site in LIVRPS, inherits are next, and specializes resolves last."
+        - "An external reference that supplies an asset path and no prim path relies on the source layer's defaultPrim to choose its target."
+        - "The prim and property stacks report authored sources in strength order, which is what explains a resolved value."
+    apply: >-
+      Define the CertificationArchive Scope with documentation reading Composition knowledge
+      verified., then set the stage's up axis to Y, its metersPerUnit to 0.01, and its start time
+      code to 1.
+
+  - quest: f9_null_monarch
+    objective: >-
+      Restate the city's asset contract on one stage: a named entry point with a role in the model
+      hierarchy, an axis and a timeline, and one referenced prim marked as shareable.
+    intro: >-
+      Everything on this floor composed into a single city stage: an entry point at the Promenade
+      gate, specs and edit targets through the Gauntlet, a resolved opinion standing over a
+      referenced one, and the architecture that would carry the result to an image. The Root Throne
+      asks for the contract that makes all of it one asset somebody else can open.
+    work_order:
+      heading: The stage names no entry point, and the throne has no sign
+      system: >-
+        Seven facts, one stage. None of them is implied by the file merely existing.
+      body: |
+        The Root Throne is the last address in the crown district, on the city stage this floor has
+        been building. /City stands with the crown district beneath it, the district carries its
+        payload and its documentation, and the archive Scope beside the throne holds the floor's
+        composition record.
+
+        Nothing stands at /City/CrownDistrict/RootThrone, so there is no prim to bring the civic
+        sign in through and nothing to mark as shareable. The stage names no default prim, which
+        leaves an outside reference to this city with no prim to target when it supplies only the
+        asset path. /City carries no kind, so a model-aware traversal passes it over instead of
+        reading it as the top of a model hierarchy, and the stage declares neither an up axis nor a
+        start and end time code.
+
+        The contract needs RootThrone defined as an Xform under the crown district, a reference on
+        it to sign.usda, that prim marked instanceable, /City set as the stage's default prim with
+        its kind set to group, the stage's up axis set to Y, its time codes set to 1 through 48, and
+        documentation on the throne reading 'Null Monarch: Capstone Stage Authoring cleared.'. Two
+        of those are easy to put on the wrong prim. instanceable is metadata on the prim holding
+        the arc, and it closes that namespace to per-instance edits once set, while group is the
+        kind for a prim whose descendants carry the components, which makes it right for /City and
+        wrong for the sign.
+      points:
+        - "defaultPrim is the prim an external reference targets when it supplies an asset path and no prim path."
+        - "An instanceable prim shares its composed namespace, so its contents stop being editable per instance."
+        - "group is the kind for an ancestor in the model hierarchy, and component is the reusable leaf beneath it."
+    apply: >-
+      Define the RootThrone Xform, reference sign.usda onto it and mark it instanceable, make /City
+      the stage's default prim with kind group, set the up axis to Y and the time codes to 1 through
+      48, and stamp the throne's documentation.

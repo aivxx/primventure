@@ -1,0 +1,337 @@
+# Bosses introduce no curriculum pages. Each record frames a cumulative review
+# assembled from the non-boss lessons in its own review window, and authors the
+# one work order the boss opens.
+reviews:
+  - quest: f5_workstream_clerk
+    objective: >-
+      Settle two workstreams arguing over one property by declaring their strength order in the
+      root layer.
+    intro: >-
+      Sublayer Yards established that a composed prim is a resolved result and that a layer stack
+      is an ordered list. The Clerk brings two departments to the same marquee and lets the order
+      decide which sign-off is posted.
+    work_order:
+      heading: The marquee sign-off has no declared strength order
+      system: >-
+        The first listed sublayer speaks over every layer listed after it.
+      body: |
+        Sublayer Yards has two workstream files published beside the city stage. layout.usda
+        authors a signOff of DRAFT on the marquee and lighting.usda authors FINAL on the same
+        property, each file holding one department's opinion and nothing else.
+
+        The root layer has not yet declared which of those files contributes, let alone in what
+        order, so the marquee has no composed sign-off at all. Editing DRAFT out of layout.usda
+        would reach into another department's file to settle a question the stack is meant to
+        answer, and authoring FINAL directly in the root layer would make the root the source of a
+        value that belongs to lighting.
+
+        The marquee needs defining as an Xform, the root subLayerPaths set to lighting.usda
+        followed by layout.usda so the lighting opinion is the strongest in the stack, the
+        composed signOff resolving to FINAL from lighting.usda rather than from any local opinion,
+        and its documentation stamped.
+      points:
+        - "subLayerPaths runs strongest to weakest, so the first listed layer wins the property."
+        - "Reordering the root list resolves the conflict without editing either workstream file."
+        - "A local opinion in the root layer outranks the whole stack, so leave the value to lighting.usda."
+    apply: >-
+      Order lighting.usda before layout.usda, let FINAL arrive from lighting rather than from a
+      local opinion, and stamp the marquee's documentation.
+
+  - quest: f5_harbor_master
+    objective: >-
+      Compose a published building onto a destination prim through an arc whose contents can be
+      unloaded.
+    intro: >-
+      Payload Berth established what a reference brings across and what a payload adds on top of
+      it. The Harbor Master would prefer everything unpacked on arrival, and the crate's
+      composition contract says otherwise.
+    work_order:
+      heading: The crate carries no arc, deferred or otherwise
+      system: >-
+        A payload targets its source exactly as a reference does and keeps the option to send the
+        contents back to sleep.
+      body: |
+        The berth already has sm_bldgF.usd published in the asset library with its own default
+        prim, and the previous docks work established how a destination prim composes an external
+        source. The crate destination itself stands empty on the stage.
+
+        With no arc authored on the crate, none of the building's scene description arrives, and
+        nothing on the prim records how it is meant to arrive. Composing the building through a
+        reference would produce the same hierarchy while removing the one property the berth cares
+        about: the ability to leave that cargo excluded until something asks for it.
+
+        The crate needs defining as an Xform, a payload authored on it to sm_bldgF.usd through
+        GetPayloads().AddPayload so the contents compose across an arc that can be unloaded, and
+        its documentation stamped as deferred cargo.
+      points:
+        - Payload and reference target a source the same way; only payload contents carry load state.
+        - Unloading excludes the scene description across the arc while the authored arc remains.
+        - Payloads sit below references in LIVRPS, so a local opinion on the crate still resolves first.
+    apply: >-
+      Keep the payload on the crate rather than swapping it for a reference, and stamp its
+      documentation as deferred cargo.
+
+  - quest: f5_encapsulation_raid
+    objective: >-
+      Bring every prim an asset depends on beneath the entry point a consumer composes.
+    intro: >-
+      Reference Docks established that an arc carries its target and the target's descendants.
+      The kiosk shipping out has a binding whose other end is standing on the pier.
+    work_order:
+      heading: The material sits beside the asset instead of inside it
+      system: >-
+        Only descendants of the referenced target arrive at the destination. Siblings stay home.
+      body: |
+        The kiosk stage holds a cube meant to travel and a red material authored at /Looks, a
+        sibling of the asset root rather than a descendant of it. The cube's binding names that
+        material by path.
+
+        Nothing yet records which prim a consumer should compose, and the material is not inside
+        the hierarchy that would travel if one did. Composing this asset elsewhere would deliver
+        the cube with a binding pointing at a path that resolves to nothing in the new context,
+        because the remapping only follows prims beneath the target.
+
+        The asset needs /World defined as an Xform and recorded as the stage default prim, the red
+        material living at /World/Looks/Red beside the cube at /World/Cube, nothing at all left at
+        /Looks so a traversal finds the material inside the asset and no stray scope outside it,
+        and /World's documentation stamped.
+      points:
+        - Encapsulation is a namespace relationship, so an arc carries the target's descendants and nothing else.
+        - A relationship target outside the referenced subtree resolves to nothing once paths are remapped.
+        - The default prim names the entry point composed when an asset path carries no prim path.
+    apply: >-
+      Make /World the default prim, move the red material beneath it beside the cube, and leave
+      nothing behind at the old root scope.
+
+  - quest: f5_city_block
+    objective: >-
+      Assemble one block from published assets, choosing reference or payload per member according
+      to how its contents should load.
+    intro: >-
+      The Highlands have handed over sublayers, references, payloads, encapsulation, and both ends
+      of the class arcs. A block is where those choices stop being separate exercises and start
+      being one prim hierarchy.
+    work_order:
+      heading: The highland block has members on paper and none on the stage
+      system: >-
+        References keep an interface composed. Payloads keep bulk optional. One block may use both.
+      body: |
+        The city pack publishes skyscraperA.usd, skyscraperE.usd, and sm_bldgF.usd, each with its
+        own default prim and its own encapsulated contents. The highland block that is supposed to
+        arrange them is not on the stage.
+
+        So the block has no root, no members, and no arcs. Copying the towers' geometry into the
+        block layer would produce the same picture while ending each tower's independent
+        publishing, and composing the warehouse the same way as the towers would force its bulk to
+        load every time the block opens, whether anyone needs that interior or not.
+
+        The block needs defining as an Xform, two destination prims beneath it referencing
+        skyscraperA.usd and skyscraperE.usd, a third destination prim payloading sm_bldgF.usd so
+        the warehouse contents stay excludable, and the block's documentation stamped.
+      points:
+        - Reuse arrives by arc; duplicated geometry stops later changes to the source from reaching the placement.
+        - Reference the members that belong in the composed interface and payload the bulk behind them.
+        - Each destination prim owns its own arc and its own placement opinions.
+    apply: >-
+      Reference the two towers, payload the warehouse, and stamp the block's documentation so the
+      skyline is composed rather than copied.
+
+  - quest: f5_liverps_labyrinth
+    objective: >-
+      Author the strongest opinion on a property while keeping every weaker arc composed and
+      inspectable.
+    intro: >-
+      Composition Highlands has laid out all six arcs and the order that settles them. The
+      Labyrinth wants one number posted and the entire argument still on the record beneath it.
+    work_order:
+      heading: Five arcs argue over one floor index
+      system: >-
+        Local, Inherits, Variant sets, References, Payloads, Specializes. In that order, every
+        time.
+      body: |
+        Two sources sit published beside the stage: ref_sign.usda authors a floorIndex of 1 on its
+        default prim and payload_sign.usda authors 3 on its own. A variant branch offers 2, and
+        the sign that is meant to resolve all of this is not defined yet.
+
+        Nothing stands at the sign's path and no arc connects it to any of those sources, so there
+        is no composition to settle. The quickest route to a posted 4 is to drop the weaker arcs
+        and author a lone value, which removes the very specs a trace exists to identify and
+        leaves nobody able to explain the number afterwards.
+
+        The sign needs defining as an Xform carrying an inherit, an edition variant set holding
+        draft and final with final selected, a reference to ref_sign.usda, a payload to
+        payload_sign.usda, and a specializes arc. A local floorIndex of 4 authored in your own
+        layer then resolves over all of them, at least five prim specs should remain contributing
+        to the prim, and the documentation needs stamping.
+      points:
+        - A local opinion outranks every arc, so the posted figure belongs in your own layer.
+        - Weaker arcs stay part of the composed prim and remain visible through GetPrimStack.
+        - GetPropertyStack narrows to the specs competing over one property when a resolved value surprises you.
+    apply: >-
+      Keep the inherit, variant, reference, payload, and specializes arcs intact, author the local
+      floorIndex of 4 in your own layer, and stamp the sign's documentation.
+
+  - quest: f6_hierarchy_sort
+    objective: >-
+      Encapsulate every contribution beneath the asset entry point and partition it by
+      responsibility.
+    intro: >-
+      The Principles Ward established an entry point and the scopes that make a hierarchy
+      legible. The Filing Clerk has found the surfacing contribution parked outside the building.
+    work_order:
+      heading: The paint is filed outside the asset it belongs to
+      system: >-
+        Scope carries no transform operations, which is exactly what an organizational prim wants.
+      body: |
+        The townhouse keeps its geometry inside /World, and the surfacing contribution sits out at
+        /Looks, a sibling of the asset root. The material is authored, reachable on this stage, and
+        entirely outside the hierarchy a consumer would compose.
+
+        Nothing yet records /World as the entry point, and even once it does, one arc to that root
+        would carry geometry and no materials, because /Looks is not a descendant of the target.
+        The prims already inside /World also carry no partition, so nobody reading the namespace
+        can tell which contribution belongs to modeling and which to surfacing.
+
+        The asset needs /World defined as an Xform and recorded as the stage default prim,
+        /World/Looks defined as a Scope, the paint material living at /World/Looks/Paint, nothing
+        left at /Looks so a traversal reaches the material inside the asset, and /World's
+        documentation stamped.
+      points:
+        - Keep Looks beneath the entry point so one arc to the root carries geometry and surfacing together.
+        - Scope is the deliberate type for a partition, since an unnecessary Xform adds transform behavior.
+        - Leaving anything at the old root path means the asset still keeps content outside its own entry point.
+    apply: >-
+      Make /World the default prim, define Looks as a Scope beneath it, and stop filing the paint
+      at the layer root.
+
+  - quest: f6_asset_interface
+    objective: >-
+      Publish an asset as a thin interface layer that payloads its own contents and declares its
+      own stage contract.
+    intro: >-
+      The Foundry has separated workstreams, partitioned the hierarchy, and parameterized the
+      entry point. What remains is deciding which file a consumer is allowed to know about.
+    work_order:
+      heading: The interface layer has nothing to reference
+      system: >-
+        The interface owns the payload decision so that no consumer has to make it.
+      body: |
+        contents.usda is published beside the stage carrying /World with a hull beneath it and its
+        own default prim. The interface layer, the one file downstream scenes are meant to
+        reference, holds nothing at /World.
+
+        With no arc authored there, the interface exposes no hull, and the layer declares neither a
+        default prim nor an up axis of its own, so a downstream reference has no entry point to
+        target and no orientation to trust. Pointing consumers straight at contents.usda would
+        work once and then weld every one of them to the layer that changes on every publish.
+
+        The interface needs /World defined as an Xform and recorded as the stage default prim, a
+        payload authored on it to contents.usda so the hull composes across an arc that can be
+        unloaded, the stage up axis set to Y on this layer, and /World's documentation stamped.
+      points:
+        - Consumers reference the interface; the interface payloads its own contents internally.
+        - Stage metadata belongs to the layer that declares it, so the interface authors its own defaultPrim and up axis.
+        - Cheap fields worth reading before loading the contents belong above the payload boundary.
+    apply: >-
+      Set /World as the default prim, payload contents.usda onto it, keep Y up, and stamp the
+      interface's documentation.
+
+  - quest: f6_loft_variant
+    objective: >-
+      Expose an internal variant set on the asset entry point and make each public branch select
+      its internal counterpart.
+    intro: >-
+      The Parameter Loft established that a control surface belongs on the entry point and the
+      opinions belong wherever they were authored. The art director now wants the finish switch
+      without a tour of implementation.
+    work_order:
+      heading: The finish switch is buried on an internal scope
+      system: >-
+        The public set advertises the names; each of its branches quietly selects its counterpart.
+      body: |
+        The townhouse's Looks scope carries an exteriorType variant set whose brick and stucco branches
+        own the actual surfacing opinions. /World, the prim a consumer reaches, carries no variant
+        set at all.
+
+        The only control over the finish therefore sits on an internal scope that downstream
+        contexts should never author against, and it disappears entirely whenever the contents
+        payload is left unloaded, which is precisely when a tool wants to read what the asset
+        offers. Copying the names up without wiring them would produce a switch that advertises
+        two finishes and changes nothing.
+
+        /World needs defining as an Xform carrying a matching exteriorType set with brick and stucco,
+        each public branch authoring the corresponding selection on the Looks set from inside that
+        branch's edit context, brick left as the public selection, the Looks set left with both
+        variants and no direct selection of its own, and /World's documentation stamped.
+      points:
+        - Variant names must match the internal set exactly, or a public branch selects nothing.
+        - Author the internal selection inside the public branch's edit context so it stays conditional on that branch.
+        - Leave the internal set without a direct selection so only the lofted branches drive it.
+    apply: >-
+      Add the exteriorType set to /World with brick selected, wire each branch to the matching Looks
+      selection, and stamp the documentation.
+
+  - quest: f6_assembly_block
+    objective: >-
+      Aggregate published components into an assembly that owns arrangement and no geometry.
+    intro: >-
+      Model Heights established what a component is and how an aggregate gathers them. The skyline
+      has components and nothing above them holding the plan.
+    work_order:
+      heading: Loose components with no aggregate above them
+      system: >-
+        An assembly places its members and leaves their contents in their own files.
+      body: |
+        The house is registered as a component with its own asset name, and sign.usda is published
+        in the world's asset folder with its own default prim. No block prim stands above either
+        of them.
+
+        The district therefore holds loose component models and no aggregate that arranges them.
+        The sign is not on this stage at all, and the shortest way to make it appear is to copy its
+        meshes into the block layer, which ends the sign's independent publishing and stops later
+        changes to it from ever reaching this placement.
+
+        The block needs defining as an Xform with assembly kind authored on it through
+        Usd.ModelAPI, a placement prim defined beneath it carrying a reference to sign.usda, and
+        the block's documentation stamped. Assembly belongs on the aggregate root, because a
+        component root would turn its referenced component descendants into an invalid hierarchy.
+      points:
+        - "Kind inheritance runs model to group to assembly."
+        - A reference without an explicit prim path needs a valid default prim in the source asset.
+        - Members keep their component role from the metadata composed across their own arcs.
+    apply: >-
+      Mark the block an assembly, reference sign.usda onto a placement prim beneath it, and stamp
+      the block's documentation.
+
+  - quest: f6_zoning_golem
+    objective: >-
+      Restore a valid model hierarchy by authoring each model role at the level that actually
+      holds it.
+    intro: >-
+      The Foundry has run from a single asset up through workstreams, interfaces, components,
+      assemblies, and groups. The Golem has all of those pieces and has stacked them upside down.
+    work_order:
+      heading: The model roles run in the wrong direction
+      system: >-
+        Group above assembly above component, contiguous from the root down.
+      body: |
+        The foundry district holds a skyline block and a house beneath /City/AssetFoundry. The
+        roles authored on that chain are inverted, so the narrowest model role sits above the
+        aggregate that is meant to contain it.
+
+        A component is a leaf of the model hierarchy, so a component holding other models makes
+        the whole chain invalid, and kind is read during composition for every member of that
+        hierarchy. Any tool that prunes traversal at model boundaries stops in the wrong place,
+        and any client asking the district for its models gets an answer that contradicts the
+        structure it can see.
+
+        The district needs /City/AssetFoundry defined as an Xform carrying group kind, assembly
+        authored on the skyline block, component authored on the house, both of those prims kept
+        present beneath the district, and /City/AssetFoundry's documentation stamped.
+      points:
+        - A component is a leaf of the model hierarchy and may not contain other models.
+        - Model hierarchy stays shallow and contiguous from the root so tools can prune traversal at its boundaries.
+        - Taxonomies that are not model roles belong in properties or schemas rather than in kind.
+    apply: >-
+      Author group on the district, assembly on the block, component on the house, and stamp the
+      district's documentation.

@@ -106,7 +106,7 @@ quests:
       - prim_stack: {path: /World/Probe, min: 2}
       - metadata_equals: {path: /World/Probe, key: documentation, value: 'Stack Inspector: Read the Property Stack
             cleared.'}
-    cookbook: docs/beyond-basics/value-resolution.md
+    cookbook: docs/creating-composition-arcs/prim-composition.md
     xp: 300
     reward: {opinion_points: 1, achievement: "New achievement! You inspected the stack and still wrote the stronger opinion yourself."}
     world_target: /City/CrownDistrict
@@ -226,7 +226,7 @@ quests:
       - attribute_equals: {path: /World/Batch.c, value: 3}
       - metadata_equals: {path: /World/Batch, key: documentation, value: 'Notice Marshal: Batch Edits in a ChangeBlock
             cleared.'}
-    cookbook: docs/beyond-basics/custom-properties.md
+    cookbook: docs/beyond-basics/value-resolution.md
     xp: 240
     reward: {opinion_points: 1, achievement: "New achievement! You used a ChangeBlock. The notice queue sends flowers."}
     world_target: /City/CrownDistrict
@@ -370,7 +370,7 @@ quests:
       - {up_axis: Y}
       - {meters_per_unit: 0.01}
       - {start_time: 1}
-    cookbook: docs/creating-composition-arcs/strength-ordering/what-is-liverps.md
+    cookbook: docs/creating-composition-arcs/prim-composition.md
     xp: 400
     reward: {opinion_points: 2, achievement: "Archive sealed. Your opinions have been indexed against the official study guide."}
     world_target: /City/CrownDistrict/CertificationArchive
@@ -445,7 +445,7 @@ quests:
       - kind_equals: {path: /City, value: group}
       - metadata_equals: {path: /City/CrownDistrict/RootThrone, key: documentation, value: 'Null Monarch: Capstone Stage Authoring
             cleared.'}
-    cookbook: docs/asset-structure/asset-structure-principles/index.md
+    cookbook: docs/asset-structure/asset-structure-principles/your-first-asset.md
     xp: 800
     reward:
       opinion_points: 7

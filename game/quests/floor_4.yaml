@@ -30,13 +30,62 @@ quests:
     world_target: /City/BeyondTheWalls/Hedge
     recipes: [Primvar, Interpolation]
 
+  - id: f4_value_resolution_probe
+    title: Author the Strongest Probe Signal
+    floor: 4
+    floor_name: Beyond-Basics Gardens
+    neighborhood: Primvar Hedge
+    kind: room
+    prerequisites: [f4_season_gate]
+    level_required: 10
+    exam_tasks: [author_local_opinion, inspect_value_source]
+    stats: {insight: 4, craft: 3}
+    brief: "SYSTEM: A referenced probe supplies signal 1. Author signal 4 locally on the destination so value resolution has a stronger source."
+    starter: |
+      from pathlib import Path
+      from pxr import Sdf, Usd
+
+      stage = Usd.Stage.Open(STAGE_PATH)
+      source_stage = Usd.Stage.CreateNew(str(Path(STAGE_PATH).parent / "weaker_probe.usda"))
+      source = source_stage.DefinePrim("/Probe", "Xform")
+      source.CreateAttribute("signal", Sdf.ValueTypeNames.Int).Set(1)
+      source_stage.SetDefaultPrim(source)
+      source_stage.GetRootLayer().Save()
+
+      probe = stage.DefinePrim("/World/Probe", "Xform")
+      probe.GetReferences().AddReference("weaker_probe.usda")
+      # TODO: Author a local integer signal of 4 on /World/Probe.
+      stage.GetRootLayer().Save()
+    language: python
+    validator:
+      assertions:
+        - attribute_equals: {path: /World/Probe.signal, value: 4}
+        - attribute_source: {path: /World/Probe.signal, layer: submission.usd}
+    cookbook: docs/beyond-basics/value-resolution.md
+    xp: 210
+    reward: Provenance Lens
+    world_target: /World/Probe
+    recipes: [Value Resolution, Property Stack]
+    questions:
+      - prompt: Why does signal resolve to the locally authored value instead of the referenced value?
+        choices:
+          - A local opinion is stronger than a referenced opinion
+          - Integer values always choose the larger number
+          - The most recently saved layer is strongest
+        answer: 0
+        explanation: Value resolution follows composition strength, where a direct local opinion outranks a referenced opinion.
+      - prompt: Which API reveals the authored sources contributing to the signal property in strength order?
+        choices: [GetPropertyStack, GetChildren, GetVariantNames]
+        answer: 0
+        explanation: GetPropertyStack returns the contributing property specs ordered strongest first.
+
   - id: f4_custom_tag
     title: Author a Custom Namespaced Property
     floor: 4
     floor_name: Beyond-Basics Gardens
     neighborhood: Primvar Hedge
     kind: room
-    prerequisites: [f4_season_gate]
+    prerequisites: [f4_value_resolution_probe]
     level_required: 8
     exam_tasks: [author_custom_attribute, namespace_property]
     stats: {craft: 3, insight: 2}
@@ -58,13 +107,46 @@ quests:
     world_target: /City/BeyondTheWalls/NorthGate
     recipes: [Property, Attribute]
 
+  - id: f4_draft_topiary
+    title: Prune the Draft Topiary Without Deleting It
+    floor: 4
+    floor_name: Beyond-Basics Gardens
+    neighborhood: Quiet Garden
+    kind: room
+    prerequisites: [f4_custom_tag]
+    level_required: 9
+    exam_tasks: [deactivate_prim]
+    stats: {insight: 3, resolve: 2}
+    brief: "SYSTEM: Two topiaries, one approved. Deactivate Draft so traversal walks past it, and leave Hero alone. Deleting the draft destroys the record, and the committee reconvenes in spring."
+    starter: |
+      from pxr import Usd, UsdGeom
+
+      stage = Usd.Stage.CreateNew(STAGE_PATH)
+      UsdGeom.Xform.Define(stage, "/City/BeyondTheWalls/Topiary")
+      UsdGeom.Sphere.Define(stage, "/City/BeyondTheWalls/Topiary/Hero")
+      UsdGeom.Cube.Define(stage, "/City/BeyondTheWalls/Topiary/Draft")
+      # TODO: Call SetActive(False) on the Draft prim, leaving Hero resolving active.
+      stage.GetRootLayer().Save()
+    language: python
+    validator:
+      assertions:
+        - active: {path: /City/BeyondTheWalls/Topiary/Draft, value: false}
+        - traversal_contains:
+            paths: [/City/BeyondTheWalls/Topiary/Hero]
+            excluded: [/City/BeyondTheWalls/Topiary/Draft]
+    cookbook: docs/beyond-basics/active-inactive-prims.md
+    xp: 190
+    reward: Committee Stamp
+    world_target: /City/BeyondTheWalls/Topiary
+    recipes: [Active and Inactive]
+
   - id: f4_two_faced_topiary
     title: "Two-Faced Topiary: Active and Inactive Prims"
     floor: 4
     floor_name: Beyond-Basics Gardens
     neighborhood: Quiet Garden
     kind: neighborhood_boss
-    prerequisites: [f4_custom_tag]
+    prerequisites: [f4_draft_topiary]
     level_required: 9
     exam_tasks: [deactivate_prim, keep_sibling_active]
     stats: {insight: 3, resolve: 3}
@@ -106,13 +188,42 @@ quests:
         answer: 0
         explanation: Default Traverse() skips inactive prims.
 
+  - id: f4_lamp_kind
+    title: Classify the Lamp Post as a Component
+    floor: 4
+    floor_name: Beyond-Basics Gardens
+    neighborhood: Measure Yard
+    kind: room
+    prerequisites: [f4_two_faced_topiary]
+    level_required: 9
+    exam_tasks: [set_model_kind]
+    stats: {lore: 3, craft: 2}
+    brief: "SYSTEM: The lamp post is a reusable leaf asset and the ledger lists it as nothing at all. Set its kind to component through Usd.ModelAPI. A schema type says what data it carries, never what role it plays."
+    starter: |
+      from pxr import Kind, Usd, UsdGeom
+
+      stage = Usd.Stage.CreateNew(STAGE_PATH)
+      lamp = UsdGeom.Xform.Define(stage, "/City/BeyondTheWalls/LampPost").GetPrim()
+      # TODO: Usd.ModelAPI(lamp).SetKind(Kind.Tokens.component) — component, never model.
+      stage.GetRootLayer().Save()
+    language: python
+    validator:
+      assertions:
+        - prim_type: {path: /City/BeyondTheWalls/LampPost, value: Xform}
+        - kind_equals: {path: /City/BeyondTheWalls/LampPost, value: component}
+    cookbook: docs/beyond-basics/model-kinds.md
+    xp: 190
+    reward: Ledger Classification
+    world_target: /City/BeyondTheWalls/LampPost
+    recipes: [Kind, Component]
+
   - id: f4_traversal_census
     title: Traverse the Stage and Count the Meshes
     floor: 4
     floor_name: Beyond-Basics Gardens
     neighborhood: Quiet Garden
     kind: room
-    prerequisites: [f4_two_faced_topiary]
+    prerequisites: [f4_lamp_kind]
     level_required: 9
     exam_tasks: [traverse_stage, count_gprims]
     stats: {insight: 4, craft: 2}
@@ -138,13 +249,42 @@ quests:
     world_target: /City/BeyondTheWalls
     recipes: [Stage Traversal]
 
+  - id: f4_hydra_lecture
+    title: Explain Hydra From the Overlook
+    floor: 4
+    floor_name: Beyond-Basics Gardens
+    neighborhood: Hydra Overlook
+    kind: room
+    prerequisites: [f4_traversal_census]
+    level_required: 10
+    exam_tasks: [explain_hydra]
+    stats: {lore: 4, insight: 3}
+    brief: "SYSTEM: Hydra bridges scene data and rendering. usdview is the application; Storm is a delegate; your viewport plugin remains someone else's basement problem. Answer anyway."
+    starter: ""
+    language: none
+    validator:
+      assertions: []
+    cookbook: docs/beyond-basics/hydra.md
+    xp: 160
+    reward: Bridge Permit
+    world_target: /City/BeyondTheWalls
+    recipes: [Hydra]
+    questions:
+      - prompt: What does Hydra sit between?
+        choices:
+          - Scene description and a render delegate
+          - Sublayers and payloads
+          - Kind and assetInfo
+        answer: 0
+        explanation: Hydra is the rendering architecture between USD scene data and backends.
+
   - id: f4_unit_contract
     title: Declare the City's Units and Up Axis
     floor: 4
     floor_name: Beyond-Basics Gardens
     neighborhood: Measure Yard
     kind: room
-    prerequisites: [f4_traversal_census]
+    prerequisites: [f4_hydra_lecture]
     level_required: 9
     exam_tasks: [set_meters_per_unit, set_up_axis]
     stats: {lore: 3, craft: 3}
@@ -206,42 +346,13 @@ quests:
         answer: 0
         explanation: Components are the reusable leaf models in the hierarchy.
 
-  - id: f4_hydra_lecture
-    title: Explain Hydra From the Overlook
-    floor: 4
-    floor_name: Beyond-Basics Gardens
-    neighborhood: Hydra Overlook
-    kind: room
-    prerequisites: [f4_kind_post]
-    level_required: 10
-    exam_tasks: [explain_hydra]
-    stats: {lore: 4, insight: 3}
-    brief: "SYSTEM: Hydra bridges scene data and rendering. usdview is the application; Storm is a delegate; your viewport plugin remains someone else's basement problem. Answer anyway."
-    starter: ""
-    language: none
-    validator:
-      assertions: []
-    cookbook: docs/beyond-basics/hydra.md
-    xp: 160
-    reward: Bridge Permit
-    world_target: /City/BeyondTheWalls
-    recipes: [Hydra]
-    questions:
-      - prompt: What does Hydra sit between?
-        choices:
-          - Scene description and a render delegate
-          - Sublayers and payloads
-          - Kind and assetInfo
-        answer: 0
-        explanation: Hydra is the rendering architecture between USD scene data and backends.
-
   - id: f4_hydra_of_choices
     title: "Hydra of Choices: Primvars, Activation, and Units"
     floor: 4
     floor_name: Beyond-Basics Gardens
     neighborhood: Hydra Overlook
     kind: floor_boss
-    prerequisites: [f4_hydra_lecture]
+    prerequisites: [f4_kind_post]
     level_required: 10
     exam_tasks: [combine_primvar_activation_units, recap_beyond_basics]
     stats: {insight: 4, resolve: 4, craft: 3}

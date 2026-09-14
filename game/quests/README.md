@@ -1,12 +1,12 @@
 # Primventure Quest Catalog
 
-The catalog currently contains 73 quests across Floors 0–9. Floors 3–9
+The catalog currently contains 139 quests across Floors 0–9. Floors 3–9
 are expanded. Floor 4 is Beyond-Basics Gardens (primvars, custom properties,
 active/inactive, traversal, units, kinds, Hydra concept). Floor 9 is the Certification
 Colosseum: live debug (edit targets, stacks, layer offsets, flatten,
 ChangeBlock) plus honest Customizing USD / Hydra concept raids. Original MCQs
 are mapped to study-guide task IDs 1.1–8.x. Files are ordered by floor, and `prerequisites` form a playable path from
-`f0_first_prim` through `f9_null_monarch`. Exchange and Instancing branch after
+`f0_stage_intake` through `f9_null_monarch`. Exchange and Instancing branch after
 Floor 6 and both must be cleared before Floor 9. Boss encounters are distributed
 throughout the route using `neighborhood_boss`, `city_boss`, and `floor_boss`;
 ordinary encounters use `room`.
@@ -41,7 +41,9 @@ Boss starters always open the accumulated city with
 precise path/value comments, and save plumbing, but never pre-author a graded
 prim, property, relationship, or composition arc. Neighborhood bosses combine
 the current skill with an earlier authoring skill; city and floor bosses grade
-progressively broader synthesis.
+progressively broader synthesis. Boss lessons are generated reviews of the
+curriculum pages taught by the rooms they cap, followed by a boss-specific work
+order; bosses never introduce a curriculum page.
 
 Python starters expect the runner to inject `STAGE_PATH`. USDA starters are
 complete text documents that the runner writes to that path. Cookbook values

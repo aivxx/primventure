@@ -126,6 +126,165 @@ lessons:
         Stamp ImportedKiosk with sourceFormat OBJ and the exact intake documentation. The Depot
         accepts metadata, not your solemn assurance that the crate looked foreign.
 
+  - source: docs/data-exchange/data-exchange/exercise.md
+    title: Anatomy of a Converter
+    objective: Assemble a standalone converter as an entry point, an extraction phase, a transformation phase, and the export options a caller selects between.
+    intro: >-
+      Before a single vertex is parsed, the terminal would like to see the shape of the machine. A
+      converter is a small program with one front door, two rooms, and one exit, and the paperwork
+      goes wrong the moment those rooms start trading responsibilities.
+    beats:
+      - kind: concept
+        heading: One entry point, two phases, one save
+        system: >-
+          Every crate that clears this hall went through a machine somebody wrote in an afternoon.
+          Try to make yours legible to whoever inherits it.
+        body: |
+          A standalone converter translates files without an application's runtime in the loop. Its
+          entry point collects arguments, calls a function that maps the source into OpenUSD, calls
+          a function that adapts that result for the destination, and saves the stage once at the
+          end.
+
+          Parsing the foreign format and authoring OpenUSD are separate concerns. A converter
+          usually hands the source side to a parsing library that already understands the format,
+          which leaves the OpenUSD side free to think in prims, attributes, and metadata. The
+          extraction function creates the output stage and returns it, so the transformation
+          receives a live stage rather than a path and never reopens work already in progress.
+        points:
+          - The entry point is the only place that reads arguments and the only place that saves.
+          - Extraction creates and returns the stage, so transformation has something to operate on.
+          - A parsing library handles the source format while usd-core handles the authoring.
+          - Keeping each phase in its own function leaves either one replaceable on its own.
+      - kind: concept
+        heading: Export options are the caller's half of the contract
+        system: >-
+          The client gets a small number of levers. Everything else is the machine's opinion, and
+          the machine does not take requests.
+        body: |
+          A converter's command line states what it accepts. An input path names the source, an
+          output path names the destination, and each export option exposes one decision the caller
+          is allowed to make. Every option needs a sensible default so the ordinary conversion runs
+          with no flags at all.
+
+          Options describe the destination rather than the source, which is why they are collected
+          at the entry point and applied in the transformation phase. An up-axis flag is the
+          standard example. OBJ is Y-up, so Y is the default, and an organization whose pipeline
+          runs Z-up asks for Z explicitly instead of leaving the converter to infer it.
+        points:
+          - Defaults should match the predominant workflow so common conversions stay flagless.
+          - An option encodes a destination choice, so its effect belongs in the transformation phase.
+          - Listing the accepted values up front keeps an option honest about what it can produce.
+      - kind: api
+        heading: Sketch both phases before filling either one in
+        system: >-
+          Two functions and a caller. It looks like nothing, which is rather the point.
+        body: |
+          Write the phases as named functions with the signatures they will keep. Extraction takes
+          the source and destination paths and returns a Usd.Stage. Transformation takes that stage
+          and edits it in place, so it returns nothing. OBJ states no linear unit, which makes the
+          unit declaration a destination decision and puts SetStageMetersPerUnit in the
+          transformation.
+        code: |
+          from pathlib import Path
+          from pxr import Usd, UsdGeom
+
+
+          def extract(input_file: Path, output_file: Path) -> Usd.Stage:
+              """Map the source into OpenUSD as directly as the schemas allow."""
+              stage = Usd.Stage.CreateNew(str(output_file))
+              # Source parsing and the authoring it drives belong here.
+              return stage
+
+
+          def transform(stage: Usd.Stage) -> None:
+              """Adapt the extracted stage for the destination."""
+              UsdGeom.SetStageMetersPerUnit(stage, UsdGeom.LinearUnits.meters)
+
+
+          def main(input_file: Path, output_file: Path) -> None:
+              stage = extract(input_file, output_file)
+              transform(stage)
+              stage.Save()
+      - kind: api
+        heading: Collect the options at the front door
+        system: >-
+          One flag, three accepted values, and a default that spares everyone the flag. The form
+          practically fills itself in.
+        body: |
+          Argument parsing belongs to the entry point, not to either phase. Naming the export
+          options as their own group documents which arguments are destination choices, and
+          deriving an unspecified output path from the input keeps the common invocation short.
+        code: |
+          import argparse
+          from enum import Enum
+          from pathlib import Path
+
+          from pxr import UsdGeom
+
+
+          class UpAxis(Enum):
+              Y = UsdGeom.Tokens.y
+              Z = UsdGeom.Tokens.z
+
+              def __str__(self):
+                  return self.value
+
+
+          parser = argparse.ArgumentParser("obj2usd", description="An OBJ to USD converter.")
+          parser.add_argument("input", help="Input OBJ file", type=Path)
+          parser.add_argument("-o", "--output", help="Output USD file", type=Path)
+          export_opts = parser.add_argument_group("Export Options")
+          export_opts.add_argument(
+              "-u",
+              "--up-axis",
+              help="Up axis for the exported USD stage.",
+              type=UpAxis,
+              choices=list(UpAxis),
+              default=UpAxis.Y,
+          )
+
+          args = parser.parse_args()
+          if args.output is None:
+              args.output = args.input.parent / f"{args.input.stem}.usda"
+      - kind: work_order
+        heading: Run the crate through both phases
+        system: >-
+          Two working halves with nothing between them is the most common way a conversion produces
+          an empty directory.
+        body: |
+          The converter on the bench is half assembled. Extraction is finished and already runs. It
+          creates the output stage, defines the crate prim it maps the source onto, and hands that
+          stage back. The transformation function is declared, accepts that stage, and has no body,
+          and the save at the end writes out whatever the pipeline produced.
+
+          OBJ states no linear unit, so nothing on the delivered stage says what one scene unit is
+          worth, and a consumer is left to fall back on an assumption this conversion never made
+          explicit. The transformation is also never invoked, which means any step written into it
+          stays inert no matter how correct the step itself is.
+
+          Declare meters inside the transformation, then run the stage extraction handed back
+          through that phase before the save. Both halves of this matter. A unit declaration is a
+          decision about the destination rather than a fact read out of the source, so it belongs
+          in the second phase, and a phase that is never called changes nothing whatever it
+          contains.
+        points:
+          - Extraction returns the stage, and everything downstream operates on that same object.
+          - A transformation edits the stage in place, so it hands nothing back.
+          - Save once at the end, after both phases have contributed their opinions.
+          - An unauthored linear unit falls back to a value no phase ever declared.
+      - kind: recap
+        heading: What you now know
+        body: |
+          A converter is an entry point that gathers arguments, an extraction phase that maps the
+          source onto a new stage, a transformation phase that adapts that stage for the
+          destination, and a single save. Export options are collected at the entry point and
+          applied during transformation, which keeps source fidelity and destination policy in
+          separate, replaceable pieces.
+    apply:
+      f8_converter_anatomy: >-
+        Declare meters inside the transformation phase, then run the extracted stage through it
+        before the save. An empty phase nobody calls converts nothing twice over.
+
   - source: docs/data-exchange/data-extraction/exercise-extracting-geometry.md
     title: Extracting a Mesh
     objective: Parse foreign geometry and author its vertices, topology, normals, and polygonal subdivision behavior as a UsdGeom.Mesh.
@@ -260,6 +419,140 @@ lessons:
         The starter has already parsed the first OBJ vertices. Define /World/Cube and set its points
         to cube_points; do not ask usd-core to open a crate it cannot read.
 
+  - source: docs/data-exchange/data-extraction/exercise-extracting-materials.md
+    title: Extracting Materials
+    objective: Map source material records onto UsdShade material graphs, translate their properties onto a preview surface, and bind the result to the extracted geometry.
+    intro: >-
+      The paint on the crate arrived as a block of text with a period in its name and a shininess
+      number no renderer will accept. Extraction is not finished when the vertices land. The dock
+      wants the surfaces too, in a graph a consumer can actually read.
+    beats:
+      - kind: concept
+        heading: A material is a graph with a lofted output
+        system: >-
+          One prim holds the graph, another does the shading, and a connection explains which is
+          which. Customs finds this arrangement soothing.
+        body: |
+          A UsdShade.Material is a container for a network of shading prims. The shading itself
+          happens in UsdShade.Shader prims inside that container, each naming the shader
+          implementation it stands for. UsdPreviewSurface is the portable choice, since consumers
+          are expected to understand it.
+
+          The material publishes its result by connecting its own surface output to the shader's
+          surface output. That connection is what makes the container usable as one material rather
+          than a folder of unrelated shading prims, and it is why a mesh binds to the material and
+          never to the shader.
+        points:
+          - CreateIdAttr writes the shader's info:id attribute, which names the implementation to run.
+          - CreateSurfaceOutput on the material and ConnectToSource on that output loft the graph's result.
+          - A material whose output is unconnected binds without complaint and shades nothing.
+      - kind: concept
+        heading: Source names are not always valid prim names
+        system: >-
+          Material.001 is a perfectly good name in the application that exported it and an
+          impossibility here.
+        body: |
+          Prim names are identifiers built from letters, digits, and underscores, so a source name
+          carrying a period, a space, or a dash cannot be used as written. Tf.MakeValidIdentifier
+          replaces the offending characters, which is how a Blender material named Material.001
+          becomes the prim Material_001.
+
+          Sanitizing is a mapping decision worth recording. Two source names can sanitize to the
+          same identifier, and a consumer searching for the original string will not find it
+          anywhere on the prim, so a converter that cares about round trips keeps the source name
+          in metadata beside the sanitized one.
+        points:
+          - Sanitize every foreign name used as a prim name, for materials exactly as for meshes.
+          - Distinct source names can collide once sanitized, so uniqueness deserves its own pass.
+          - The original name is source data and survives in customData if the mapping preserves it.
+      - kind: api
+        heading: Define the material and its preview surface
+        system: >-
+          Two prims and one connection. The terminal has processed worse in triplicate.
+        body: |
+          Define the material at the sanitized path and the shader as a child of it, then name the
+          shader implementation and loft the result. Sdf.Path.AppendChild builds the child path
+          without string surgery, and ConnectableAPI is what the material's output connects to.
+        code: |
+          from pxr import Sdf, Tf, Usd, UsdGeom, UsdShade
+
+          stage = Usd.Stage.CreateNew("shapes.usda")
+          UsdGeom.Xform.Define(stage, "/World")
+          material_path = Sdf.Path("/World").AppendChild(
+              Tf.MakeValidIdentifier("Material.001")
+          )
+
+          material = UsdShade.Material.Define(stage, material_path)
+          shader = UsdShade.Shader.Define(stage, material_path.AppendChild("Shader"))
+          shader.CreateIdAttr("UsdPreviewSurface")
+          material.CreateSurfaceOutput().ConnectToSource(
+              shader.ConnectableAPI(), UsdShade.Tokens.surface
+          )
+      - kind: api
+        heading: Map the source properties, then bind
+        system: >-
+          Shininess becomes roughness through arithmetic nobody enjoys explaining twice.
+        body: |
+          CreateInput authors a namespaced input on the shader, so the diffuse color arrives as
+          inputs:diffuseColor and the specular color as inputs:specularColor. Colors map straight
+          across from the source record, while a specular shininess has to be converted into the
+          roughness UsdPreviewSurface expects. MaterialBindingAPI applies the binding schema to the
+          mesh, and Bind authors the material:binding relationship that points at the material.
+        code: |
+          import math
+
+          from pxr import Gf, Sdf, UsdShade
+
+          roughness = 1 - math.sqrt(shininess / 1000.0)
+
+          shader.CreateInput("useSpecularWorkflow", Sdf.ValueTypeNames.Int).Set(1)
+          shader.CreateInput("diffuseColor", Sdf.ValueTypeNames.Color3f).Set(
+              Gf.Vec3f(diffuse_color)
+          )
+          shader.CreateInput("specularColor", Sdf.ValueTypeNames.Color3f).Set(
+              Gf.Vec3f(specular_color)
+          )
+          shader.CreateInput("roughness", Sdf.ValueTypeNames.Float).Set(roughness)
+
+          binding_api = UsdShade.MaterialBindingAPI.Apply(usd_mesh.GetPrim())
+          binding_api.Bind(material)
+      - kind: work_order
+        heading: Give the extracted cube the surface its source describes
+        system: >-
+          An unbound mesh renders in whatever gray the viewer keeps for emergencies.
+        body: |
+          The extraction so far is on the stage: a root Xform at /World, the cube beneath it, and
+          the one material record read off the MTL beside shapes.obj, whose source name is
+          Material.001 and whose specular color is (0.5, 0.5, 0.5). The sanitized path for that
+          material has already been built.
+
+          Nothing on the stage describes what the crate is made of. The cube carries positions and
+          no binding, the material named in the source has no prim at all, and the name as written
+          cannot become one while it still contains a period. A consumer opening this stage has
+          geometry and no surface to put on it.
+
+          Define the material at that path, define its Shader child with UsdPreviewSurface as the
+          implementation, connect the material's surface output to the shader's, author the
+          specular color input, and bind the material to the cube. The order matters less than the
+          connection, since a material bound without a lofted output leaves the mesh attached to a
+          graph that produces nothing.
+        points:
+          - Tf.MakeValidIdentifier turns a source name such as Material.001 into a usable prim name.
+          - The shader's id attribute names the implementation, and without it there is no shading to run.
+          - Bind attaches the material prim, which is why the material owns the graph's surface output.
+          - Colors carry over directly, while shininess converts into roughness before it is authored.
+      - kind: recap
+        heading: What you now know
+        body: |
+          Material extraction sanitizes each source material name, defines a UsdShade.Material to
+          hold the graph, defines a UsdPreviewSurface shader inside it, connects the shader's
+          surface output to the material's, maps the source properties onto shader inputs, and
+          binds the material to the mesh it belongs to.
+    apply:
+      f8_material_bench: >-
+        Sanitize the source name into a prim, build the material and its preview surface, author the
+        specular color, and bind the result to the cube. The crate is not extracted until its paint is.
+
   - source: docs/data-exchange/data-extraction/what-is-data-extraction.md
     title: Complete Extraction
     objective: Evaluate whether extracted geometry is faithful, complete, legible, and suitable as a foundation for later transformations.
@@ -380,9 +673,10 @@ lessons:
           includes the positions, bounds, and topology required by its contract, while conceptual
           mapping records assumptions, unsupported concepts, and schema gaps.
     apply:
-      f8_extract_overseer: >-
-        Author the eight unit-cube corners and the matching extent from (-1, -1, -1) to
-        (1, 1, 1). The Overseer has already sharpened the discrepancy pencil.
+      f8_mapping_document: >-
+        Identify what faithful extraction output should resemble, and name the convention for a
+        compound source record OpenUSD has no schema for. The dock files specifications, not
+        intentions.
 
   - source: docs/data-exchange/data-transformation/transformation-hierarchy.md
     title: Hierarchy and Axes
@@ -509,6 +803,110 @@ lessons:
         Declare Y-up and add one translate op placing ImportedKiosk at (10, 0, -4). The switchyard
         accepts converted coordinates, not motivational speeches about vertical.
 
+  - source: docs/data-exchange/data-transformation/exercise-export-option.md
+    title: Export Options
+    objective: Add an optional transformation step that honors a caller's up-axis request and applies the corrective rotation the new convention requires.
+    intro: >-
+      A client on the Z-up line has filed a request, which the junction treats as an event. An
+      export option is a transformation the caller turns on, and this one cannot be satisfied by
+      relabeling the shipment and waving it through.
+    beats:
+      - kind: concept
+        heading: Mandatory steps run always, optional steps run on request
+        system: >-
+          Some transformations are house policy. Others are requests, and requests come with a
+          flag, a default, and a note explaining what they did.
+        body: |
+          A transformation pipeline holds steps of two kinds. A mandatory step runs on every
+          conversion because the output is unusable without it, which is why reparenting extracted
+          prims under a default root belongs there. An optional step runs only when a caller asks
+          for it, because most deliveries do not need it and some would be harmed by it.
+
+          Each optional step is one function with one job, reached from the transformation phase
+          and driven by a parsed argument. Keeping them separate lets a pipeline select, reorder,
+          or skip steps without editing the extraction that feeds them.
+        points:
+          - A mandatory step exists because the destination cannot consume the output without it.
+          - An optional step defaults to off, or to the value the predominant workflow expects.
+          - One step per function keeps the pipeline reorderable and each behavior testable.
+      - kind: concept
+        heading: A declaration alone leaves the geometry where it was
+        system: >-
+          Relabeling vertical is not the same as making it vertical. Legal has asked me to repeat
+          that at every opportunity.
+        body: |
+          OBJ is Y-up, so a converter that declares Y is stating a fact about the source. A caller
+          who asks for Z is asking for a different coordinate convention, and SetStageUpAxis only
+          writes the token. Every authored point, extent, and transform keeps the number it had, so
+          the token change on its own describes the same geometry differently and stands it on its
+          side.
+
+          The conversion is completed by a corrective transformation on the asset's root, a
+          rotation of 90 degrees about X that puts the content back upright under the new
+          convention. Naming that operation with a suffix records why it exists, which is how a
+          later reader tells a conversion corrective apart from an artistic placement.
+        points:
+          - upAxis is a stage-wide declaration and moves nothing on its own.
+          - AddRotateXOp accepts an opSuffix, producing a named op such as xformOp:rotateX:unitsResolve.
+          - A corrective belongs on the default prim, where it applies to the whole delivered asset.
+          - Leaving the requested axis at the source default means the optional step does nothing at all.
+      - kind: api
+        heading: Implement the option as one branch
+        system: >-
+          Two outcomes, one function, no surprises for whoever reads it next quarter.
+        body: |
+          The option handler takes the stage and the requested axis. The source-default branch only
+          declares the convention, since the data already matches it. The other branch declares the
+          new convention and adds the corrective op to the default prim, which UsdGeom.Xformable
+          wraps for authoring.
+        code: |
+          from pxr import Usd, UsdGeom
+
+
+          def set_up_axis(stage: Usd.Stage, up_axis: str) -> None:
+              """Declare the requested up axis, correcting the data when it changes."""
+              if up_axis == UsdGeom.Tokens.y:
+                  UsdGeom.SetStageUpAxis(stage, UsdGeom.Tokens.y)
+              else:
+                  UsdGeom.SetStageUpAxis(stage, UsdGeom.Tokens.z)
+                  xformable = UsdGeom.Xformable(stage.GetDefaultPrim())
+                  xformable.AddRotateXOp(opSuffix="unitsResolve").Set(90.0)
+      - kind: work_order
+        heading: Deliver the Z-up option with its corrective
+        system: >-
+          A flag that flips one token and moves nothing is an option in name only.
+        body: |
+          The shipment is on a stage that declares Y as the up axis, with a root Xform at /Shipment
+          named as the default prim and the converted cube beneath it. That declaration is the OBJ
+          default, and it matches the coordinates the geometry was authored with.
+
+          This delivery was ordered with the up-axis option set to Z. Nothing on the stage reflects
+          that yet, and simply writing the Z token would leave every authored coordinate untouched,
+          so the cube that reads as upright under Y would arrive lying on its side under Z. The
+          root prim carries no local transformation to compensate with either.
+
+          Declare Z as the stage up axis and add a rotate-X op of 90.0 on the default prim, suffixed
+          unitsResolve so the reason for it survives. The suffix is a convention rather than
+          decoration, since an unnamed rotation on an asset root is indistinguishable from a
+          placement someone intended, and local transformations are an ordered list, so the
+          corrective appends rather than replacing anything already there.
+        points:
+          - Declare the requested convention and transform the data, or the delivery is only half converted.
+          - AddRotateXOp with an opSuffix authors xformOp:rotateX:unitsResolve and appends it to xformOpOrder.
+          - The corrective goes on the default prim so it covers everything the asset delivers.
+          - An option that changes nothing when it is selected is worse than no option at all.
+      - kind: recap
+        heading: What you now know
+        body: |
+          Export options are optional transformation steps a caller selects, each implemented as
+          its own function and applied from the transformation phase. Honoring an up-axis request
+          means declaring the new convention and applying a corrective rotation to the asset root,
+          named with a suffix that records why the operation is there.
+    apply:
+      f8_export_option: >-
+        Declare Z as the up axis and add the unitsResolve rotate-X corrective on the default prim.
+        The junction accepts a converted shipment, not a relabeled one.
+
   - source: docs/data-exchange/data-transformation/what-is-data-transformation.md
     title: Units and Transformation
     objective: Design reusable transformation steps that normalize linear units and adapt extracted USD for downstream workflows.
@@ -625,9 +1023,10 @@ lessons:
           coordinates keep their authored values, so numeric conversion and metadata must describe
           the same physical asset.
     apply:
-      f8_unit_gauge: >-
-        Preserve Y-up and declare metersPerUnit as 0.01 for centimeters. The Gauge wants one honest
-        contract and has rejected three crates for rounding theatrically.
+      f8_transform_options: >-
+        Place export options in the phase that owns destination choices, and say why a round trip
+        wants as few transformations as possible. The junction reroutes cargo; it does not
+        re-survey it.
 
   - source: docs/data-exchange/asset-validation/what-is-asset-validation.md
     title: Asset Validation
@@ -876,7 +1275,7 @@ lessons:
           accepted by the destination contract. Each assertion protects one specific
           interoperability promise.
     apply:
-      f8_customs_engine: >-
-        Complete the whole manifest: /World as default component, Y-up, centimeters, /World/Cube
-        with the first eight OBJ points, and sourceFormat OBJ on /World. The Engine is already
-        humming in a key the legal department calls admissible.
+      f8_conversion_report: >-
+        Declare Y as the up axis and 0.01 as metersPerUnit on the converted stage, so the two
+        geometric conventions the concourse reported missing are authored where the conversion
+        happens rather than patched into the delivered file.

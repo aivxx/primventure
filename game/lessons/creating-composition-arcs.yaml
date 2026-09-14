@@ -185,9 +185,109 @@ lessons:
           then listed sublayers proceed from first to last, recursively. Reordering the list changes
           which competing opinions win while preserving every source document.
     apply:
-      f5_workstream_clerk: >-
-        Put lighting.usda before layout.usda so FINAL wins at /World/Marquee.signOff without
-        touching either workstream. The Clerk accepts ordering, evidence, and no speeches.
+      f5_sublayer_brief: >-
+        Read the stack as an ordered list: first listed is strongest, every layer arrives at the
+        paths it was authored on, and the weaker opinion waits rather than vanishing.
+
+  - source: docs/creating-composition-arcs/references-payloads/what-are-references.md
+    title: Reference Semantics
+    objective: Explain how a reference grafts a source prim hierarchy onto a destination prim, and distinguish internal from external references.
+    intro: >-
+      Three identical prims, one authored building, and a sublayer list that cannot help you.
+      References exist for exactly this shape of problem, and the docks would like the vocabulary
+      settled before another shipment arrives with three names on it.
+    beats:
+      - kind: concept
+        heading: Sublayers cannot make siblings
+        system: >-
+          Listing the same layer three times produces one prim and a great deal of confidence. Only
+          one of those is useful.
+        body: |
+          A sublayer contributes every spec at the path it was authored. Listing one sphere layer
+          three times therefore contributes three opinions to the same sphere, because nothing in
+          the sublayer list can say that the second copy belongs at a different path in the prim
+          hierarchy.
+
+          Three copies of one piece of content standing beside each other is a namespace problem,
+          not a strength problem. It needs an arc that names both a source and a destination, so
+          the same authored hierarchy can arrive at several different paths.
+        points:
+          - Sublayer inclusion preserves authored paths, so repeated inclusion collides on one prim.
+          - A reference names a destination prim, which is what allows several copies to coexist.
+          - Copies remain one source document rather than several duplicated hierarchies.
+      - kind: concept
+        heading: Grafting translates the source namespace
+        system: >-
+          The building keeps its shape and surrenders its name at the door. Immigration for prims.
+        body: |
+          A reference grafts a prim hierarchy from one layer onto a prim of another layer. The
+          referenced prim takes on the destination prim's name, and every descendant path is
+          translated to reflect the destination's namespace.
+
+          That translation is what makes references suited to modularity and reuse. One published
+          asset can be composed at red_cube_01, red_cube_02, and anywhere else a consumer needs it,
+          while the asset itself remains a single independently editable document.
+        points:
+          - Path translation rewrites the source paths into the destination's namespace.
+          - The same asset can be referenced many times to aggregate a large scene from small units.
+          - Libraries developed in parallel can be aggregated without duplicating anyone's work.
+      - kind: api
+        heading: External and internal targets
+        system: >-
+          One arc points at another document, the other points across the room. Both are references.
+        body: |
+          An external reference targets a prim in a different layer, which is the usual case for
+          assets published by another team. An internal reference targets a prim in the current
+          layer stack, which is convenient when several destinations should track one locally
+          authored hierarchy.
+        code: |
+          from pxr import Sdf, Usd, UsdGeom
+
+          stage = Usd.Stage.CreateNew("factory.usda")
+          UsdGeom.Xform.Define(stage, "/World")
+
+          # External: the conveyor asset lives in its own document.
+          belt = UsdGeom.Xform.Define(stage, "/World/conveyor_01").GetPrim()
+          belt.GetReferences().AddReference("conveyor.usd")
+
+          # Internal: this destination tracks a prim in the current layer stack.
+          copy = UsdGeom.Xform.Define(stage, "/World/conveyor_02").GetPrim()
+          copy.GetReferences().AddInternalReference(Sdf.Path("/World/conveyor_01"))
+
+          stage.GetRootLayer().Save()
+      - kind: work_order
+        heading: One tower asset, several addresses on the skyline
+        system: >-
+          Two published documents can furnish a three-building skyline, and the arithmetic is the
+          whole point.
+        body: |
+          Reference Docks holds two finished buildings in the city asset library, and the skyline
+          on order needs three towers standing on a stage that currently has nothing beneath its
+          /World Xform.
+
+          Two documents cannot cover three addresses by being listed twice in a layer stack, since
+          every inclusion would contribute at the paths the building was authored on and produce one
+          tower with several opinions. Copying a hierarchy into the stage would fill the skyline
+          while leaving three separate documents for the teams who own those buildings to maintain
+          separately.
+
+          Each destination prim needs defining and then an arc naming the asset it composes, with
+          one building named twice. Path translation is what keeps the two copies distinct, since
+          each arc rewrites the source hierarchy beneath the destination prim that carries it.
+        points:
+          - Name the destination prim first; the arc composes the source beneath it.
+          - Two destinations naming one asset is reuse, and the asset stays a single document.
+          - Prefer an internal reference when the source hierarchy is authored in the current layer stack.
+      - kind: recap
+        heading: What you now know
+        body: |
+          References graft a source prim hierarchy onto a destination prim and translate the source
+          paths into the destination's namespace. They compose small assets into large aggregates,
+          they can be external or internal, and one source can serve any number of destinations.
+    apply:
+      f5_reference_brief: >-
+        Read a reference as a graft with an address change: the source hierarchy arrives beneath the
+        destination prim under the destination's name, which is what a sublayer list can never do.
 
   - source: docs/creating-composition-arcs/references-payloads/working-with-references.md
     title: Authoring References
@@ -380,9 +480,343 @@ lessons:
           and other required dependencies beneath the asset root, make that root the default prim,
           and test the asset from a referencing stage.
     apply:
-      f5_encapsulation_raid: >-
-        Make /World the default prim and define /World/Looks/Red beneath it beside the cube.
-        Anything left at /Looks misses the raid and strands the binding on live television.
+      f5_encapsulation_brief: >-
+        Read encapsulation as one namespace boundary: a reference carries its target's descendants,
+        so a binding survives only when both of its ends sit inside that subtree.
+
+  - source: docs/creating-composition-arcs/encapsulation/experimenting-with-encapsulation.md
+    title: Reading Encapsulation
+    objective: Inspect an asset's hierarchy to judge its encapsulation, and predict what composes for a given reference target.
+    intro: >-
+      Two kiosk packs, one bench, and no way to tell them apart from the outside. Both open without
+      complaint in their own file. Only one of them survives being referenced, and the tell is
+      visible in the hierarchy before anything is composed.
+    beats:
+      - kind: concept
+        heading: The hierarchy is the evidence
+        system: >-
+          Expand the tree, look above the default prim, and the diagnosis takes about four seconds.
+        body: |
+          A well encapsulated layer shows every prim the asset needs beneath the root a consumer is
+          meant to reference, which is usually the layer's default prim. Geometry, materials, and
+          any private support scopes all sit inside that one subtree.
+
+          The unencapsulated version of the same asset looks almost identical, except that its
+          material sits in a Looks scope beside the asset root rather than inside it. On its own
+          stage both layers resolve their bindings, because both ends of the relationship exist as
+          root-level prims, so nothing in the authoring context reports a problem.
+        points:
+          - Read the tree relative to the prim a consumer references, not relative to the file.
+          - A support scope beside the asset root is the common shape of the defect.
+          - An asset can resolve correctly in its own file and still be unusable through a reference.
+      - kind: concept
+        heading: Composition reports the stranded target
+        system: >-
+          The warning names the path, the relationship, and the arc. It is the most helpful sentence
+          in the whole harbor.
+        body: |
+          Reference the unencapsulated root into another layer and only the cube arrives. Its
+          material binding still names the original external path, which now refers to a path
+          outside the scope of the reference, and USD reports that and ignores the target.
+
+          The composed result is a mesh with a binding that resolves to nothing. Nothing about the
+          arc is invalid, so the arc is composed as authored; only the relationship target falls
+          outside the boundary the reference established.
+        points:
+          - A relationship target outside the referenced subtree is reported and then ignored.
+          - The remaining scene description still composes, which is why the defect is easy to miss.
+          - Reading the composition warnings names the exact relationship and arc involved.
+      - kind: api
+        heading: Test the asset from a consuming stage
+        system: >-
+          The only opinion that counts is the one a consumer composes. Ask it directly.
+        body: |
+          Encapsulation is confirmed by referencing the asset from another stage and inspecting what
+          arrives. Composing both roots side by side shows which subtree carried its dependencies
+          and which one left them behind.
+        code: |
+          from pxr import Usd, UsdGeom, UsdShade
+
+          stage = Usd.Stage.CreateNew("references_encapsulation.usda")
+          UsdGeom.Xform.Define(stage, "/World")
+
+          good = UsdGeom.Xform.Define(stage, "/World/encapsulated_01").GetPrim()
+          good.GetReferences().AddReference("encapsulated_GOOD.usd")
+
+          bad = UsdGeom.Xform.Define(stage, "/World/unencapsulated_01").GetPrim()
+          bad.GetReferences().AddReference("unencapsulated_BAD.usd")
+
+          for name in ("encapsulated_01", "unencapsulated_01"):
+              cube = stage.GetPrimAtPath(f"/World/{name}/Cube")
+              binding = UsdShade.MaterialBindingAPI(cube).GetDirectBinding()
+              print(name, binding.GetMaterialPath())
+      - kind: concept
+        heading: The target prim moves the boundary
+        system: >-
+          Aim one level too low and a correctly built asset arrives half dressed. The asset was fine.
+        body: |
+          A reference can name a source prim as well as an asset path, and the encapsulation
+          boundary is measured against whatever prim is named. Targeting the Cube inside a well
+          encapsulated asset composes the cube alone, because the material sits above the prim the
+          arc targeted rather than beneath it.
+
+          The same warning appears, this time describing a target above the referenced prim. Reading
+          it carefully distinguishes an asset that was built wrong from an asset that was consumed
+          wrong, and those have different repairs.
+        points:
+          - Naming a descendant as the source prim narrows the boundary to that descendant's subtree.
+          - A default prim exists to tell consumers which root the asset intends to be referenced at.
+          - Two identical warnings can describe an authoring defect and a consumption mistake.
+      - kind: work_order
+        heading: Put the kiosk material inside the root a consumer names
+        system: >-
+          One front door, every department behind it, and a default prim saying which door that is.
+        body: |
+          The kiosk on the bench is a cube and one red material, and the open question is where that
+          material sits relative to the prim a consumer will reference. Nothing in the city yet
+          stands as that asset root.
+
+          Authored as a sibling of the asset root, the material resolves on this stage and disappears
+          at every destination, because the arc carries the target's descendants and nothing above
+          them. Leaving the material where it is and asking consumers to target a descendant only
+          narrows the boundary further.
+
+          The asset root needs defining as an Xform with both the cube and the material scope
+          beneath it, that root marked as the default prim, and its documentation stamped. Nothing
+          may remain outside the root, since a material one level too high is invisible from any
+          consuming stage.
+        points:
+          - Keep every dependency beneath the prim the asset intends consumers to reference.
+          - Mark that prim as the default prim so an arc without a prim path finds it.
+          - Confirm the repair by referencing the asset from another stage and inspecting the binding.
+      - kind: recap
+        heading: What you now know
+        body: |
+          Judge encapsulation by reading the hierarchy above and below the prim a consumer
+          references. A dependency outside that subtree is reported as a target beyond the scope of
+          the reference and then ignored, and the same shape of mistake can come from how the asset
+          was built or from which prim the arc names.
+    apply:
+      f5_encapsulation_survey: >-
+        Read both packs from the consumer's side: what composes is the targeted prim's subtree, so
+        judge the layer and the named source prim as two separate decisions.
+
+  - source: docs/creating-composition-arcs/variant-sets/what-are-variant-sets.md
+    title: Variant Set Semantics
+    objective: Explain how a variant set switches between alternative representations, and weigh the cost of the switches it offers.
+    intro: >-
+      One lamp with a switch on it beats two lamps filed separately, and one character with an
+      outfit variant set beats tracking coats in a spreadsheet. The wardrobe department has opinions
+      about how many switches is too many, and for once they are correct.
+    beats:
+      - kind: concept
+        heading: One controller, many variations
+        system: >-
+          The variant set is the dial. The variants are the settings. Only the chosen setting is
+          composed, which is more restraint than anything else in this city shows.
+        body: |
+          A variant set defines alternative representations of the same dataset that can be switched
+          at runtime. The variations themselves are called variants, and only the opinions of the
+          selected variant are composed onto the stage.
+
+          A character with several outfits is the classic case. Authored as one asset with an outfit
+          variant set, the combination is selected rather than assembled, so nobody has to track the
+          character and the clothing as separate things and reunite them per shot.
+        points:
+          - A variant set is authored on a prim and controls variations of that prim's subtree.
+          - Only the selected variant contributes opinions to the composed stage.
+          - The author decides what a variant set varies, and narrow scope makes selections predictable.
+      - kind: concept
+        heading: What a single variant may author
+        system: >-
+          Properties, new prims, or entire arcs. The dial has more range than the label suggests.
+        body: |
+          A variant can sparsely override properties on the prim holding the variant set or on any
+          of its descendants, such as changing a material's diffuse color from blue to green.
+
+          A variant can also define new descendant prims, so one variant contributes a single cube
+          and another contributes two. It can even author composition arcs that exist only within
+          that variant, which is how one variant references a blue material while another references
+          a green one from the same materials layer.
+        points:
+          - Sparse property overrides are the lightest thing a variant can carry.
+          - Variants can define descendant prims, so the hierarchy itself can vary.
+          - An arc authored inside a variant exists only while that variant is selected.
+      - kind: concept
+        heading: Combinations are authored, not free
+        system: >-
+          Four combinations from two dials, and someone still has to author the wet character
+          without the hat.
+        body: |
+          Several variant sets on one prim can be selected independently, which multiplies out into
+          many combinations. A geometric variant set controlling shape and a shading variant set
+          controlling materials is a common and well behaved pairing.
+
+          Each combination still needs its data authored. Adding variant sets freely produces
+          combinations nobody will ever select, and skipping the data for combinations that are
+          selectable leaves an end user holding a selection that does nothing.
+        points:
+          - Independent variant sets multiply into combinations that all have to be authored.
+          - Unused combinations are wasted authoring; unauthored ones are a poor experience.
+          - Geometric and shading variant sets are a conventional split of responsibilities.
+      - kind: api
+        heading: Weigh the switch before offering it
+        system: >-
+          Some dials only re-resolve a value. Others rebuild the composition. Turn them at different
+          frequencies.
+        body: |
+          Switching a variant that only changes attribute values or visibility is comparatively
+          cheap, because the composition index stays as it is and only resolved values change.
+          Switching a variant that changes a reference target or an activation opinion is more
+          expensive, because part of the composition index has to be rebuilt.
+        code: |
+          from pxr import Usd
+
+          stage = Usd.Stage.Open("street_lamp.usda")
+          lamp = stage.GetPrimAtPath("/World/StreetLamp")
+
+          lights = lamp.GetVariantSet("lights")
+          print(lights.GetVariantNames(), lights.GetVariantSelection())
+
+          # Re-resolving values on a selection change is the inexpensive case.
+          lights.SetVariantSelection("off")
+          print(stage.GetAttributeAtPath("/World/StreetLamp.lampState").Get())
+      - kind: work_order
+        heading: One switch for the lamp the night scenes keep dimming
+        system: >-
+          Two settings on one dial, scoped to the lamp, and predictable to anyone who finds it.
+        body: |
+          The lamp standing on Inherit Street burns at one intensity around the clock, and the night
+          scenes need it dark without a second lamp asset being published beside it.
+
+          Two lamps would mean two documents to maintain and a manual swap wherever the street
+          appears. Authoring the dark values directly on the lamp would settle tonight's scene and
+          erase the lit one, since a local opinion is a single value rather than a choice.
+
+          What the lamp needs is one variant set holding two named settings, each authoring the
+          globe's intensity and the lamp's own state, with a selection recorded on the prim. Scope
+          it to the lighting alone, because a dial that also swaps geometry is a dial nobody can
+          predict.
+        points:
+          - Author the variant set on the prim whose subtree the variations belong to.
+          - Keep one variant set to one kind of variation so selections stay predictable.
+          - Record a selection, since an unselected variant set composes none of its variants.
+      - kind: recap
+        heading: What you now know
+        body: |
+          A variant set is a controller for variations of one prim's subtree, and only the selected
+          variant composes. Variants can override properties, define descendant prims, and author
+          arcs of their own. Every combination costs authoring, and value or visibility switches are
+          cheaper to flip than switches that rebuild composition.
+    apply:
+      f5_variant_brief: >-
+        Read a variant set as one dial with named settings: the selection decides what composes, a
+        variant may reach the prim and its descendants, and cheap switches only re-resolve values.
+
+  - source: docs/creating-composition-arcs/variant-sets/working-with-variant-sets.md
+    title: Authoring Variant Sets
+    objective: Author a variant set with named variants, populate each variant through its edit context, and record a selection.
+    intro: >-
+      The lamp needs a switch, and a switch is three calls and a context manager. The wardrobe
+      department has requested a longer segment; the wiring genuinely does not need one.
+    beats:
+      - kind: concept
+        heading: A selection decides what composes
+        system: >-
+          Change the selection and the shader's diffuse color follows. Nothing else in the file moves.
+        body: |
+          Inspecting a stage with a color variant set shows the selection recorded on the prim that
+          holds the set. Choosing blue resolves the shader's diffuse color to blue, and choosing red
+          resolves the same property to red, while every other authored value stays exactly as it was.
+
+          What varies is the opinion contributed by the selected variant. The property being
+          overridden lives on a descendant of the prim carrying the variant set, which is why one
+          dial on a lamp or a character can reach an entire subtree.
+        points:
+          - The selection is recorded on the prim that holds the variant set.
+          - Only the selected variant contributes its opinions to the composed stage.
+          - A variant reaches the prim holding the set and every descendant beneath it.
+      - kind: concept
+        heading: Variants can add prims and arcs
+        system: >-
+          One setting contributes a row of shelving. Another contributes a reference. The dial is
+          doing considerably more than paint.
+        body: |
+          A variant set that defines prims changes the hierarchy as the selection changes, which is
+          how one shelf asset offers several sizes by defining an extra row inside one variant
+          rather than publishing several shelves.
+
+          A variant can also carry a composition arc. Selecting a color can change which prim a
+          material reference targets, so the composed material arrives from a different source prim
+          in the same materials layer depending on the setting.
+        points:
+          - Defining descendant prims inside a variant varies the hierarchy itself.
+          - An arc authored inside a variant is composed only while that variant is selected.
+          - Inspecting the varying prim shows which source the current selection composes from.
+      - kind: api
+        heading: Add the set, then edit inside each variant
+        system: >-
+          GetVariantEditContext points your authoring calls at the variant instead of the prim.
+          Everything typed inside it lands in the setting you selected.
+        body: |
+          Usd.Prim.GetVariantSets returns the editing interface, and AddVariantSet authors the set
+          itself. AddVariant names each setting, SetVariantSelection chooses which one is active,
+          and GetVariantEditContext redirects authoring into the selected variant for the duration
+          of the with block.
+        code: |
+          from pxr import Sdf, Usd, UsdGeom, UsdLux
+
+          stage = Usd.Stage.CreateNew("street_lamp.usda")
+          UsdGeom.Xform.Define(stage, "/World")
+          lamp = UsdGeom.Xform.Define(stage, "/World/StreetLamp").GetPrim()
+          globe = UsdLux.SphereLight.Define(stage, "/World/StreetLamp/Globe")
+
+          lights = lamp.GetVariantSets().AddVariantSet("lights")
+          lights.AddVariant("on")
+          lights.AddVariant("off")
+
+          lights.SetVariantSelection("on")
+          with lights.GetVariantEditContext():
+              globe.CreateIntensityAttr(1000.0)
+
+          lights.SetVariantSelection("off")
+          with lights.GetVariantEditContext():
+              globe.CreateIntensityAttr(0.0)
+
+          stage.GetRootLayer().Save()
+      - kind: work_order
+        heading: Two settings for the lamp, parked on off
+        system: >-
+          Author both settings before choosing one. A dial with a single position is a value with
+          extra steps.
+        body: |
+          The lamp on the stage is an Xform with a sphere light beneath it, and neither prim carries
+          an intensity or a state of its own. A helper is available that authors both of those
+          opinions together for whichever setting is being edited.
+
+          With no variant set on the lamp there is no switch to select, and the tempting shortcut
+          makes the switch useless. Authoring an intensity directly on the globe puts a local opinion
+          on the prim, and a local opinion outranks every variant, so the dial would turn without
+          the light ever changing.
+
+          The lamp needs a variant set named for the lighting, holding a lit setting and a dark
+          setting, each populated inside its own edit context, with the dark setting left selected.
+          Both values belong inside the variants rather than on the prims themselves.
+        points:
+          - Author the values inside the variant edit context, never directly on the prim as well.
+          - A local opinion on the same property outranks every variant in the set.
+          - The recorded selection is what the stage composes when it opens.
+      - kind: recap
+        heading: What you now know
+        body: |
+          Author a variant set with AddVariantSet, name each variant with AddVariant, populate one
+          at a time inside GetVariantEditContext, and record the active setting with
+          SetVariantSelection. Variants can override properties, define prims, and carry arcs, and
+          a competing local opinion on the same property outranks all of them.
+    apply:
+      f5_lamp_variants: >-
+        Give the lamp a lights set holding on and off, author each setting inside its own edit
+        context through the helper, and leave off selected. One dial, two settings, no local override.
 
   - source: docs/creating-composition-arcs/references-payloads/working-with-payloads.md
     title: Authoring Payloads
@@ -567,9 +1001,9 @@ lessons:
           discover or navigate to payload roots, and load only the working set while keeping
           lightweight interface opinions available.
     apply:
-      f5_harbor_master: >-
-        Keep the payload on /World/CargoCrate and stamp its documentation "Loaded on demand."
-        The Harbor Master may demand unpacking; the composition contract outranks his whistle.
+      f5_payload_brief: >-
+        Read the load gate: a payload targets its source exactly as a reference does, and unloading
+        excludes what lies across the arc while the arc itself stays authored.
 
   - source: docs/creating-composition-arcs/inherits-specializes/what-is-inherits.md
     title: Inherits and Classes
@@ -664,6 +1098,128 @@ lessons:
         Create /_street_lamp_dbl as a class, give it temperature 2700, and make
         /World/StreetLamp inherit it. One shared fixture policy; the union may keep its megaphone.
 
+  - source: docs/creating-composition-arcs/inherits-specializes/experimenting-with-inherits.md
+    title: Broadcasting Through Inherits
+    objective: Author an opinion on an inherits source so it reaches every inheriting prim in one consuming context only.
+    intro: >-
+      The night crew wants every lamp on this street amber, and only on this street. The published
+      lamp asset says white and intends to keep saying it. One opinion on a shared source settles
+      the whole street without touching a single lamp.
+    beats:
+      - kind: concept
+        heading: The source acts as one shared address
+        system: >-
+          Correct the source once and every prim pointing at it follows. This is leverage, not magic,
+          whatever the electricians claim.
+        body: |
+          An asset that carries an inherits arc gives its consumers a single prim to correct. Each
+          referenced copy of the asset composes opinions from that inherits source, so an opinion
+          authored there arrives at every copy at once.
+
+          A pyramid built from three references to one cube asset shows this plainly. Author a
+          diffuse color on the class the cubes inherit and all three cubes take it, even though
+          nothing was authored on any individual cube.
+        points:
+          - An inherits source behaves as a shared namespace that stronger layers can address.
+          - Every prim carrying the arc composes the opinions authored on that source.
+          - Nothing needs authoring on the individual destinations for the correction to reach them.
+      - kind: concept
+        heading: The correction stays in its own context
+        system: >-
+          One scene turns amber. The scene next door never hears about it. Excellent professional
+          boundaries.
+        body: |
+          An opinion authored on the source in one consuming layer stack is composed in that layer
+          stack alone. Another stage referencing the same aggregate is unaffected, because the
+          opinion was never authored into the published asset.
+
+          The alternative approaches are worse in opposite directions. Editing the asset itself
+          ripples into every scene that consumes it, and authoring overrides on each referenced light
+          by hand is laborious, error prone, and leaves a great deal of authored data behind.
+        points:
+          - Broadcast overrides affect only the composition context that authored them.
+          - Editing the published asset reaches every consumer of that asset.
+          - Per-destination overrides scale with the number of destinations rather than with the intent.
+      - kind: api
+        heading: Override the source in the consuming stage
+        system: >-
+          An over on the shared path, one property, and the whole street changes colour. Two lines
+          of authoring for a district-wide decision.
+        body: |
+          The asset authors the class and the arc through CreateClassPrim and
+          GetInherits().AddInherit. The consuming stage then authors an over at the same source path
+          and puts its opinion there, which composition applies across every prim that inherits it.
+        code: |
+          from pxr import Sdf, Usd, UsdGeom
+
+          asset = Usd.Stage.CreateNew("street_lamp_dbl.usda")
+          lamp_class = asset.CreateClassPrim("/_street_lamp_dbl")
+          root = asset.DefinePrim("/World", "Xform")
+          root.GetInherits().AddInherit(lamp_class.GetPath())
+          root.CreateAttribute("tint", Sdf.ValueTypeNames.String).Set("white")
+          asset.SetDefaultPrim(root)
+          asset.GetRootLayer().Save()
+
+          scene = Usd.Stage.CreateNew("night_scene_01.usda")
+          for name in ("Lamp_01", "Lamp_02"):
+              lamp = UsdGeom.Xform.Define(scene, f"/World/{name}").GetPrim()
+              lamp.GetReferences().AddReference("street_lamp_dbl.usda")
+
+          shared = scene.OverridePrim("/_street_lamp_dbl")
+          shared.CreateAttribute("tint", Sdf.ValueTypeNames.String).Set("amber")
+
+          print(scene.GetAttributeAtPath("/World/Lamp_01.tint").Get())  # amber
+          scene.GetRootLayer().Save()
+      - kind: concept
+        heading: Inherits outranks the asset's own value
+        system: >-
+          The asset says white from across a reference. The inherit says amber from inside this layer
+          stack. LIVRPS settles it without a hearing.
+        body: |
+          The published asset's white is composed across a reference arc, while the amber authored
+          in the consuming stage arrives through an inherits arc. Inherits sits above references in
+          strength ordering, so amber is the value the street composes.
+
+          A local opinion authored directly on one lamp would outrank both, which is how a single
+          fixture keeps an exception while the rest of the street follows the broadcast.
+        points:
+          - An inherited opinion outranks values arriving through references and payloads.
+          - A local opinion on a destination prim still outranks the broadcast.
+          - The published asset keeps its own value for every other consumer.
+      - kind: work_order
+        heading: One amber opinion for the whole street
+        system: >-
+          Author it once on the shared source. Authoring it twice on two lamps is the version that
+          ages badly.
+        body: |
+          The stage carries a published lamp asset in its own document, whose root inherits an
+          unencapsulated class and authors a tint of white. The city stage itself has a /World Xform
+          and nothing standing on the street yet.
+
+          Two lamp destinations composing that asset would both read white, and the direct repair
+          teaches the street nothing. Typing amber onto each lamp settles today's request and leaves
+          the next colour change to be repeated fixture by fixture, while editing the asset would
+          repaint every other scene that consumes it.
+
+          Both destinations need defining with an arc naming the published asset, then an over at
+          the shared class path in this stage carrying a tint of amber. The composed amber has to
+          arrive across the inherits arc rather than being authored on either lamp.
+        points:
+          - Author the destinations first, then the single opinion on the shared source.
+          - The over lives in the consuming stage, which is what keeps the change local to it.
+          - Both lamps composing amber is the evidence that the broadcast reached them.
+      - kind: recap
+        heading: What you now know
+        body: |
+          An inherits source is a shared address a consuming layer stack can author on, and the
+          opinion reaches every prim carrying the arc in that context alone. It outranks values
+          arriving through references, it leaves the published asset and other scenes untouched, and
+          local opinions on individual destinations remain available for exceptions.
+    apply:
+      f5_inherit_broadcast: >-
+        Reference the lamp asset onto both destinations, then author amber once on the shared class
+        in this stage. Two lamps, one opinion, and the asset keeps its white for everyone else.
+
   - source: docs/creating-composition-arcs/inherits-specializes/what-is-specializes.md
     title: Specializes Fallbacks
     objective: Author specializes arcs that provide globally reusable fallback opinions weaker than every other LIVRPS category.
@@ -756,9 +1312,309 @@ lessons:
           inherits structurally but yields to every stronger authored category, making it suitable
           for defaults that should survive only until something more specific is authored.
     apply:
-      f5_specializes_fallback: >-
+      f5_road_defaults: >-
         Specialize /World/MainStreet from /_osm_street_data, then author local maxspeed 20 so the
         fallback 30 loses exactly as designed. The traffic cop composes tickets strongest first.
+
+  - source: docs/creating-composition-arcs/inherits-specializes/experimenting-with-specializes.md
+    title: Broadcasting Fallbacks
+    objective: Broadcast a new fallback from a specializes source while refined destinations keep their more specific values.
+    intro: >-
+      Traffic engineering has raised the district default and the surveyed side street has not
+      changed its mind about twenty. Specializes was built for precisely this argument, and it loses
+      it on purpose wherever a survey exists.
+    beats:
+      - kind: concept
+        heading: A refined destination ignores the broadcast
+        system: >-
+          Change the shared colour and only the prims that never picked one follow. The others already
+          decided.
+        body: |
+          A specializes source holds fallback opinions, so a destination composes them only where it
+          has no more specific opinion of its own. Change the fallback and the destinations still
+          relying on it follow, while destinations carrying their own authored value stay exactly
+          where they are.
+
+          A pyramid of three cubes shows the split cleanly. With a red fallback on the class and blue
+          and green authored on two of the cubes, moving the fallback to magenta repaints only the
+          third cube.
+        points:
+          - Specialized opinions apply where nothing more specific is authored.
+          - Destinations with their own value are described as refined and keep it.
+          - Editing the fallback source reaches only the destinations still using it.
+      - kind: concept
+        heading: Imported defaults are the natural fallback
+        system: >-
+          Thirty for every road nobody has measured. It is a default with the good manners to yield.
+        body: |
+          A digital twin of a road network wants one shared maximum speed for every piece of road it
+          imported, and a different number wherever a survey exists. Authoring the shared value on a
+          class and pointing every road mesh at it through a specializes arc expresses both at once.
+
+          Side streets then receive their surveyed value as an authored opinion on the road itself.
+          Every road carries the arc, so the class remains the single place the shared default can be
+          corrected later.
+        points:
+          - One class prim can hold the shared default for an entire network of destinations.
+          - Author the arc on every destination, including the ones that will be refined.
+          - A property arriving through the arc appears on the destination without being authored there.
+      - kind: api
+        heading: Move the fallback, keep the survey
+        system: >-
+          Forty on the shared source, twenty on the street that was measured. Both numbers survive.
+        body: |
+          CreateClassPrim holds the shared value and GetSpecializes().AddSpecialize authors the arc.
+          Setting the attribute on the class broadcasts a new fallback, and setting it on a
+          destination refines that destination alone.
+        code: |
+          from pxr import Sdf, Usd, UsdGeom
+
+          stage = Usd.Stage.CreateNew("main_street.usda")
+          UsdGeom.Xform.Define(stage, "/World")
+
+          shared = stage.CreateClassPrim("/_osm_street_data")
+          shared.CreateAttribute(
+              "osm:street:maxspeed", Sdf.ValueTypeNames.Int, custom=True
+          ).Set(30)
+
+          for name in ("road_main_01", "road_side_01"):
+              road = stage.DefinePrim(f"/World/{name}", "Mesh")
+              road.GetSpecializes().AddSpecialize(shared.GetPath())
+
+          side = stage.GetPrimAtPath("/World/road_side_01")
+          side.GetAttribute("osm:street:maxspeed").Set(20)
+
+          shared.GetAttribute("osm:street:maxspeed").Set(40)
+
+          print(stage.GetAttributeAtPath("/World/road_main_01.osm:street:maxspeed").Get())  # 40
+          print(stage.GetAttributeAtPath("/World/road_side_01.osm:street:maxspeed").Get())  # 20
+          stage.GetRootLayer().Save()
+      - kind: work_order
+        heading: Forty across the district, twenty where the survey stands
+        system: >-
+          One number moves on the shared source. The measured street does not notice, which is the
+          entire design.
+        body: |
+          Two road meshes stand on the stage beside a class prim carrying an imported maximum speed
+          of thirty, and neither road is connected to it yet. Traffic engineering has since raised
+          the district default to forty, and the side street was surveyed at twenty.
+
+          With no arc between the roads and the shared data, neither number reaches either road, and
+          the direct approach undoes the point of the class. Authoring forty onto each road
+          separately would leave the district with two copies of a value that is meant to be shared
+          and corrected in one place.
+
+          Both roads need the arc naming the shared source, the side street needs its surveyed
+          twenty authored on the road itself, and the class needs its maximum speed moved to forty.
+          The main road then composes the broadcast while the surveyed street holds its own value.
+        points:
+          - Author the arc on every destination that should track the shared default.
+          - Refine a destination by authoring the property on the destination prim.
+          - Moving the value on the source reaches the destinations that were never refined.
+      - kind: recap
+        heading: What you now know
+        body: |
+          A specializes source broadcasts fallback opinions that any more specific authored value
+          replaces. Point every destination at one class, refine the destinations that need their own
+          value, and correct the shared default on the source when it changes, knowing refined
+          destinations will hold their ground.
+    apply:
+      f5_specializes_survey: >-
+        Specialize both roads from the shared source, refine the side street with a local twenty,
+        then move the class to forty. One broadcast, one survey, and no argument between them.
+
+  - source: docs/creating-composition-arcs/inherits-specializes/encapsulation-refinement.md
+    title: Refinement and Encapsulation
+    objective: Choose an encapsulated or unencapsulated source for an inherits or specializes arc based on how far its opinions should broadcast.
+    intro: >-
+      Both arcs on this street point at a source prim, and the only real decision left is where that
+      prim sits. Inside the asset root or outside it changes how far a later correction travels,
+      which is the sort of detail that decides whether one note repaints a city.
+    beats:
+      - kind: concept
+        heading: Either kind of source is valid
+        system: >-
+          Inside the asset or outside it, the arc composes either way. The consequences arrive later.
+        body: |
+          An inherits arc and a specializes arc can both target a source prim that is encapsulated
+          beneath the asset root, or one that sits outside it in an unencapsulated namespace such as
+          a root-level class.
+
+          Neither placement makes the arc invalid, and on the authoring stage the two behave
+          identically. The difference appears when the destination prim is referenced into another
+          layer stack, which is the moment path translation applies.
+        points:
+          - Both arc types accept encapsulated and unencapsulated sources.
+          - The choice is about broadcasting behaviour rather than about validity.
+          - On the authoring stage alone, the two placements are hard to tell apart.
+      - kind: concept
+        heading: Referencing is what separates them
+        system: >-
+          A path inside the boundary gets rewritten. A path outside it never moves. One rule, two
+          outcomes.
+        body: |
+          A reference composes its target's subtree at a destination prim and translates the paths
+          inside that subtree. A source prim encapsulated beneath the asset root is therefore
+          re-pathed once per reference, giving each aggregate its own copy of that source.
+
+          A source prim outside the asset root is not part of the referenced subtree, so its path is
+          unchanged in every consuming context. Every copy of the asset points at the same address,
+          which is what allows one opinion to reach all of them.
+        points:
+          - Encapsulated sources are re-pathed per reference, producing one source per aggregate.
+          - Unencapsulated sources keep a single path across every reference.
+          - The destination prims keep their arcs either way; only the target path differs.
+      - kind: api
+        heading: Place the source deliberately
+        system: >-
+          Two class prims, two reaches. Choose by how many prims should hear the next correction.
+        body: |
+          Authoring the class outside the asset root gives consumers one shared address to correct.
+          Authoring it beneath the root ties the source to the aggregate that owns it, so a
+          correction there stays inside that copy.
+        code: |
+          from pxr import Sdf, Usd
+
+          stage = Usd.Stage.CreateNew("cube_pyramid.usda")
+
+          # Outside the asset root: one address in every consuming context.
+          shared = stage.CreateClassPrim("/_cube_asset")
+
+          root = stage.DefinePrim("/World", "Xform")
+          # Beneath the asset root: re-pathed with the subtree at each destination.
+          local = stage.CreateClassPrim("/World/_local_cube")
+
+          cube = stage.DefinePrim("/World/cube_01", "Cube")
+          cube.GetInherits().AddInherit(shared.GetPath())
+          cube.GetInherits().AddInherit(local.GetPath())
+
+          print([str(path) for path in cube.GetInherits().GetAllDirectInherits()])
+          stage.GetRootLayer().Save()
+      - kind: work_order
+        heading: A shared lamp source the whole street can be corrected from
+        system: >-
+          Where the source sits decides who hears the next instruction. Decide it before publishing.
+        body: |
+          The lamp asset on Inherit Street publishes a class prim and an arc from its root to that
+          class, and consumers compose the asset by referencing its root. The class currently sits
+          outside that root, in a root-level namespace of its own.
+
+          That placement is a decision, not an accident. Moved beneath the asset root, the class
+          would be re-pathed at every destination, and a note asking for an amber street would have
+          to be repeated once per aggregate. Left outside, one address serves every copy in the
+          consuming context, and a single opinion reaches them all.
+
+          Keep the shared source unencapsulated for street-wide corrections, and reserve an
+          encapsulated source for changes that belong to one aggregate. A prim can carry both arcs,
+          so both reaches remain available.
+        points:
+          - Unencapsulated sources suit corrections meant for every copy in a context.
+          - Encapsulated sources suit changes that should stay inside one aggregate.
+          - One destination may carry arcs to both kinds of source at once.
+      - kind: recap
+        heading: What you now know
+        body: |
+          Inherits and specializes arcs accept either an encapsulated or an unencapsulated source,
+          and the placement decides the broadcast. Referencing re-paths encapsulated sources per
+          aggregate while leaving unencapsulated ones at one shared address, so choose the source by
+          how far a later correction should travel.
+    apply:
+      f5_refinement_brief: >-
+        Read the placement as the decision it is: an encapsulated source is re-pathed per reference,
+        an unencapsulated one keeps a single address, and the arc is valid either way.
+
+  - source: docs/creating-composition-arcs/inherits-specializes/experimenting-with-encapsulation-refinement.md
+    title: Global and Local Refinement
+    objective: Distinguish global from local refinement and predict which prims a correction on each kind of source reaches.
+    intro: >-
+      One note turned every cube in the city magenta. Another turned exactly one pyramid cyan. Same
+      arc, same kind of opinion, different source prim, and the difference is worth understanding
+      before the next note arrives.
+    beats:
+      - kind: concept
+        heading: Global refinement rides an unchanging path
+        system: >-
+          The address survives every reference, so the correction arrives everywhere at once. Ambitious.
+        body: |
+          Global refinement takes advantage of an arc whose target path never changes. A path outside
+          encapsulation is never re-pathed on reference, so every copy of the asset in a consuming
+          context points at the same source prim.
+
+          Overriding that source and authoring a new colour therefore reaches every prim inheriting
+          it. In the example scene, one magenta opinion on the shared class turns all of the cubes
+          magenta, however many aggregates they were composed through.
+        points:
+          - An unencapsulated target keeps one path through every reference.
+          - One opinion on that source reaches every prim carrying the arc in the context.
+          - This is the reach to use when a correction is meant for the whole scene.
+      - kind: concept
+        heading: Local refinement rides a translated path
+        system: >-
+          One pyramid changes and its neighbours never learn about it. Precisely scoped vandalism.
+        body: |
+          Local refinement is what happens when the arc targets an encapsulated prim. That target is
+          re-pathed on reference, so each aggregate composes its own copy of the source at its own
+          address.
+
+          Authoring a cyan colour on one aggregate's copy of the source affects only the prims
+          inheriting that copy. The other aggregates keep their previous values, because their arcs
+          point at different paths entirely.
+        points:
+          - An encapsulated target is re-pathed beneath each destination prim.
+          - A correction there is confined to the aggregate that owns that copy.
+          - This is the reach to use when one instance needs to differ from its siblings.
+      - kind: api
+        heading: Read the target path to predict the reach
+        system: >-
+          The path tells you the blast radius before you author anything. Read it first.
+        body: |
+          Inspecting the arcs on a composed prim shows which source paths it points at. A root-level
+          target indicates a global reach, while a target beneath an aggregate indicates a
+          correction confined to that aggregate.
+        code: |
+          from pxr import Usd
+
+          stage = Usd.Stage.Open("local_refinement.usda")
+          cube = stage.GetPrimAtPath("/World/cube_pyramid_01/cube_01")
+
+          for source in cube.GetInherits().GetAllDirectInherits():
+              print(source)  # /_cube_asset is global; /World/cube_pyramid_01/_local_cube is not
+
+          # Refine one aggregate alone by authoring on its own copy of the source.
+          local = stage.OverridePrim("/World/cube_pyramid_01/_local_cube")
+          print(local.GetPath())
+      - kind: work_order
+        heading: Two corrections, two different reaches
+        system: >-
+          One note for the district, one note for a single block. Choose the source that matches the
+          note.
+        body: |
+          The city carries several aggregates composed from the same cube asset, and each cube
+          inherits both a shared class outside the asset root and a local class beneath the aggregate
+          that contains it. Both arcs are already authored and neither source carries an opinion.
+
+          Two requests arrive with different scopes. Treating them the same way is what causes
+          trouble, since a correction on the shared source repaints every aggregate, and a correction
+          on one aggregate's local source reaches nothing outside it.
+
+          Author the district-wide colour on the unencapsulated source, and author the single-block
+          colour on that block's own encapsulated source. Reading the target path of each arc before
+          authoring is what tells the two apart, because the composed cubes look identical.
+        points:
+          - A root-level source reaches every prim carrying the arc in that context.
+          - An aggregate-local source reaches only the copies beneath that aggregate.
+          - Both arcs can sit on one prim, so the reach is chosen when the opinion is authored.
+      - kind: recap
+        heading: What you now know
+        body: |
+          Global refinement authors on a source outside encapsulation, whose path no reference
+          re-paths, so the opinion reaches every prim carrying the arc. Local refinement authors on
+          an encapsulated source that is re-pathed per aggregate, confining the opinion to that copy.
+          Reading the target path is how you tell which reach you are about to use.
+    apply:
+      f5_refinement_survey: >-
+        Compare the two by target path: an unencapsulated source repaints every aggregate, while an
+        encapsulated one is re-pathed per copy and holds its correction to one.
 
   - source: docs/creating-composition-arcs/prim-composition.md
     title: Prim Composition
@@ -801,14 +1657,25 @@ lessons:
           - A single composed prim can draw different properties from different source layers.
           - Inspecting stacks is more reliable than inferring a winner from filenames.
       - kind: api
-        heading: Author references and payloads into one prim
+        heading: Author arcs onto destination prims and inspect the result
         system: >-
-          Two towers stay present; one warehouse sleeps. Urban planning has discovered selective consciousness.
+          Every arc has its own counter, and every counter files the same paperwork. Urban planning
+          has discovered specialization.
         body: |
-          Composition arcs are authored on destination prims through their editing interfaces.
-          The stage presents the combined result while each arc remains independently inspectable.
+          Composition arcs are authored on destination prims, each through its own editing interface
+          reached from the prim. The stage presents the combined result while each arc remains
+          independently inspectable.
+
+          Each destination composes the source hierarchy the arc names, and the composed prim can
+          carry stronger local opinions of its own. Reading a prim's stack afterwards names the
+          layers whose specs contribute to it, which is how an arc's effect is confirmed rather
+          than assumed.
+        points:
+          - One editing interface per arc category, each reached from the destination prim.
+          - A destination prim composes its source while keeping its own local opinions available.
+          - "GetPrimStack lists the contributing specs, so an arc's contribution can be read back from the composed prim."
         code: |
-          from pxr import Usd, UsdGeom
+          from pxr import Sdf, Usd, UsdGeom
 
           stage = Usd.Stage.CreateNew("block.usda")
           block = UsdGeom.Xform.Define(stage, "/World/Block")
@@ -816,12 +1683,12 @@ lessons:
           tower = UsdGeom.Xform.Define(stage, "/World/Block/Tower").GetPrim()
           tower.GetReferences().AddReference("tower.usd")
 
-          warehouse = UsdGeom.Xform.Define(
-              stage, "/World/Block/Warehouse"
-          ).GetPrim()
-          warehouse.GetPayloads().AddPayload("warehouse.usd")
+          second = UsdGeom.Xform.Define(stage, "/World/Block/TowerCopy").GetPrim()
+          second.GetReferences().AddInternalReference(Sdf.Path("/World/Block/Tower"))
+          second.SetDisplayName("Second tower, same source")
 
-          print([spec.layer.identifier for spec in tower.GetPrimStack()])
+          for prim in (tower, second):
+              print([spec.layer.identifier for spec in prim.GetPrimStack()])
           stage.GetRootLayer().Save()
       - kind: concept
         heading: Edit targets choose the authored layer
@@ -882,9 +1749,9 @@ lessons:
           indexes and resolves those opinions into composed objects. Use composition arcs to
           assemble content, inspect stacks to understand sources, and set the edit target before authoring.
     apply:
-      f5_city_block: >-
-        Compose TowerA and TowerE by reference and Warehouse by payload beneath HighlandBlock.
-        One prim hierarchy, three arcs, and no duplicated skyline on the expense report.
+      f5_composition_brief: >-
+        Read a composed prim as a resolved result: specs in layers hold the opinions, the prim index
+        orders them, and every field is settled on its own.
       f9_edit_target_duel: >-
         The notes layer is already the weaker sublayer and active edit target; set /World's
         displayName there and save both layers. Strength is not permission to write in the wrong file.
@@ -978,9 +1845,9 @@ lessons:
           specs, GetPropertyStack for the exact competing property specs, and inspect each spec's
           layer and path in strength order before authoring a corrective opinion.
     apply:
-      f5_liverps_labyrinth: >-
-        Author local floorIndex 4 and keep the inherit, variant, reference, payload, and
-        specializes arcs intact. The sign needs one winner and a complete audit trail for the season finale.
+      f5_trace_brief: >-
+        Read a trace at property granularity: identify the competing specs with GetPropertyStack and
+        leave every weaker arc composed, because removing one changes the result being explained.
 
   - source: docs/creating-composition-arcs/strength-ordering/what-is-liverps.md
     title: LIVRPS Strength Ordering
@@ -1089,6 +1956,6 @@ lessons:
           strongest to weakest. Local spans the root and recursive sublayers of one layer stack,
           internal order still matters, and the algorithm applies recursively across connected stacks.
     apply:
-      f9_archivist_prime: >-
-        Seal the CertificationArchive only after answering from the actual rules: LIVRPS order,
-        default-prim targeting, stack inspection, and customization boundaries. Archivist Prime can smell memorized incantations.
+      f5_liverps_brief: >-
+        Read the order as the law every arc on this floor was already obeying: Local spans a whole
+        layer stack, sublayers are gathered depth first, and each stack reached across an arc runs the same rules again.

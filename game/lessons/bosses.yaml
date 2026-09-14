@@ -1,0 +1,314 @@
+# A boss adapts no curriculum page of its own, because it introduces nothing.
+# Its lesson is assembled from the cards its run already taught; only the
+# framing and the work order are authored here.
+reviews:
+  - quest: f0_gatekeeper
+    objective: >-
+      Define typed containers and give each one a named value, on the stage you have been
+      composing into since the intake desk.
+    intro: >-
+      Prim Threshold asked three questions: where an opinion lands, what carries it, and what
+      names its value. The Gatekeeper asks all three at once and accepts nothing vaguer than a
+      typed prim holding a named string.
+    work_order:
+      heading: The Threshold has no district name and no container
+      system: >-
+        The Gatekeeper accepts typed containers carrying named data. It has rejected the word
+        "vibes" in writing.
+      body: |
+        The Departure Gate closes out Prim Threshold. Behind you are the intake desk, the first
+        prim, and the nameplate, so /City should still be standing as an Xform with the city's
+        name on it. The gate out of the floor runs through /City/Threshold, which has never
+        been built.
+
+        Nothing stands at that path, so the district has neither a container nor a label. An
+        untyped prim is a container that declares nothing about what it carries, and a string
+        attribute nobody has authored has no value to read at all rather than a blank one.
+
+        The gate needs /City typed as an Xform with cityName reading Primventure, /City/Threshold
+        defined as an Xform, and a string attribute districtName on it set to Prim Threshold. The
+        exactness is the part that bites: a string value carries its punctuation and
+        capitalisation, and CreateAttribute wants Sdf.ValueTypeNames.String named explicitly
+        rather than inferred.
+      points:
+        - "An untyped prim declares nothing about what it holds, which is not the same as holding nothing."
+        - "CreateAttribute takes an explicit Sdf value type, and Set() then writes the value."
+        - "String values are exact, punctuation and capitalisation included."
+    apply: >-
+      Define /City as an Xform with cityName reading Primventure, define /City/Threshold as an
+      Xform, and give it a string districtName of Prim Threshold.
+
+  - quest: f2_relationship_bridge
+    objective: >-
+      Point one prim at another with relationships, so a connection lives in the scene instead
+      of in a naming convention.
+    intro: >-
+      Attributes carry values. A canal crossing does not want a value, it wants to know which
+      two things it joins. That is a different kind of property, and Binding Canal has been
+      waiting on it.
+    work_order:
+      heading: The bridge stands between two banks it cannot name
+      system: >-
+        The bridge exists. It simply holds opinions about neither bank.
+      body: |
+        Binding Canal sits below the lamp-lit stretch of the property ward. The lamp globe on the
+        far bank has its radius, the canal on the near bank is cut, and a bridge is meant to span
+        the two.
+
+        Nothing at /City/PropertyWard/Bridge records what it joins. A string attribute holding the
+        text "/City/PropertyWard/Canal" would look correct and mean nothing: it is a value that
+        resembles a path, and nothing composing the stage would follow it to the far end.
+
+        A joined crossing needs the Bridge defined as an Xform, a destination relationship
+        targeting the lamp globe, and an origin relationship targeting the canal. Two details
+        matter. CreateRelationship rather than CreateAttribute is what makes a targeting property,
+        and SetTargets takes the paths themselves rather than text spelling them out.
+      points:
+        - "A relationship targets prim paths; an attribute holds a value that can only look like one."
+        - "CreateRelationship then SetTargets is the pair that authors a connection."
+        - "A mistyped target composes as a dangling target rather than an error."
+    apply: >-
+      Define the Bridge as an Xform, then author destination targeting the lamp globe and origin
+      targeting the canal.
+
+  - quest: f1_clockwork_crossing
+    objective: >-
+      Give a stage a time range and author an attribute whose value changes across it.
+    intro: >-
+      Everything you have authored so far holds one value forever. A clock that holds one value
+      forever is a sculpture. Clockwork Crossing would like the other kind.
+    work_order:
+      heading: The clock holds one size for all of time
+      system: >-
+        The crossing loops outside time. Its residents describe this as convenient.
+      body: |
+        Clockwork Crossing is the stretch of the property ward where the city keeps its clock. The
+        crossing is cut and the clock is meant to stand at /City/PropertyWard/Clock, growing from
+        the hour it starts to the hour it ends.
+
+        The stage declares no time range, so there is no interval for anything to move across, and
+        the clock carries no size that varies. A single authored value is a default that resolves
+        identically at every time code, which is why the crossing reads as frozen.
+
+        A running clock needs the Cube defined, the stage's start and end time codes set to 1 and
+        48, and size authored as two time samples: 1.0 at time code 1 and 10.0 at time code 48. The
+        detail to watch is that a default and a time sample are different opinions on the same
+        attribute. Set() with a time argument writes a sample, Set() without one writes the
+        default, and the default does not fill the interval between samples.
+      points:
+        - "Start and end time codes are stage metadata; they bound the interval without animating anything."
+        - "Set(value, time) authors a time sample, while Set(value) authors the time-independent default."
+        - "Values interpolate between samples and hold flat outside the outermost ones."
+    apply: >-
+      Define the Clock as a Cube, set the stage range to 1 through 48, and author size as 1.0 at
+      time code 1 and 10.0 at time code 48.
+
+  - quest: f2_schema_warden
+    objective: >-
+      Address prims and properties by their exact paths, and record the text format an opinion
+      is written in.
+    intro: >-
+      The Foundry files everything by address. A prim path, a property path, and the format the
+      layer is written in are three separate pieces of information, and the Warden asks for all
+      three.
+    work_order:
+      heading: The vault records neither its format nor what it archives
+      system: >-
+        The Warden rejects vague forms. Bring the address, not the general vicinity.
+      body: |
+        Warden Foundry keeps the archive at the top of the property ward. The stacks are shelved,
+        the clock across the ward is running, and the vault at /City/Archive/WardenVault is meant
+        to record what is filed and in what form.
+
+        The vault carries no formatNote naming the text format its layer is written in, and nothing
+        connects it to the clock it archives. The stacks beside it have no shelf count. None of the
+        three has a fallback to fall back on: an unauthored attribute has no value to read, and an
+        unauthored relationship targets nothing.
+
+        A working archive needs the WardenVault defined as an Xform with a formatNote of usda, an
+        archives relationship targeting the clock, and a shelfCount of 12 on the stacks. Addressing
+        is where this goes wrong: a prim path and a property path differ by the dot, so
+        /City/Archive/Stacks names the container and /City/Archive/Stacks.shelfCount names one
+        property on it.
+      points:
+        - "A property path is the prim path, a dot, then the property name."
+        - "usda is the human-readable text format, usdc is the binary one, and usd can resolve to either."
+        - "Relationships target paths and attributes hold values, so different calls author them."
+    apply: >-
+      Define the WardenVault as an Xform with formatNote usda, target the clock through an archives
+      relationship, and set shelfCount to 12 on the stacks.
+
+  - quest: f1_civic_record
+    objective: >-
+      Stamp metadata onto the prims you have built, and restate the connection between them.
+    intro: >-
+      Floor 1 was the floor of properties: values, connections, time, addresses, and formats. The
+      Registrar closes it by asking for the one kind of opinion that describes a prim rather than
+      hangs off it.
+    work_order:
+      heading: No district in the ledger carries any documentation
+      system: >-
+        The Registrar erased the ledger and would like it restored, in the Registrar's preferred
+        fields.
+      body: |
+        The Records Office closes out the property ward. Both districts you have worked through,
+        the ward itself and the archive above it, now hold values, a running clock, and shelved
+        stacks.
+
+        Neither district carries documentation and the stacks carry no comment. Metadata is not a
+        property: it does not hang off the prim as an attribute and it has no fallback, so an
+        unstamped district is genuinely absent from the record rather than defaulted to something.
+        The stacks no longer carry the relationship that indexed the clock either.
+
+        A restored ledger needs /City/PropertyWard and /City/Archive defined as Xforms with
+        documentation stamped on each, /City/Archive/Stacks defined with a comment, and an indexes
+        relationship on the stacks targeting the clock. Keep the fields straight: documentation and
+        comment are separate metadata keys with separate meanings, and SetMetadata writes them by
+        key rather than through CreateAttribute.
+      points:
+        - "Metadata describes a prim, while attributes are properties that hang off it."
+        - "documentation and comment are distinct keys, and stamping one leaves the other empty."
+        - "Unauthored metadata has no fallback, so a blank record reads as blank."
+    apply: >-
+      Define both districts as Xforms with documentation stamped, give the stacks a comment, and
+      re-target the indexes relationship at the clock.
+
+  - quest: f2_blueprint_marshal
+    objective: >-
+      Let each prim's schema declare what it is, and author every value through the accessor that
+      schema owns.
+    intro: >-
+      Floor 2 was one long argument that a prim's type is not decoration. The Marshal reads the
+      whole borough as a single manifest: geometry, grouping, transform, and light, each declared
+      by the schema that owns it.
+    work_order:
+      heading: The borough is a row of undeclared containers
+      system: >-
+        Every prim declared by the schema that owns it. The Marshal reads manifests for pleasure.
+      body: |
+        Lumen Row runs the length of Blueprint Borough. A market stall, a working yard, a crane, a
+        lift, and a street lamp are all meant to stand along it, with the borough itself as the
+        container they hang beneath.
+
+        None of them declares what it is. An untyped prim carries no schema, so the stall has no
+        size to set, the lamp has no intensity, and a transform has no ops to order. Grouping is
+        its own version of the problem, because a plain container and a Scope are not
+        interchangeable: a Scope is the type that says outright that this prim groups and does not
+        transform.
+
+        A declared borough needs the borough as an Xform, the stall as a Cube with size 2.0, the
+        yard as a Scope, the crane as an Xform translated to (0, 12, 0), the lift as an Xform
+        scaled to (2, 2, 2), and the street lamp as a SphereLight with inputs:intensity of 750. The
+        namespaces are where this fails quietly: transform values live on xformOp attributes with
+        their op order declared alongside, and a light's intensity is inputs:intensity, so dropping
+        the prefix authors a custom attribute while the schema's own keeps its fallback.
+      points:
+        - "A prim's type is the schema that gives it properties and their fallback values."
+        - "Scope groups without transforming; Xform is the type that carries transform ops."
+        - "Prefer the schema accessor, such as AddTranslateOp or CreateIntensityAttr, so the namespaced name is written for you."
+    apply: >-
+      Type every prim on the row to its job: an Xform borough, a Cube stall at size 2.0, a Scope
+      yard, a translated crane, a scaled lift, and a SphereLight at intensity 750.
+  - quest: f4_two_faced_topiary
+    objective: >-
+      Prune a prim subtree out of the composed stage while leaving every authored spec
+      intact in its layer.
+    intro: >-
+      Three rooms of Quiet Garden, three ways to hang an opinion on a prim. This one wants
+      the opinion that makes a prim stop existing as far as traversal is concerned, while
+      leaving it perfectly readable on disk.
+    work_order:
+      heading: The topiary bed carries no approved design
+      system: >-
+        The committee approved one design and filed the other, so the argument can be
+        reopened the moment somebody finds the paperwork.
+      body: |
+        Quiet Garden is the last stretch of Beyond-the-Walls to be settled. The hedge along
+        it carries a constant displayColor, the north gate holds a namespaced note for the
+        warden, and the topiary bed at the end of the path is still bare ground.
+
+        Nothing stands at /City/BeyondTheWalls/Topiary, so there is no Hero and no Draft
+        beneath it and neither has an active state to resolve. The bed carries no
+        documentation either, which leaves no record of which design the committee kept.
+
+        A settled garden needs the Topiary Xform defined with Hero and Draft under it, Hero
+        left resolving active, SetActive(False) authored on Draft, and documentation stamped
+        on the bed. The detail to watch is reach: deactivating Draft prunes everything below
+        it from composition, so a descendant's own active opinion cannot bring it back.
+      points:
+        - "Deactivating a parent prunes every descendant, whatever the descendant's own active opinion says."
+        - "SetActive authors into the current edit target, not necessarily the layer that defined the prim."
+        - "Traversal walking past a prim is not the same as the prim leaving its layer."
+    apply: >-
+      Define the Topiary bed with Hero and Draft beneath it, leave Hero active, deactivate
+      Draft, and stamp the bed's documentation.
+
+  - quest: f4_kind_post
+    objective: >-
+      Classify a prim's role in the model hierarchy with kind metadata, independently of the
+      schema type it carries.
+    intro: >-
+      Measure Yard taught you to count what stands on a stage and to declare what its numbers
+      mean. Neither said what any of it is for. Kind is that opinion, and Floor 6 will assemble
+      your regrets out of it.
+    work_order:
+      heading: The lamp post has a schema type and no role
+      system: >-
+        A lamp post is not an assembly, however many committees are assigned to maintain it.
+      body: |
+        Measure Yard ends at the lamp post. The yard is surveyed now, with the stage declaring
+        centimeters and a Y up axis, and a census has already walked the district counting the
+        concrete prims on it.
+
+        The lamp post is meant to be a reusable leaf asset that later floors bring in as one
+        unit. Nothing stands at /City/BeyondTheWalls/LampPost, and even once an Xform does,
+        kind is prim metadata with nothing standing in for it: GetKind returns an empty token
+        and a model-aware traversal passes the prim over entirely.
+
+        A catalogued lamp post needs the Xform defined, its kind set to Kind.Tokens.component
+        through Usd.ModelAPI, and documentation stamped on the prim. Two details are easy to
+        miss: model is the abstract base of the taxonomy and should never be the authored
+        token, and a component's ancestors have to be group or assembly for the classification
+        to be valid.
+      points:
+        - "Author the concrete tokens — group, assembly, component, subcomponent — never the abstract model."
+        - "Kind is independent of schema type; an Xform can hold any role or none at all."
+        - "GetKind returning an empty token means nothing was authored, which is not an error."
+    apply: >-
+      Define the LampPost Xform, set its kind to component through Usd.ModelAPI, and stamp its
+      documentation.
+
+  - quest: f5_specializes_fallback
+    objective: >-
+      Author the weakest LIVRPS arc as a broadcast fallback and show a local opinion still
+      outranks it.
+    intro: >-
+      Inherit Street has handed you both ends of the strength order. Inherits speaks with
+      authority. Specializes speaks last and fully expects to be overruled. The traffic cop
+      composes tickets strongest first.
+    work_order:
+      heading: The posted limit has to outrank the broadcast default
+      system: >-
+        Specializes yields to everything. It is the only arc that has made peace with this.
+      body: |
+        Inherit Street runs from the lamp class at one end to Main Street at the other. Every
+        fixture on it now takes its colour temperature from a class it inherits, and the district
+        survey has come back with a posted limit of 20 for the street itself.
+
+        Nothing is laid at /World/MainStreet yet, and the imported road data that unsurveyed
+        streets fall back on broadcasts 30. Authoring 20 onto the shared source would change every
+        road in the district at once, and removing the shared source would leave the unsurveyed
+        ones with no figure at all.
+
+        Main Street needs laying as a Mesh, the shared road data attached through
+        GetSpecializes().AddSpecialize, a local osm:street:maxspeed of 20 authored on the street,
+        and its documentation stamped. The posted figure has to be a local opinion in your own
+        layer rather than a value arriving across the arc, because specializes sits last in LIVRPS
+        and yields to anything more specific.
+      points:
+        - "A local opinion outranks both inherits and specializes."
+        - "Author the arc on the destination prim; the class only carries the fallback data."
+        - "Specializes sitting last means removing the local posting lets the broadcast figure return."
+    apply: >-
+      Lay Main Street as a Mesh, specialize it from the shared road data, post a local maxspeed of
+      20, and stamp its documentation so the posting outranks the broadcast 30.

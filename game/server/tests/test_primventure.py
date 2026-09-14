@@ -2,6 +2,7 @@ import os
 import re
 import shutil
 from pathlib import Path
+from typing import Any
 
 import yaml
 from pxr import Sdf, Usd
@@ -133,6 +134,30 @@ def test_every_quest_has_a_resolved_lesson() -> None:
     assert not missing
 
 
+def test_a_boss_reviews_its_run_then_opens_its_own_work_order() -> None:
+    """The Gatekeeper must not reopen the Nameplate room's attribute lesson."""
+    store = QuestStore()
+    boss = store.get("f0_gatekeeper")
+    review = store.lesson_for(boss)
+    assert review is not None
+
+    pages = store.review_window(boss)
+    cards = store.lessons.all()
+    recap_beats = review["beats"][:-1]
+    assert [beat["kind"] for beat in recap_beats] == ["recap"] * len(pages)
+    assert [beat["heading"] for beat in recap_beats] == [
+        cards[page].title for page in pages
+    ]
+    assert review["beats"][-1]["kind"] == "work_order"
+
+    nameplate = store.lesson_for(store.get("f0_nameplate"))
+    assert nameplate is not None
+    assert review["title"].startswith("Review:")
+    assert review["beats"][-1]["heading"] not in {
+        beat["heading"] for beat in nameplate["beats"]
+    }
+
+
 def test_lesson_bullets_survive_a_colon() -> None:
     """An unquoted 'label: detail' bullet is valid YAML that parses as a dict.
 
@@ -186,12 +211,19 @@ def test_work_orders_state_the_scene_gap_and_fix_without_failure_theater() -> No
         re.IGNORECASE,
     )
     show_language = re.compile(r"\b(?:validator|graded|checks?)\b", re.IGNORECASE)
-    for source, lesson in QuestStore().lessons.all().items():
+    lessons = QuestStore().lessons
+    # A boss authors its own work order instead of borrowing a card's, so it has
+    # to clear the same bar.
+    orders_by_source: list[tuple[str, Any]] = [
+        (quest_id, review.work_order) for quest_id, review in lessons.reviews().items()
+    ]
+    for source, lesson in lessons.all().items():
         orders = [beat for beat in lesson.beats if beat.kind == "work_order"]
         if len(orders) != 1:
             vague.append(f"{source}: expected one work order, found {len(orders)}")
             continue
-        order = orders[0]
+        orders_by_source.append((source, orders[0]))
+    for source, order in orders_by_source:
         paragraphs = [paragraph for paragraph in order.body.strip().split("\n\n") if paragraph]
         if len(paragraphs) < 3:
             vague.append(f"{source}: work order needs scene, gap, and fix paragraphs")

@@ -245,12 +245,55 @@ def test_no_room_grades_authoring_the_path_has_not_reached() -> None:
     assert not ahead, sorted(set(ahead))
 
 
-def test_a_boss_never_opens_a_lesson_no_room_has_taught() -> None:
-    """A boss consolidates authoring the player has already practised in a room."""
-    kinds = {quest.id: quest.kind for quest in QuestStore().all()}
-    unpractised = [
-        f"{quest_id} is a boss opening {page} with no teaching room before it"
-        for quest_id, page in first_encounters()
-        if kinds[quest_id].endswith("boss")
-    ]
-    assert not unpractised, unpractised
+def test_a_boss_reviews_the_run_it_caps_and_introduces_nothing() -> None:
+    """A boss's lesson is a review, so every page in it must already be taught.
+
+    A boss used to carry a curriculum page of its own, which made it the room
+    where the player first met that lesson: the floor 0 boss and the nameplate
+    room showed one identical card, and nineteen bosses cited a page they never
+    graded a single rule from. A boss now reviews the window reaching back to
+    the last boss of equal or higher rank, so a floor boss with an empty
+    immediate run still reviews its whole floor.
+    """
+    store = QuestStore()
+    reviews = store.lessons.reviews()
+    taught = {
+        quest.cookbook for quest in store.all() if not quest.kind.endswith("boss")
+    }
+    broken: list[str] = []
+    for quest in store.all():
+        if not quest.kind.endswith("boss"):
+            continue
+        if quest.id not in reviews:
+            broken.append(f"{quest.id} is a boss with no review lesson of its own")
+            continue
+        window = store.review_window(quest)
+        if not window:
+            broken.append(f"{quest.id} reviews nothing; no room separates it from its peer boss")
+        elif quest.cookbook not in window:
+            broken.append(f"{quest.id} cites {quest.cookbook}, which its own run never taught")
+        broken += [
+            f"{quest.id} reviews {page}, which no room teaches"
+            for page in window
+            if page not in taught
+        ]
+    assert not broken, sorted(broken)
+
+
+def test_curriculum_cards_apply_only_to_teaching_rooms() -> None:
+    """A boss owns a review and work order, never a curriculum card's task line."""
+    store = QuestStore()
+    quests = {quest.id: quest for quest in store.all()}
+    stale: list[str] = []
+    for source, card in store.lessons.all().items():
+        for quest_id in card.apply:
+            quest = quests.get(quest_id)
+            if quest is None:
+                stale.append(f"{source} applies to missing quest {quest_id}")
+            elif quest.kind.endswith("boss"):
+                stale.append(f"{source} still applies to boss {quest_id}")
+            elif quest.cookbook != source:
+                stale.append(
+                    f"{source} applies to {quest_id}, whose lesson is {quest.cookbook}"
+                )
+    assert not stale, sorted(stale)

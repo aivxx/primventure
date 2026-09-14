@@ -92,13 +92,49 @@ quests:
         answer: 1
         explanation: The root layer changes composition without rewriting either source.
 
+  - id: f3_strength_briefing
+    title: Read the LIVRPS Strength Order
+    floor: 3
+    floor_name: Opinion Quarter
+    neighborhood: Layer Registry
+    kind: room
+    prerequisites: [f3_layer_stack_boss]
+    level_required: 7
+    exam_tasks: [predict_liverps_strength, compare_local_and_reference_opinions]
+    stats: {insight: 3, lore: 2}
+    brief: "SYSTEM: Read LIVRPS strongest to weakest, then identify why a local destination opinion outranks the value introduced by a reference."
+    starter: ""
+    language: none
+    validator:
+      assertions: []
+    cookbook: docs/composition-basics/strength-ordering.md
+    xp: 120
+    reward: Strength Ledger
+    world_target: /City/CompositionQuarter/BaronSign
+    recipes: [LIVERPS Strength Ordering, Local Opinion]
+    questions:
+      - prompt: Which sequence gives LIVRPS from strongest to weakest?
+        choices:
+          - Local, Inherits, Variant sets, References, Payloads, Specializes
+          - Local, Variant sets, Inherits, References, Specializes, Payloads
+          - Specializes, Payloads, References, Variant sets, Inherits, Local
+        answer: 0
+        explanation: Local opinions are strongest, followed by inherits, variants, references, payloads, and specializes.
+      - prompt: A referenced source authors a marquee and the destination authors a different marquee locally. Which value resolves?
+        choices:
+          - The destination's local value
+          - The referenced source's value
+          - Whichever value was saved most recently
+        answer: 0
+        explanation: A direct local opinion at the destination is stronger than an opinion introduced through a reference.
+
   - id: f3_def_docket
     title: Issue the Kiosk a Def Specifier
     floor: 3
     floor_name: Opinion Quarter
     neighborhood: Specifier Court
     kind: room
-    prerequisites: [f3_layer_stack_boss]
+    prerequisites: [f3_strength_briefing]
     level_required: 7
     exam_tasks: [author_def, understand_traversal]
     stats: {craft: 2, insight: 1}
@@ -323,7 +359,7 @@ quests:
       - prim_stack: {path: /City/CompositionQuarter/BaronSign, min: 2}
       - metadata_equals: {path: /City/CompositionQuarter/BaronSign, key: documentation, value: 'Duplicate Baron: Override a Referenced
             Asset cleared.'}
-    cookbook: docs/composition-basics/strength-ordering.md
+    cookbook: docs/composition-basics/default-prim.md
     xp: 230
     reward: {opinion_points: 1, achievement: "New achievement! You overruled a Baron without editing his asset."}
     world_target: /City/CompositionQuarter/BaronSign

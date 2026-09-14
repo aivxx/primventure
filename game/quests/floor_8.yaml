@@ -31,13 +31,90 @@ quests:
     world_target: /City/ExchangeTerminal/ImportedKiosk
     recipes: [Metadata, Asset Info]
 
+  - id: f8_converter_anatomy
+    title: Run the Crate Through Both Converter Phases
+    floor: 7
+    floor_name: Customs Terminal
+    neighborhood: Intake Platform
+    kind: room
+    prerequisites: [f8_import_depot]
+    level_required: 15
+    exam_tasks: [assemble_converter_phases, order_extraction_before_transformation]
+    stats: {lore: 4, craft: 3}
+    brief: "SYSTEM: The dock built you a converter with an empty second phase and nothing calling it. Declare the delivery unit where it belongs, then run the crate through both halves."
+    starter: |
+      from pxr import Usd, UsdGeom
+
+
+      def extract():
+          """Phase one: map the source into USD as directly as the schemas allow."""
+          stage = Usd.Stage.CreateNew(STAGE_PATH)
+          UsdGeom.Xform.Define(stage, "/Crate")
+          return stage
+
+
+      def transform(converted):
+          """Phase two: apply the export options this delivery was ordered with."""
+          # TODO: Declare UsdGeom.LinearUnits.meters on the converted stage.
+
+
+      stage = extract()
+      # TODO: Run the transformation phase on the stage extraction handed back.
+      stage.GetRootLayer().Save()
+    language: python
+    validator:
+      assertions:
+        - prim_type: {path: /Crate, value: Xform}
+        - meters_per_unit: 1.0
+    cookbook: docs/data-exchange/data-exchange/exercise.md
+    xp: 190
+    reward: Converter Blueprint
+    world_target: /City/ExchangeTerminal/ConverterBench
+    recipes: [Data Exchange, Stage]
+
+  - id: f8_mapping_document
+    title: Map the OBJ Records Onto USD Schemas
+    floor: 7
+    floor_name: Customs Terminal
+    neighborhood: Intake Platform
+    kind: room
+    prerequisites: [f8_converter_anatomy]
+    level_required: 15
+    exam_tasks: [map_source_concepts, identify_schema_gaps]
+    stats: {lore: 4, insight: 3}
+    brief: "SYSTEM: State which OBJ record becomes which USD schema before a single vertex is authored. Extraction is a specification the dock can be held to, and the terminal has run out of patience for improvisation."
+    starter: ''
+    language: none
+    validator:
+      assertions: []
+    cookbook: docs/data-exchange/data-extraction/what-is-data-extraction.md
+    xp: 170
+    reward: Mapping Document
+    world_target: /City/ExchangeTerminal
+    recipes: [Data Exchange]
+    questions:
+      - prompt: What should the output of the extraction phase resemble?
+        choices:
+          - The source data, so the result stays legible and easy to round-trip
+          - The receiving client's preferred asset structure
+          - A single flattened prim holding every mesh
+        answer: 0
+        explanation: Extraction stays faithful to the source; destination structure belongs to transformation.
+      - prompt: A source format groups related fields into one compound record that no USD schema models. What is the conventional OpenUSD representation?
+        choices:
+          - Namespace-prefixed custom attributes that group the related properties
+          - A native USD struct value type
+          - One USD layer per field
+        answer: 0
+        explanation: OpenUSD has no struct type, so namespaced attributes are the convention for grouped data.
+
   - id: f8_extract_mesh
     title: Extract the OBJ Cube Into a Mesh
     floor: 7
     floor_name: Customs Terminal
     neighborhood: Intake Platform
     kind: room
-    prerequisites: [f8_import_depot]
+    prerequisites: [f8_mapping_document]
     level_required: 15
     exam_tasks: [extract_geometry, author_mesh]
     stats: {craft: 5, insight: 3}
@@ -69,13 +146,59 @@ quests:
     world_target: /City/ExchangeTerminal/ExtractedCube
     recipes: [Gprim, Mesh]
 
+  - id: f8_material_bench
+    title: Extract the Crate's Material Onto a Preview Surface
+    floor: 7
+    floor_name: Customs Terminal
+    neighborhood: Intake Platform
+    kind: room
+    prerequisites: [f8_extract_mesh]
+    level_required: 15
+    exam_tasks: [extract_materials, bind_material_to_mesh]
+    stats: {craft: 5, insight: 3}
+    brief: "SYSTEM: The crate's paint arrived as a block of MTL text with a period in its name. Build the material graph, then bind it to the cube you already landed."
+    starter: |
+      from pxr import Gf, Sdf, Tf, Usd, UsdGeom, UsdShade
+
+      stage = Usd.Stage.CreateNew(STAGE_PATH)
+      world = UsdGeom.Xform.Define(stage, "/World")
+      stage.SetDefaultPrim(world.GetPrim())
+      cube = UsdGeom.Mesh.Define(stage, "/World/Cube")
+
+      # Read off the MTL record shipped beside shapes.obj.
+      source_name = "Material.001"
+      specular_color = Gf.Vec3f(0.5, 0.5, 0.5)
+      material_path = Sdf.Path("/World").AppendChild(Tf.MakeValidIdentifier(source_name))
+
+      # TODO: Define a UsdShade.Material at material_path.
+      # TODO: Define a UsdShade.Shader at material_path.AppendChild("Shader") and give it
+      #       CreateIdAttr("UsdPreviewSurface"), which authors info:id.
+      # TODO: Connect the material's surface output to the shader's surface output.
+      # TODO: Author inputs:specularColor on the shader from specular_color.
+      # TODO: Bind the material to the cube with UsdShade.MaterialBindingAPI. Bind writes the
+      #       material:binding relationship for you; SetTargets is the longhand equivalent.
+      stage.GetRootLayer().Save()
+    language: python
+    validator:
+      assertions:
+        - prim_type: {path: /World/Material_001, value: Material}
+        - prim_type: {path: /World/Material_001/Shader, value: Shader}
+        - attribute_equals: {path: "/World/Material_001/Shader.info:id", value: UsdPreviewSurface}
+        - attribute_equals: {path: "/World/Material_001/Shader.inputs:specularColor", value: [0.5, 0.5, 0.5]}
+        - relationship_targets: {path: "/World/Cube.material:binding", targets: [/World/Material_001]}
+    cookbook: docs/data-exchange/data-extraction/exercise-extracting-materials.md
+    xp: 250
+    reward: Shader Swatch Book
+    world_target: /City/ExchangeTerminal/ExtractedCube
+    recipes: [Material, Shader]
+
   - id: f8_extract_overseer
     title: "Dock Overseer: Points and Extent Must Agree"
     floor: 7
     floor_name: Customs Terminal
     neighborhood: Intake Platform
     kind: neighborhood_boss
-    prerequisites: [f8_extract_mesh]
+    prerequisites: [f8_material_bench]
     level_required: 15
     exam_tasks: [inspect_extracted_geometry, author_extent]
     stats: {insight: 4, craft: 3}
@@ -123,13 +246,112 @@ quests:
         answer: 0
         explanation: Data exchange often happens outside usd-core via explicit extract-and-author.
 
+  - id: f8_validate_warden
+    title: Pass the Asset Validation Contract
+    floor: 7
+    floor_name: Customs Terminal
+    neighborhood: Validation Concourse
+    kind: room
+    prerequisites: [f8_extract_overseer]
+    level_required: 16
+    exam_tasks: [validate_asset_contract, set_default_prim]
+    stats: {insight: 5, lore: 3}
+    brief: "SYSTEM: usdchecker-style rules, no C++ plugins. Default prim, Y-up, component kind. Fail any one and the crate stays on the dock."
+    starter: |
+      from pxr import Kind, Usd, UsdGeom
+
+      stage = Usd.Stage.CreateNew(STAGE_PATH)
+      world = UsdGeom.Xform.Define(stage, "/World").GetPrim()
+      # TODO: default prim /World, up axis Y, kind component.
+      stage.GetRootLayer().Save()
+    language: python
+    validator:
+      assertions:
+        - default_prim: /World
+        - up_axis: Y
+        - kind_equals: {path: /World, value: component}
+    cookbook: docs/data-exchange/asset-validation/what-is-asset-validation.md
+    xp: 230
+    reward: Warden Clipboard
+    world_target: /City/ExchangeTerminal
+    recipes: [Kind, Default Prim]
+
+  - id: f8_conversion_report
+    title: Declare the Conventions the Concourse Reported Missing
+    floor: 7
+    floor_name: Customs Terminal
+    neighborhood: Validation Concourse
+    kind: room
+    prerequisites: [f8_validate_warden]
+    level_required: 16
+    exam_tasks: [author_stage_conventions, revalidate_converted_output]
+    stats: {insight: 4, craft: 4}
+    brief: "SYSTEM: The converter output parses and still declares nothing geometric. The concourse reported two missing conventions; author them in the converter's stage, not by hand on the delivered file."
+    starter: |
+      from pxr import Gf, Usd, UsdGeom
+
+      stage = Usd.Stage.CreateNew(STAGE_PATH)
+      UsdGeom.Xform.Define(stage, "/World")
+      cube = UsdGeom.Mesh.Define(stage, "/World/Cube")
+      cube.CreatePointsAttr([Gf.Vec3f(1, 1, 1), Gf.Vec3f(-1, -1, -1)])
+      # TODO: SetStageUpAxis to Y, since OBJ specifies Y as its up axis.
+      # TODO: SetStageMetersPerUnit to 0.01, the unit the terminal runs on.
+      stage.GetRootLayer().Save()
+    language: python
+    validator:
+      assertions:
+        - prim_type: {path: /World/Cube, value: Mesh}
+        - up_axis: Y
+        - meters_per_unit: 0.01
+    cookbook: docs/data-exchange/asset-validation/exercise-asset-validation-testing.md
+    xp: 250
+    reward: Conversion Report
+    world_target: /City/ExchangeTerminal/CustomsCube
+    recipes: [Up Axis, Stage]
+
+  - id: f8_transform_options
+    title: Sort the Export Options From the Extraction
+    floor: 7
+    floor_name: Customs Terminal
+    neighborhood: Transform Junction
+    kind: room
+    prerequisites: [f8_conversion_report]
+    level_required: 16
+    exam_tasks: [plan_transformation_steps, separate_source_facts_from_policy]
+    stats: {lore: 4, insight: 4}
+    brief: "SYSTEM: The junction reroutes cargo; it does not re-survey it. Decide which decisions belong to the source and which belong to whoever ordered the crate, then keep the two piles apart."
+    starter: ''
+    language: none
+    validator:
+      assertions: []
+    cookbook: docs/data-exchange/data-transformation/what-is-data-transformation.md
+    xp: 180
+    reward: Junction Routing Notes
+    world_target: /City/ExchangeTerminal
+    recipes: [Data Exchange]
+    questions:
+      - prompt: Where do user-facing export options belong?
+        choices:
+          - The transformation phase, where destination and workflow choices are made
+          - The extraction phase, beside the source parsing
+          - Neither phase; options are a rendering concern
+        answer: 0
+        explanation: Export options reflect destination choices, so they are transformation rather than source fact.
+      - prompt: Why should a round-trip workflow keep its transformations minimal?
+        choices:
+          - Extensive restructuring is hard to invert on reimport and can drop information
+          - OpenUSD permits only one transformation per stage
+          - Transformations cannot run outside the exporting process
+        answer: 0
+        explanation: The more the data is restructured, the harder it is to reverse the changes accurately on the way back in.
+
   - id: f8_axis_switchyard
     title: Convert the Z-Up Shipment to Y-Up
     floor: 7
     floor_name: Customs Terminal
     neighborhood: Transform Junction
     kind: room
-    prerequisites: [f8_extract_overseer]
+    prerequisites: [f8_transform_options]
     level_required: 16
     exam_tasks: [normalize_up_axis, author_translate]
     stats: {insight: 4, craft: 4}
@@ -153,13 +375,49 @@ quests:
     world_target: /City/ExchangeTerminal/ImportedKiosk
     recipes: [Up Axis, Xform]
 
+  - id: f8_export_option
+    title: Ship the Z-Up Export Option With Its Corrective
+    floor: 7
+    floor_name: Customs Terminal
+    neighborhood: Transform Junction
+    kind: room
+    prerequisites: [f8_axis_switchyard]
+    level_required: 16
+    exam_tasks: [apply_export_option, author_corrective_transform]
+    stats: {insight: 4, craft: 4}
+    brief: "SYSTEM: This client's line runs Z-up and the crate does not. Flip the declaration, then rotate the shipment back upright before the junction signs for it."
+    starter: |
+      from pxr import Usd, UsdGeom
+
+      stage = Usd.Stage.CreateNew(STAGE_PATH)
+      shipment = UsdGeom.Xform.Define(stage, "/Shipment")
+      stage.SetDefaultPrim(shipment.GetPrim())
+      UsdGeom.SetStageUpAxis(stage, UsdGeom.Tokens.y)
+      UsdGeom.Mesh.Define(stage, "/Shipment/Cube")
+
+      # The converter was called with --up-axis Z, so the Y-up default no longer applies.
+      # TODO: Declare Z as the stage up axis.
+      # TODO: Add a rotate-X op of 90.0 on the default prim, suffixed "unitsResolve", so the
+      #       shipment stays upright: xformOp:rotateX:unitsResolve.
+      stage.GetRootLayer().Save()
+    language: python
+    validator:
+      assertions:
+        - up_axis: Z
+        - attribute_equals: {path: "/Shipment.xformOp:rotateX:unitsResolve", value: 90.0}
+    cookbook: docs/data-exchange/data-transformation/exercise-export-option.md
+    xp: 240
+    reward: Option Flag Set
+    world_target: /City/ExchangeTerminal/ExportedShipment
+    recipes: [Up Axis, Xform]
+
   - id: f8_unit_gauge
     title: "Meter Gauge: Convert Units on Import"
     floor: 7
     floor_name: Customs Terminal
     neighborhood: Transform Junction
     kind: neighborhood_boss
-    prerequisites: [f8_axis_switchyard]
+    prerequisites: [f8_export_option]
     level_required: 16
     exam_tasks: [set_meters_per_unit, preserve_axis]
     stats: {lore: 4, insight: 3}
@@ -197,43 +455,13 @@ quests:
         answer: 0
         explanation: metersPerUnit scales scene units into meters.
 
-  - id: f8_validate_warden
-    title: Pass the Asset Validation Contract
-    floor: 7
-    floor_name: Customs Terminal
-    neighborhood: Validation Concourse
-    kind: room
-    prerequisites: [f8_unit_gauge]
-    level_required: 16
-    exam_tasks: [validate_asset_contract, set_default_prim]
-    stats: {insight: 5, lore: 3}
-    brief: "SYSTEM: usdchecker-style rules, no C++ plugins. Default prim, Y-up, component kind. Fail any one and the crate stays on the dock."
-    starter: |
-      from pxr import Kind, Usd, UsdGeom
-
-      stage = Usd.Stage.CreateNew(STAGE_PATH)
-      world = UsdGeom.Xform.Define(stage, "/World").GetPrim()
-      # TODO: default prim /World, up axis Y, kind component.
-      stage.GetRootLayer().Save()
-    language: python
-    validator:
-      assertions:
-        - default_prim: /World
-        - up_axis: Y
-        - kind_equals: {path: /World, value: component}
-    cookbook: docs/data-exchange/asset-validation/what-is-asset-validation.md
-    xp: 230
-    reward: Warden Clipboard
-    world_target: /City/ExchangeTerminal
-    recipes: [Kind, Default Prim]
-
   - id: f8_customs_engine
     title: "Customs Engine: Extract, Stamp, and Validate"
     floor: 7
     floor_name: Customs Terminal
     neighborhood: Validation Concourse
     kind: city_boss
-    prerequisites: [f8_validate_warden]
+    prerequisites: [f8_unit_gauge]
     level_required: 16
     exam_tasks: [obj_to_usd_pipeline, validate_stage_contract]
     stats: {insight: 5, resolve: 5, craft: 4}

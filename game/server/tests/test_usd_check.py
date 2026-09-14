@@ -141,7 +141,7 @@ def test_briefing_only_rooms_have_no_usda_check(tmp_path: Path, monkeypatch) -> 
         monkeypatch,
         xp=900,
         level=10,
-        completed_quests=["f4_kind_post"],
+        completed_quests=["f4_traversal_census"],
     )
     failed = _run(client, "f4_hydra_lecture", "", answers=[1])
     assert failed["success"] is False
@@ -214,17 +214,20 @@ def test_old_census_stock_refunds_op_and_preserves_claims() -> None:
 
 
 def test_every_authoring_room_generates_parseable_focused_usda() -> None:
+    authoring_rooms = [
+        quest
+        for quest in QuestStore().all()
+        if quest.validator.get("assertions")
+    ]
     generated = 0
-    for quest in QuestStore().all():
-        if not quest.validator.get("assertions"):
-            continue
+    for quest in authoring_rooms:
         text = successful_usda(quest)
         layer = Sdf.Layer.CreateAnonymous(".usda")
         assert layer.ImportFromString(text), quest.id
         assert "focused reference" in text, quest.id
         generated += 1
 
-    assert generated == 80
+    assert generated == len(authoring_rooms)
 
 
 def test_no_room_requires_two_values_for_one_metadata_field() -> None:
