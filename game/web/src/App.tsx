@@ -414,22 +414,38 @@ function Landing({ onStart, hasProgress, nextQuest, quests, floors }: {
         <span className="landing-eyebrow">SEASON 01 · LIVE, UNRENDERED, AND MILDLY EMBARRASSED</span>
         <h1 data-text="PRIMVENTURE">PRIMVENTURE</h1>
         <p className="landing-tagline">
-          “Other dungeons hand you a sword. I hand you a keyboard, ten floors of architecture that no longer agrees
-          with itself, and my full attention.”
+          “You brought a keyboard to a dungeon. Finally, someone read the job description.”
         </p>
         <span className="tagline-by">— YOUR HOST, THE SYSTEM</span>
         <p className="landing-context">
-          The subject is <b>OpenUSD</b> — the open standard for describing 3D scenes across film, games, and simulation.
-          The lessons are NVIDIA's Learn OpenUSD curriculum. The judge is <b>usd-core</b>, the real library, which has
-          never once been impressed.
+          Welcome to PrimVenture, Contestant #USD-01! Your world has collapsed into a series of mismanaged dungeon
+          floors, and it is your job to build the pieces back together using <b>OpenUSD</b> — the open standard for
+          describing 3D scenes across film, games, and simulation. The lessons come directly from NVIDIA's Learn OpenUSD
+          curriculum, reimagined as interactive dungeon challenges and bosses. You will be judged on every move by the
+          keepers of your world, <b>usd-core</b>, who will decide if you succeed or fail. Good luck!
         </p>
       </header>
 
       <div className="lower-third">
         <span className="lt-accent" />
+        <div className="lt-avatar" aria-hidden="true"><span>USD</span><b>01</b></div>
         <div className="lt-body">
-          <strong>CONTESTANT #USD-01</strong>
-          <span>PRIMWRIGHT · UNDERQUALIFIED · {hasProgress ? `LIVE ON FLOOR ${floorLabel}` : "AWAITING FLOOR 00"}</span>
+          <span className="lt-kicker">CONTESTANT PROFILE</span>
+          <strong>CONTESTANT <em>#USD-01</em></strong>
+          <dl className="lt-stats">
+            <div>
+              <dt>CLASS</dt>
+              <dd>PRIMWRIGHT</dd>
+            </div>
+            <div>
+              <dt>SKILL LEVEL</dt>
+              <dd>UNDERQUALIFIED</dd>
+            </div>
+            <div>
+              <dt>STATUS</dt>
+              <dd className="lt-status">{hasProgress ? `LIVE ON FLOOR ${floorLabel}` : "AWAITING FLOOR 00"}</dd>
+            </div>
+          </dl>
         </div>
         <span className="lt-live"><i className="live-dot" /> ON AIR</span>
       </div>
@@ -465,10 +481,30 @@ function Landing({ onStart, hasProgress, nextQuest, quests, floors }: {
         <div className="transmission-sign">— THE SYSTEM · HOST, JUDGE, AND NOT YOUR FRIEND</div>
       </section>
 
-      <section className="landing-cast">
-        <div><span>THE COMPOSITION</span><p>The collapsed city. Ten floors. Reclaimed one honest fix at a time.</p></div>
-        <div><span>THE SYSTEM</span><p>Host, judge, building inspector. Enjoys the rooms you lose.</p></div>
-        <div><span>A PRIMWRIGHT</span><p>Your new title. You write what a 3D scene is. Skill optional at intake.</p></div>
+      <section className="landing-overview" aria-labelledby="game-overview-title">
+        <header>
+          <span>BEFORE YOU ENTER</span>
+          <h2 id="game-overview-title">GAME OVERVIEW</h2>
+          <p>Rebuild a broken 3D world by completing ten floors of hands-on OpenUSD challenges.</p>
+        </header>
+        <div className="landing-cast">
+          <div>
+            <span>WORLD — THE COMPOSITION</span>
+            <p>A city made from broken 3D scenes. Each floor explores a different part of OpenUSD.</p>
+          </div>
+          <div>
+            <span>YOUR ROLE — PRIMWRIGHT</span>
+            <p>Repair each scene by writing and editing real USD code.</p>
+          </div>
+          <div>
+            <span>OBJECTIVE — RESTORE TEN FLOORS</span>
+            <p>Complete the rooms, apply the fixes, and defeat the boss waiting at the end of each floor.</p>
+          </div>
+          <div>
+            <span>VALIDATION — USD-CORE</span>
+            <p>Every solution runs against real OpenUSD tooling. Your code either works or it doesn’t.</p>
+          </div>
+        </div>
       </section>
 
       <div className="landing-stats">
@@ -478,20 +514,29 @@ function Landing({ onStart, hasProgress, nextQuest, quests, floors }: {
         <div><b>01</b><small>CITY TO REBUILD</small></div>
       </div>
 
-      <section className="landing-how">
-        <h2>COMBAT, SUCH AS IT IS</h2>
+      <section className="landing-how" aria-labelledby="rooms-work-title">
+        <header className="landing-section-heading">
+          <h2 id="rooms-work-title">How Rooms Work</h2>
+          <p>Every room follows the same basic loop.</p>
+        </header>
         <ol className="landing-steps">
-          <li><b>01</b><strong>Read the room</strong><span>Two lines of job from the System, plus the lesson it was stolen from.</span></li>
-          <li><b>02</b><strong>State your case</strong><span>Finish the starter code in the room's terminal. It is ordinary Python.</span></li>
-          <li><b>03</b><strong>Face the judges</strong><span>OpenUSD opens what you wrote and rules on it, line by line.</span></li>
+          <li><b>01</b><strong>Review the objective</strong><span>Read the System's assignment and the supporting OpenUSD lesson.</span></li>
+          <li><b>02</b><strong>Write your solution</strong><span>Complete the starter code using Python and OpenUSD.</span></li>
+          <li><b>03</b><strong>Run validation</strong><span><em>usd-core</em> executes your code and checks the resulting 3D scene.</span></li>
+          <li><b>04</b><strong>Restore the city</strong><span>Pass the challenge to add your work to the city and earn the room's XP.</span></li>
         </ol>
-        <p className="landing-note">
-          Win and your work is filed into a real 3D city that keeps growing on your disk, and the room pays XP once —
-          each level needs 100 XP, and a few rooms will not open below one. Miss and the System says something
-          unkind and hands the room straight back. A boss miss takes at most the XP earned inside your current level.
-          At that level's XP floor, the first miss adds 10 XP debt to that boss's clear reward instead. Your current
-          level and published city cannot be taken away.
-        </p>
+        <aside className="landing-progression">
+          <h3>PROGRESSION &amp; FAILURE</h3>
+          <ul>
+            <li>Each level requires <b>100 XP</b>.</li>
+            <li>Some rooms require a minimum level.</li>
+            <li>Each room awards XP only once.</li>
+            <li>Regular failed attempts do not cost XP.</li>
+            <li>A failed boss attempt can remove XP earned during your current level.</li>
+            <li>Your completed levels and published city are permanent.</li>
+            <li>If you have no XP available to lose, your first boss failure creates <b>10 XP of debt</b>, deducted from that boss's reward when cleared.</li>
+          </ul>
+        </aside>
       </section>
 
       <section className="landing-tower">
