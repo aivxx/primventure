@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import Editor from "@monaco-editor/react";
 import {
   ArrowRight, Backpack, Boxes, BookOpen, Building2, CheckCircle2, ChevronLeft,
-  ChevronRight, Circle, CircleDollarSign, Clapperboard, Code2, FileCheck2, FlaskConical,
+  ChevronRight, Circle, CircleAlert, CircleDollarSign, Code2, FileCheck2, FlaskConical,
   Gem, HelpCircle, Lightbulb, ListChecks, LockKeyhole, Play, RefreshCw, Shield,
   ShoppingCart, Skull, Sparkles, Swords, TerminalSquare, Trash2, Trophy, Tv, X,
   XCircle, Zap,
@@ -144,7 +144,7 @@ const LESSONS_READ_KEY = "primventure.lessons-read.v1";
 const USDA_REVIEW_KEY = "primventure.usda-review";
 const VIEW_KEY = "primventure.view.v1";
 
-type Tab = "map" | "skills" | "kiosk";
+type Tab = "feed" | "skills" | "kiosk";
 // "city" tears down what was published and leaves the record standing; "all"
 // takes the save with it.
 type ResetScope = "city" | "all";
@@ -158,8 +158,8 @@ const POINTER_SIDE: Record<GuideTarget, PointerSide> = {
   lesson: "right",
   editor: "right",
   run: "left",
-  usda: "right",
-  map: "right",
+  usda: "left",
+  map: "left",
   level: "up",
   payout: "left",
   consumables: "left",
@@ -167,7 +167,7 @@ const POINTER_SIDE: Record<GuideTarget, PointerSide> = {
   class: "right",
   saferoom: "right",
   recipes: "right",
-  feed: "left",
+  feed: "right",
 };
 const GUIDE_STEPS: Array<{ target: GuideTarget; title: string; body: string }> = [
   {
@@ -186,14 +186,19 @@ const GUIDE_STEPS: Array<{ target: GuideTarget; title: string; body: string }> =
     body: "usd-core opens your stage and checks it against the list in the room card. Ordinary rooms cost nothing to retry. Boss misses cost within-level XP; at the XP floor, the first miss adds 10 XP debt to that boss instead. Review failed checks before retrying. Your level cannot drop.",
   },
   {
+    target: "feed",
+    title: "Watch the city compose",
+    body: "City Feed sits above the room terminal and renders world/root.usda, the stage every cleared room publishes into. It redraws after each win, so the skyline is the running total of everything you have authored.",
+  },
+  {
     target: "usda",
     title: "Read the USDA you authored",
-    body: "This panel holds the layer itself. BEFORE is the stage the room handed you, AFTER is what your code wrote, and the first changed line is highlighted.",
+    body: "To the right of City Feed, this panel holds the active layer itself. BEFORE is the stage the room handed you, AFTER is what your code wrote, and the first changed line is highlighted.",
   },
   {
     target: "map",
     title: "Move through the floors",
-    body: "Clear the rooms to learn the floor. The boss is the exit exam, and your cleared work stacks up as a real USD city in world/. Cleared floors become playback episodes. The audience rewatches those reruns while you stay on the live broadcast.",
+    body: "The Dungeon Map lives at the bottom of the left rail. Choose a floor, then select an available room from its floor plan. Corridors lead toward the larger boss room, and cleared floors remain available in the archive.",
   },
   {
     target: "level",
@@ -216,6 +221,11 @@ const GUIDE_STEPS: Array<{ target: GuideTarget; title: string; body: string }> =
     body: "Clearing an ordinary room leaves a souvenir here: a Copper Scene Key for your first prim, an Offset Wrench for layer offsets. Each one names an OpenUSD concept you authored. Three unstamped trophies cash in for 1 Opinion Point. The store stamps a trophy rather than taking it, so the backpack stays a transcript of the rooms you cleared.",
   },
   {
+    target: "recipes",
+    title: "Collect the recipes",
+    body: "Use the lower-right tabs to open the Recipe Tree, your Cookbook index. Every room names the OpenUSD terms it uses, and clearing it unlocks those nodes, so the tree records what you have authored.",
+  },
+  {
     target: "class",
     title: "Declare a class at level 2",
     body: "At level 2, declare a class in the Saferoom. Each path grants a starter kit, cheaper restocks, extra Opinion Points on its home floors, and a softer boss fee. Classes never skip rooms or hand you the answer. A full crawl reset is the only way to choose again.",
@@ -223,17 +233,7 @@ const GUIDE_STEPS: Array<{ target: GuideTarget; title: string; body: string }> =
   {
     target: "saferoom",
     title: "Restock in the Saferoom",
-    body: "This is the consumables store. One Opinion Point fills Hint Tokens and USD Checks to capacity. Three unstamped Key Items cash in for 1 OP.",
-  },
-  {
-    target: "recipes",
-    title: "Collect the recipes",
-    body: "The Recipe Tree is your Cookbook index. Every room names the OpenUSD terms it uses, and clearing it unlocks those nodes, so the tree is a record of what you have actually authored.",
-  },
-  {
-    target: "feed",
-    title: "Watch the city compose",
-    body: "City Feed renders world/root.usda, the stage every cleared room publishes into. It redraws after each win, so the skyline is the running total of everything you have authored.",
+    body: "Use the lower-right tabs to open the Saferoom. One Opinion Point fills Hint Tokens and USD Checks to capacity. Three unstamped Key Items cash in for 1 OP.",
   },
 ];
 
@@ -268,14 +268,36 @@ function floorStatus(rooms: Quest[]): "locked" | "live" | "cleared" {
   return "locked";
 }
 
-function episodeCode(floor: number) {
-  return `S01E${String(floor).padStart(2, "0")}`;
+function dungeonLayout(rooms: Quest[]) {
+  const ordinary = rooms.filter((quest) => !quest.kind.endsWith("boss"));
+  const bosses = rooms.filter((quest) => quest.kind.endsWith("boss"));
+  const rowCount = Math.max(1, Math.ceil(ordinary.length / 3));
+  const height = 175 + rowCount * 112;
+  const columns = [150, 500, 850];
+  const placements = new Map<string, { x: number; y: number; boss: boolean }>();
+  const route: Array<{ x: number; y: number }> = [{ x: 38, y: height - 28 }];
+
+  ordinary.forEach((quest, index) => {
+    const row = Math.floor(index / 3);
+    const slot = index % 3;
+    const x = row % 2 === 0 ? columns[slot] : columns[2 - slot];
+    const y = height - 88 - row * 112;
+    placements.set(quest.id, { x, y, boss: false });
+    route.push({ x, y });
+  });
+
+  bosses.forEach((quest, index) => {
+    const x = bosses.length === 1 ? 500 : 360 + index * 280;
+    const y = 58;
+    placements.set(quest.id, { x, y, boss: true });
+    route.push({ x, y });
+  });
+
+  return { height, placements, route };
 }
 
-function episodeTag(kind: "locked" | "live" | "cleared") {
-  if (kind === "live") return "ON AIR";
-  if (kind === "cleared") return "RERUN";
-  return "UNAIRED";
+function episodeCode(floor: number) {
+  return `S01E${String(floor).padStart(2, "0")}`;
 }
 
 function firstChangedLine(before: string, after: string): number {
@@ -920,6 +942,13 @@ function UsdCheckReadout({ usda }: { usda: string }) {
   </div>;
 }
 
+function InfoTooltip({ children, label }: { children: React.ReactNode; label: string }) {
+  return <span className="info-tooltip">
+    <button type="button" aria-label={label}><CircleAlert size={16} /></button>
+    <span role="tooltip">{children}</span>
+  </span>;
+}
+
 export default function App() {
   const [state, setState] = useState<PlayerState>(emptyState);
   const [quests, setQuests] = useState<Quest[]>([]);
@@ -929,7 +958,7 @@ export default function App() {
   const [answers, setAnswers] = useState<Array<number | string>>([]);
   const [activeTab, setActiveTab] = useState<Tab>(() => {
     const tab = storedView().tab;
-    return tab === "skills" || tab === "kiosk" ? tab : "map";
+    return tab === "skills" || tab === "kiosk" ? tab : "feed";
   });
   const [running, setRunning] = useState(false);
   const [assistBusy, setAssistBusy] = useState<"hint" | "usd-check" | null>(null);
@@ -1053,7 +1082,7 @@ export default function App() {
   const enterArena = () => {
     localStorage.setItem(ONBOARDED_KEY, "1");
     setShowLanding(false);
-    setActiveTab("map");
+    setActiveTab("feed");
     if (localStorage.getItem(GUIDED_KEY) !== "1") setGuideStep(0);
   };
 
@@ -1137,7 +1166,7 @@ export default function App() {
     const target = GUIDE_STEPS[guideStep].target;
     // Some steps describe a tab, so the tour opens it for them. The closing step
     // returns to the map, which is where the player actually starts.
-    const tab = ({ map: "map", recipes: "skills", class: "kiosk", saferoom: "kiosk", feed: "map" } as Record<string, Tab>)[target];
+    const tab = ({ feed: "feed", recipes: "skills", class: "kiosk", saferoom: "kiosk" } as Record<string, Tab>)[target];
     if (tab) setActiveTab(tab);
     // The drawer covers the screen, so it has to step aside once the tour
     // moves on to the terminal behind it.
@@ -1435,7 +1464,7 @@ export default function App() {
       setUsdaView({ before_usda: "", after_usda: "" });
       setAssistResult(null);
       setLessonOpen(false);
-      setActiveTab("map");
+      setActiveTab("feed");
       // refresh() is the one path that reloads state, quests, and recipes
       // together and opens the next room, which is what a boot would do.
       await refresh(true);
@@ -1555,13 +1584,18 @@ export default function App() {
           <div className="panel-heading"><span><Swords size={15} /> RUN STATUS</span><em>{state.completed_quests.length}/{quests.length}</em></div>
           <div className="stat-line"><span><Trophy size={15} /> CITY CONTROL</span><b>{quests.length ? Math.round(state.completed_quests.length / quests.length * 100) : 0}%</b></div>
           <div className="meter health"><i style={{ width: `${quests.length ? state.completed_quests.length / quests.length * 100 : 0}%` }} /></div>
-          <div className="stat-line"><span><Zap size={15} /> TO NEXT LEVEL</span><b>{xpIntoLevel} / {xpRequired} XP</b></div>
+          <div className="stat-line">
+            <span>
+              <Zap size={15} /> TO NEXT LEVEL
+              <InfoTooltip label="About level progress">
+                This meter shows progress inside level {state.level}. Each room pays XP once. A boss miss can reduce
+                this progress to zero; at zero, one-time boss debt reduces that boss's eventual payout instead. A miss
+                cannot lower your current level.
+              </InfoTooltip>
+            </span>
+            <b>{xpIntoLevel} / {xpRequired} XP</b>
+          </div>
           <div className="meter xp"><i style={{ width: `${xpProgress}%` }} /></div>
-          <p className="currency-note">
-            This meter shows progress inside level {state.level}. Each room pays XP once. A boss
-            miss can reduce this progress to zero; at zero, one-time boss debt reduces that boss's
-            eventual payout instead. A miss <b>cannot lower your current level</b>.
-          </p>
           <div className="currency"><CircleDollarSign size={18} /><div><small>OPINION POINTS</small><b>{state.opinion_points}</b></div></div>
           <p className="currency-note">
             Earned by clearing boss rooms. {nextPayingQuest
@@ -1651,28 +1685,27 @@ export default function App() {
           })}
           <p className="currency-note"><b>{trophiesUnstamped}</b> unstamped · {trophyOpCost} buy 1 OP</p>
         </section>
-        <ScenePreview revision={revision} panelRef={feedRef} spotlit={spotlight === "feed"} />
-      </aside>
-      <section className="command-center">
-        <nav className="mode-tabs">
-          <button className={activeTab === "map" ? "active" : ""} onClick={() => setActiveTab("map")}><Skull size={16} /> DUNGEON MAP</button>
-          <button className={activeTab === "skills" ? "active" : ""} onClick={() => setActiveTab("skills")}><Sparkles size={16} /> RECIPE TREE</button>
-          <button className={activeTab === "kiosk" ? "active" : ""} onClick={() => setActiveTab("kiosk")}><ShoppingCart size={16} /> SAFEROOM</button>
-        </nav>
-        {activeTab === "map" && <div className={`map panel ${playbackEpisode ? "playback" : ""} ${spotlight === "map" ? "spotlight" : ""}`} ref={mapRef}>
+        <div className={`map rail-map panel ${playbackEpisode ? "playback" : ""} ${spotlight === "map" ? "spotlight" : ""}`} ref={mapRef}>
           <div className="map-title">
             <div>
               <span>{mapScope === "floor"
-                ? `${playbackEpisode ? "PLAYBACK EPISODE" : "LIVE BROADCAST"} · ${episodeCode(focusFloor)} · ${focusCleared}/${focusRooms.length} SCENES`
-                : "SEASON 01 · BOX SET"}</span>
-              <h1>{mapScope === "floor" ? focusRooms[0]?.floor_name || "RECAPTURE PROTOCOL" : "SEASON GUIDE"}</h1>
-              <p>{playbackEpisode
-                ? <>Previously on the Composition. The audience is rewatching this episode while the live crawl waits on floor {String(liveFloor).padStart(2, "0")}.{nextQuest ? <> Resume with <b>{nextQuest.title}</b>.</> : null}</>
-                : nextQuest
-                  ? <>This episode is still taping. Clear the rooms, face the boss, and the System files another syndication package. Next scene: <b>{nextQuest.title}</b>.</>
-                  : "Season finale locked. Every episode is in the can."}</p>
-              <div className="episode-guide" aria-label="Season 01 episode guide">
-                <button className="episode-step" disabled={previousFloor === undefined} onClick={() => previousFloor !== undefined && openFloor(previousFloor)} aria-label="Previous episode">
+                ? `${playbackEpisode ? "ARCHIVED FLOOR" : "CURRENT FLOOR"} · ${focusCleared}/${focusRooms.length} ROOMS CLEARED`
+                : "FLOOR DIRECTORY"}</span>
+              <div className="panel-title-row">
+                <h1>{mapScope === "floor" ? `FLOOR ${String(focusFloor).padStart(2, "0")} — ${focusRooms[0]?.floor_name || "RECAPTURE PROTOCOL"}` : "ALL FLOORS"}</h1>
+                <InfoTooltip label="About this dungeon floor">
+                  {playbackEpisode
+                    ? <>This floor is complete. Review any cleared room, or return to Floor {String(liveFloor).padStart(2, "0")} to continue.</>
+                    : nextQuest
+                      ? <>Select an available room to continue. Next objective: <b>{nextQuest.title}</b>.</>
+                      : "Every floor has been restored."}
+                </InfoTooltip>
+              </div>
+              {mapScope === "floor" && <div className="floor-progress" aria-label={`${focusCleared} of ${focusRooms.length} rooms cleared`}>
+                <i style={{ width: `${focusRooms.length ? focusCleared / focusRooms.length * 100 : 0}%` }} />
+              </div>}
+              <div className="floor-switcher" aria-label="Dungeon floors">
+                <button className="floor-step" disabled={previousFloor === undefined} onClick={() => previousFloor !== undefined && openFloor(previousFloor)} aria-label="Previous floor">
                   <ChevronLeft size={14} />
                 </button>
                 {floors.map(([floor, rooms]) => {
@@ -1680,55 +1713,142 @@ export default function App() {
                   const selected = mapScope === "floor" && floor === focusFloor;
                   return <button
                     key={floor}
-                    className={`episode-chip ${kind} ${selected ? "active" : ""}`}
+                    className={`floor-chip ${kind} ${selected ? "active" : ""}`}
                     disabled={kind === "locked"}
                     onClick={() => openFloor(floor)}
-                    title={`${episodeTag(kind)} · ${episodeCode(floor)} · ${rooms[0]?.floor_name}`}
+                    title={`Floor ${String(floor).padStart(2, "0")} · ${rooms[0]?.floor_name}`}
                   >
-                    <em>EP</em>
-                    {String(floor).padStart(2, "0")}
-                    <small>{episodeTag(kind)}</small>
+                    <em>F</em>{String(floor).padStart(2, "0")}
                   </button>;
                 })}
-                <button className="episode-step" disabled={nextArchiveFloor === undefined} onClick={() => nextArchiveFloor !== undefined && openFloor(nextArchiveFloor)} aria-label="Next episode">
+                <button className="floor-step" disabled={nextArchiveFloor === undefined} onClick={() => nextArchiveFloor !== undefined && openFloor(nextArchiveFloor)} aria-label="Next floor">
                   <ChevronRight size={14} />
                 </button>
-                <button className={`episode-chip all ${mapScope === "all" ? "active" : ""}`} onClick={() => openFloor("all")}>BOX SET</button>
+                <button className={`floor-chip all ${mapScope === "all" ? "active" : ""}`} onClick={() => openFloor("all")}>ALL</button>
               </div>
             </div>
-            <div className="completion"><b>{state.completed_quests.length}/{quests.length}</b><small>SCENES FILED</small></div>
           </div>
           {playbackEpisode && <div className="playback-bumper">
-            <div className="bumper-bug"><i className="rec-dot" /> RERUN</div>
-            <Clapperboard size={22} />
+            <div className="bumper-bug">ARCHIVE</div>
             <div>
-              <span>PREVIOUSLY ON THE COMPOSITION</span>
-              <strong>{episodeCode(focusFloor)} · {focusRooms[0]?.floor_name}</strong>
-              <p>
-                SYSTEM: This episode already aired. The crowd demanded a recap package, so here we are, watching you watch yourself.
-                Open a scene to reread the lesson and the USDA on file. Nothing here advances the live crawl.
-              </p>
+              <strong>FLOOR {String(focusFloor).padStart(2, "0")} · {focusRooms[0]?.floor_name}</strong>
+              <p>Reviewing this floor does not change your current objective.</p>
             </div>
-            <button className="resume-live" onClick={resumeLiveBroadcast}>RESUME LIVE BROADCAST</button>
+            <button className="resume-live" onClick={resumeLiveBroadcast}>RETURN TO CURRENT FLOOR</button>
           </div>}
-          <div className="floor-list">{visibleFloors.map(([floor, rooms]) => <div className="floor" key={floor}>
-            <div className="floor-label"><span>{episodeCode(floor)} · {floorStatus(rooms) === "cleared" ? "RERUN" : floorStatus(rooms) === "live" ? "ON AIR" : "UNAIRED"}</span><strong>{rooms[0]?.floor_name}</strong></div>
-            <div className="room-track">{rooms.map((quest, index) => {
-              const roomStatus = questStatus(quest);
-              return <div className="room-wrap" key={quest.id}>
-                {index > 0 && <span className={`connector ${roomStatus === "locked" ? "locked" : ""}`} />}
-                <button className={`room ${roomStatus} ${activeQuest?.id === quest.id ? "selected" : ""}`} disabled={roomStatus === "locked"} onClick={() => chooseQuest(quest)}>
-                  {roomStatus === "locked" ? <LockKeyhole /> : roomStatus === "boss" ? <Skull /> : roomStatus === "complete" ? <Trophy /> : <Code2 />}
-                  <span>{quest.kind.endsWith("boss") ? "BOSS" : `0${index + 1}`}</span>
-                </button><small>{quest.title}</small>
-                {quest.opinion_points > 0 && <b className={`room-pay ${roomStatus === "complete" ? "spent" : ""}`}>{roomStatus === "complete" ? `PAID ${quest.opinion_points} OP` : `+${quest.opinion_points} OP`}</b>}
-              </div>;
-            })}</div>
-          </div>)}</div>
-          <div className="legend"><span><i className="complete" /> AIRED</span><span><i className="available" /> TAPING</span><span><i className="boss" /> FINALE</span><span><i className="locked" /> UNAIRED</span><span>RERUN PLAYS BACK A CLEARED EPISODE FOR THE AUDIENCE</span></div>
-        </div>}
+          <div className="dungeon-floor-list">{visibleFloors.map(([floor, rooms]) => {
+            const layout = dungeonLayout(rooms);
+            const routeRooms = [
+              ...rooms.filter((quest) => !quest.kind.endsWith("boss")),
+              ...rooms.filter((quest) => quest.kind.endsWith("boss")),
+            ];
+            return <section className="dungeon-floor" key={floor}>
+              {mapScope === "all" && <header>
+                <div><small>FLOOR {String(floor).padStart(2, "0")}</small><strong>{rooms[0]?.floor_name}</strong></div>
+                <span>{rooms.filter((quest) => quest.completed).length}/{rooms.length}</span>
+              </header>}
+              <div className="dungeon-canvas" style={{ height: layout.height }}>
+                <svg viewBox={`0 0 1000 ${layout.height}`} preserveAspectRatio="none" aria-hidden="true">
+                  {layout.route.slice(1).map((point, index) => {
+                    const previous = layout.route[index];
+                    const routeStatus = questStatus(routeRooms[index]);
+                    return <path
+                      className={routeStatus === "complete" ? "cleared" : routeStatus === "available" || routeStatus === "boss" ? "current" : "locked"}
+                      d={`M ${previous.x} ${previous.y} H ${point.x} V ${point.y}`}
+                      key={routeRooms[index].id}
+                    />;
+                  })}
+                </svg>
+                <span className="dungeon-entrance">ENTRANCE</span>
+                {rooms.map((quest, index) => {
+                  const placement = layout.placements.get(quest.id)!;
+                  const roomStatus = questStatus(quest);
+                  const statusLabel = roomStatus === "complete" ? "CLEARED" : roomStatus === "available" ? "AVAILABLE" : roomStatus === "boss" ? "BOSS" : "LOCKED";
+                  return <button
+                    className={`dungeon-room ${roomStatus} ${placement.boss ? "boss-room" : ""} ${activeQuest?.id === quest.id ? "selected" : ""}`}
+                    style={{
+                      left: `${(placement.x - (placement.boss ? 250 : 135)) / 10}%`,
+                      top: placement.y - (placement.boss ? 40 : 36),
+                    }}
+                    disabled={roomStatus === "locked"}
+                    onClick={() => chooseQuest(quest)}
+                    aria-label={`${quest.title}, ${statusLabel}`}
+                    key={quest.id}
+                  >
+                    <span>{placement.boss ? "BOSS HALL" : `ROOM ${String(index + 1).padStart(2, "0")}`}</span>
+                    <strong>{quest.title}</strong>
+                  </button>;
+                })}
+              </div>
+              {activeQuest?.floor === floor && <div className="dungeon-selection">
+                <div>
+                  <small>SELECTED ROOM</small>
+                  <strong>{activeQuest.title}</strong>
+                </div>
+                <span>{activeQuest.completed ? "CLEARED" : activeQuest.kind.endsWith("boss") ? "BOSS" : "AVAILABLE"} · +{activeQuest.boss_clear_xp ?? activeQuest.xp} XP{activeQuest.opinion_points ? ` · +${activeQuest.opinion_points} OP` : ""}</span>
+              </div>}
+            </section>;
+          })}</div>
+          <div className="map-legend"><span><i className="complete" /> CLEARED</span><span><i className="available" /> AVAILABLE</span><span><i className="boss" /> BOSS</span><span><i className="locked" /> LOCKED</span></div>
+        </div>
+      </aside>
+      <section className="command-center">
+        <div className="workspace-inspectors">
+          {activeTab === "feed" && <ScenePreview revision={revision} panelRef={feedRef} spotlit={spotlight === "feed"} />}
+          <section className={`usda-panel panel ${reviewPending ? "review-required" : ""} ${spotlight === "usda" ? "spotlight" : ""}`} ref={usdaRef}>
+            <div className="usda-heading">
+              <span><Code2 size={15} /> {playbackScene ? "FILED USDA · ORIGINAL AIR" : "AUTHORED USDA"}</span>
+              <div className="usda-tabs">
+                <button className={usdaMode === "before" ? "active" : ""} onClick={() => setUsdaMode("before")}>BEFORE</button>
+                <button className={usdaMode === "after" ? "active" : ""} onClick={() => setUsdaMode("after")} disabled={!usdaView.after_usda}>AFTER</button>
+              </div>
+            </div>
+            {reviewPending && <div className="review-callout">
+              <ArrowRight size={18} />
+              <div><strong>ROOM CLEARED // REVIEW THE UPDATE</strong><small>The green USDA is the layer your Python authored.</small></div>
+            </div>}
+            <div className={`usda-editor ${usdaMode}`}>
+              {visibleUsda ? <Editor
+                key={`${activeQuest?.id}-${usdaMode}-${reviewPending ? "review" : "idle"}`}
+                height="100%"
+                language="plaintext"
+                theme="vs-dark"
+                value={visibleUsda}
+                onMount={(editor) => {
+                  if (usdaMode !== "after" || !usdaView.before_usda) return;
+                  const line = firstChangedLine(usdaView.before_usda, usdaView.after_usda);
+                  editor.revealLineInCenter(line);
+                  editor.deltaDecorations([], [{
+                    range: { startLineNumber: line, startColumn: 1, endLineNumber: line, endColumn: 1 },
+                    options: { isWholeLine: true, className: "usda-changed-line", glyphMarginClassName: "usda-changed-glyph" },
+                  }]);
+                }}
+                options={{ readOnly: true, minimap: { enabled: false }, fontSize: 11, lineHeight: 18, wordWrap: "on", scrollBeyondLastLine: false, padding: { top: 12 } }}
+              /> : <div className="usda-empty">
+                <Code2 size={24} />
+                <strong>{activeQuest?.language === "none" ? "NO LAYER FOR THIS BRIEFING" : "RUN THE ROOM TO AUTHOR USDA"}</strong>
+                <p>{activeQuest?.language === "none" ? "This room checks an answer, not a stage." : "The BEFORE tab shows the incoming layer. Your authored result appears here after a run."}</p>
+              </div>}
+            </div>
+            {reviewPending && <button className="continue-button" onClick={continueAfterReview}>
+              I SEE THE NEW OPINIONS — CONTINUE <ArrowRight size={15} />
+            </button>}
+          </section>
+        </div>
+        <nav className="mode-tabs">
+          <button className={activeTab === "feed" ? "active" : ""} onClick={() => setActiveTab("feed")}><Boxes size={16} /> CITY FEED</button>
+          <button className={activeTab === "skills" ? "active" : ""} onClick={() => setActiveTab("skills")}><Sparkles size={16} /> RECIPE TREE</button>
+          <button className={activeTab === "kiosk" ? "active" : ""} onClick={() => setActiveTab("kiosk")}><ShoppingCart size={16} /> SAFEROOM</button>
+        </nav>
         {activeTab === "skills" && <div className={`skill-tree panel ${spotlight === "recipes" ? "spotlight" : ""}`} ref={recipesRef}>
-          <div className="section-hero"><span>THE COOKBOOK INDEX</span><h1>RECIPES OF POWER</h1><p>Glossary nodes from the Cookbook graph. Clear rooms that name them. SYSTEM: collecting terms fills the shelf; composing them builds the city.</p><small className="recipe-count">{masteredRecipes}/{recipes.length} MASTERED</small></div>
+          <div className="section-hero">
+            <span>THE COOKBOOK INDEX</span>
+            <div className="panel-title-row">
+              <h1>RECIPES OF POWER</h1>
+              <InfoTooltip label="About the Recipe Tree">Glossary nodes from the Cookbook graph. Clear rooms that name them. Collecting terms fills the shelf; composing them builds the city.</InfoTooltip>
+            </div>
+            <small className="recipe-count">{masteredRecipes}/{recipes.length} MASTERED</small>
+          </div>
           {recipeGroups.map(([category, nodes]) => <section className="recipe-cluster" key={category}>
             <header><span>{category.replaceAll("-", " ")}</span><b>{nodes.filter((node) => node.unlocked).length}/{nodes.length}</b></header>
             <div className="skill-grid">{nodes.map((recipe, index) => <article className={`skill-node ${recipe.unlocked ? "unlocked" : ""} ${recipe.affinity ? "affinity" : ""}`} key={recipe.id} style={{ "--i": index } as React.CSSProperties}>
@@ -1737,7 +1857,14 @@ export default function App() {
           </section>)}
         </div>}
         {activeTab === "kiosk" && <div className={`kiosk panel ${spotlight === "saferoom" ? "spotlight" : ""}`} ref={saferoomRef}>
-          <div className="section-hero"><span>CONSUMABLES STORE // OPINIONS FINAL</span><h1>RESTOCK TO SURVIVE</h1><p>SYSTEM: One Opinion Point fills Hint Tokens and USD Checks to capacity. Opinion Points come from clearing boss rooms. {nextPayingQuest ? `Your next payout is ${nextPayingQuest.title}, worth ${nextPayingQuest.opinion_points}.` : "You have cleared every paying room on this route."} Three unstamped Key Items cash in for 1 OP. Restocks land in the left rail.</p><small className="recipe-count">{state.opinion_points} OP BANKED</small></div>
+          <div className="section-hero">
+            <span>CONSUMABLES STORE // OPINIONS FINAL</span>
+            <div className="panel-title-row">
+              <h1>RESTOCK TO SURVIVE</h1>
+              <InfoTooltip label="About the Saferoom">One Opinion Point fills Hint Tokens and USD Checks to capacity. Opinion Points come from clearing boss rooms. {nextPayingQuest ? `Your next payout is ${nextPayingQuest.title}, worth ${nextPayingQuest.opinion_points}.` : "You have cleared every paying room on this route."} Three unstamped Key Items cash in for 1 OP. Restocks land in the left rail.</InfoTooltip>
+            </div>
+            <small className="recipe-count">{state.opinion_points} OP BANKED</small>
+          </div>
           <div className={`class-choice ${spotlight === "class" ? "spotlight" : ""}`} ref={classRef}>
             <div className="class-explainer">
               <span>CLASS PATH // AVAILABLE AT LEVEL 2</span>
@@ -1922,45 +2049,6 @@ export default function App() {
           </div>}
           {/* A briefing room shows these on its slate instead, where the terminal would be. */}
           {!briefingRoom && questionFields}
-        </section>
-        <section className={`usda-panel panel ${reviewPending ? "review-required" : ""} ${spotlight === "usda" ? "spotlight" : ""}`} ref={usdaRef}>
-          <div className="usda-heading">
-            <span><Code2 size={15} /> {playbackScene ? "FILED USDA · ORIGINAL AIR" : "AUTHORED USDA"}</span>
-            <div className="usda-tabs">
-              <button className={usdaMode === "before" ? "active" : ""} onClick={() => setUsdaMode("before")}>BEFORE</button>
-              <button className={usdaMode === "after" ? "active" : ""} onClick={() => setUsdaMode("after")} disabled={!usdaView.after_usda}>AFTER</button>
-            </div>
-          </div>
-          {reviewPending && <div className="review-callout">
-            <ArrowRight size={18} />
-            <div><strong>ROOM CLEARED // REVIEW THE UPDATE</strong><small>The green USDA is the layer your Python authored.</small></div>
-          </div>}
-          <div className={`usda-editor ${usdaMode}`}>
-            {visibleUsda ? <Editor
-              key={`${activeQuest?.id}-${usdaMode}-${reviewPending ? "review" : "idle"}`}
-              height="100%"
-              language="plaintext"
-              theme="vs-dark"
-              value={visibleUsda}
-              onMount={(editor) => {
-                if (usdaMode !== "after" || !usdaView.before_usda) return;
-                const line = firstChangedLine(usdaView.before_usda, usdaView.after_usda);
-                editor.revealLineInCenter(line);
-                editor.deltaDecorations([], [{
-                  range: { startLineNumber: line, startColumn: 1, endLineNumber: line, endColumn: 1 },
-                  options: { isWholeLine: true, className: "usda-changed-line", glyphMarginClassName: "usda-changed-glyph" },
-                }]);
-              }}
-              options={{ readOnly: true, minimap: { enabled: false }, fontSize: 11, lineHeight: 18, wordWrap: "on", scrollBeyondLastLine: false, padding: { top: 12 } }}
-            /> : <div className="usda-empty">
-              <Code2 size={24} />
-              <strong>{activeQuest?.language === "none" ? "NO LAYER FOR THIS BRIEFING" : "RUN THE ROOM TO AUTHOR USDA"}</strong>
-              <p>{activeQuest?.language === "none" ? "This room checks an answer, not a stage." : "The BEFORE tab shows the incoming layer. Your authored result appears here after a run."}</p>
-            </div>}
-          </div>
-          {reviewPending && <button className="continue-button" onClick={continueAfterReview}>
-            I SEE THE NEW OPINIONS — CONTINUE <ArrowRight size={15} />
-          </button>}
         </section>
       </aside>
     </main>
