@@ -56,7 +56,7 @@ button:focus-visible { outline: 2px solid var(--cream); outline-offset: 3px; }
 .player-strip small, .player-strip strong { display:block; }
 .player-strip small { font-size:7px; color:var(--muted); letter-spacing:1.8px; }
 .player-strip strong { font-size:11px; }
-.level { margin-left:8px; font-size:9px; color:var(--yellow); border:1px solid #62501d; padding:5px 7px; }
+.level { margin-left:8px; display:inline-flex; align-items:center; gap:5px; font-size:9px; color:var(--yellow); border:1px solid #62501d; padding:5px 7px; }
 
 main { display:grid; grid-template-columns:minmax(320px,1fr) minmax(480px,1.5fr) minmax(320px,1fr); grid-template-rows:41px minmax(240px,34vh) minmax(380px,auto); gap:12px; padding:12px; min-height:calc(100vh - 74px); }
 .left-rail, .editor-rail { display:flex; flex-direction:column; gap:12px; min-width:0; }
@@ -178,7 +178,15 @@ main { display:grid; grid-template-columns:minmax(320px,1fr) minmax(480px,1.5fr)
 .info-tooltip>button:hover,.info-tooltip>button:focus-visible { border-color:var(--yellow); background:#28221a; outline:none; }
 .info-tooltip>[role="tooltip"] { position:absolute; right:0; top:calc(100% + 8px); z-index:30; display:block; width:min(280px,75vw); padding:11px 12px; border:1px solid #5c4a20; background:#17151a; box-shadow:5px 5px 0 rgba(0,0,0,.3); color:#d8d0dc; font-size:10px; font-weight:400; line-height:1.55; letter-spacing:0; text-align:left; text-transform:none; visibility:hidden; opacity:0; pointer-events:none; }
 .info-tooltip:hover>[role="tooltip"],.info-tooltip:focus-within>[role="tooltip"] { visibility:visible; opacity:1; }
-.stat-line .info-tooltip>[role="tooltip"] { right:auto; left:-100px; transform:none; }
+.left-rail .info-tooltip>[role="tooltip"],.stat-line .info-tooltip>[role="tooltip"] { right:auto; left:-100px; transform:none; }
+.panel-heading .info-tooltip>button,.currency .info-tooltip>button,.level .info-tooltip>button,
+.usda-heading .info-tooltip>button,.editor-toolbar .info-tooltip>button,
+.class-explainer .info-tooltip>button,.run-help .info-tooltip>button,
+.cookbook-row .info-tooltip>button { width:20px; height:20px; }
+.class-explainer>span { display:flex; align-items:center; gap:7px; }
+.run-help { display:flex; justify-content:flex-end; margin-bottom:5px; }
+.cookbook-row { display:flex; align-items:center; gap:7px; }
+.cookbook-row .info-tooltip { margin-top:10px; }
 .completion { width:82px; height:82px; flex:none; border:1px solid #5b4b1b; background:#211c10; display:grid; place-content:center; text-align:center; transform:rotate(2deg); }
 .completion b { font:900 30px "Barlow Condensed"; color:var(--yellow); }.completion small{font-size:6px;letter-spacing:1px}
 .floor-list { padding:5px 30px 10px; }
@@ -279,8 +287,8 @@ main { display:grid; grid-template-columns:minmax(320px,1fr) minmax(480px,1.5fr)
 
 /* The System's nameplate. Same treatment everywhere it speaks so the host is
    never mistaken for the instructional copy. */
-.system-line{display:grid;grid-template-columns:32px 1fr;gap:11px;align-items:start}
-.system-avatar{display:grid;place-items:center;width:32px;height:32px;background:var(--purple);color:#fff;font:800 10px "IBM Plex Mono";letter-spacing:.5px;clip-path:polygon(14% 0,100% 0,86% 100%,0 100%)}
+.system-line{display:grid;grid-template-columns:48px 1fr;gap:12px;align-items:start}
+.system-avatar{display:block;width:48px;height:48px;object-fit:contain;image-rendering:pixelated;filter:drop-shadow(0 0 8px rgba(159,84,255,.35))}
 .system-tag{display:block;color:var(--purple);font-size:8px;font-weight:700;letter-spacing:2.2px}
 .system-line p{max-width:60ch;margin:6px 0 0;color:#efe7f5;font:italic 13.5px/1.7 "Barlow Condensed";letter-spacing:.3px}
 .system-line.intro{padding:16px;border:1px solid #4b3a5e;border-left:3px solid var(--purple);background:linear-gradient(140deg,rgba(159,84,255,.16),rgba(23,21,26,.95) 65%)}
@@ -473,7 +481,10 @@ main { display:grid; grid-template-columns:minmax(320px,1fr) minmax(480px,1.5fr)
 .landing-cast p { margin:8px 0 0; font-size:12.5px; line-height:1.6; color:#a9a1b4; }
 
 .landing-transmission { margin:34px 0 0; padding:22px 24px; text-align:left; background:linear-gradient(150deg,rgba(159,84,255,.13),rgba(23,21,26,.96) 60%); border:1px solid #4b3a5e; border-left:3px solid var(--purple); }
-.transmission-tag { color:var(--purple); font-size:9.5px; font-weight:700; letter-spacing:2.4px; margin-bottom:12px; }
+.transmission-host { display:flex; align-items:center; gap:12px; margin-bottom:12px; }
+.transmission-host img { width:58px; height:58px; object-fit:contain; image-rendering:pixelated; filter:drop-shadow(0 0 10px rgba(159,84,255,.35)); }
+.transmission-host>div>span { color:var(--yellow); font-size:10px; font-weight:700; letter-spacing:1.2px; }
+.transmission-tag { margin-top:3px; color:var(--purple); font-size:9.5px; font-weight:700; letter-spacing:1.2px; }
 .landing-transmission p { margin:0 0 11px; font-size:15px; line-height:1.7; color:#e3ddea; }
 .landing-transmission p:last-child { margin-bottom:0; }
 .landing-transmission b { color:var(--yellow); }
@@ -680,7 +691,7 @@ main { display:grid; grid-template-columns:minmax(320px,1fr) minmax(480px,1.5fr)
   .help-button span{display:none}
   .topbar{padding:0 11px}.player-strip>div{display:none}.left-rail{display:flex}.map-title{padding:22px 18px}.completion{display:none}.floor-list{padding:3px 16px}.room{width:45px;height:45px;margin:16px auto 18px}.room>span{bottom:7px;right:7px}.room-track{gap:8px}.room-wrap{flex-basis:86px;width:86px}.room-wrap small{font-size:11px;margin-top:12px}.connector{display:none}.legend{padding:10px 16px;gap:10px;flex-wrap:wrap}.mode-tabs button{padding:0 10px;font-size:7px}.skill-grid,.shop-grid{grid-template-columns:1fr 1fr;padding:13px}.skill-node{min-height:175px}.system-toast{right:16px;top:76px}
   .lesson-drawer>header{padding:10px 12px}.lesson-drawer>header strong{font-size:19px}.lesson-actions a{display:none}
-  .lesson-content{padding:16px 14px 20px}.system-line{grid-template-columns:26px 1fr;gap:8px}.system-avatar{width:26px;height:26px;font-size:8px}.system-line.intro p{font-size:15px}.lesson-beat h3{font-size:19px}
+  .lesson-content{padding:16px 14px 20px}.system-line{grid-template-columns:40px 1fr;gap:9px}.system-avatar{width:40px;height:40px}.system-line.intro p{font-size:15px}.lesson-beat h3{font-size:19px}
 }
 
 /* Keep dense portal chrome readable without increasing panel dimensions. */

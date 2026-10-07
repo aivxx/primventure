@@ -9,6 +9,8 @@ import {
 } from "lucide-react";
 import * as THREE from "three";
 
+const systemSprite = new URL("./assets/the-system.svg", import.meta.url).href;
+
 type Language = "python" | "usda" | "none";
 type Question = { prompt: string; choices?: string[]; answer?: number; answer_key?: string };
 type LessonBeat = {
@@ -88,7 +90,7 @@ const CLASS_PATHS: ClassPath[] = [
       "City bosses +1 OP, floor bosses +2 OP on home floors.",
       "Home-floor boss misses charge half XP.",
       "One free USD Check after a fail per home floor.",
-      "Affinity recipes pay +1 OP, up to 5 for the crawl.",
+      "Rooms tied to class-affinity concepts pay +1 OP, up to 5 for the crawl.",
     ],
   },
   {
@@ -102,7 +104,7 @@ const CLASS_PATHS: ClassPath[] = [
       "City bosses +1 OP, floor bosses +2 OP on home floors.",
       "Home-floor boss misses charge half XP.",
       "One free Hint per home floor, even at zero stock.",
-      "Affinity recipes pay +1 OP, up to 5 for the crawl.",
+      "Rooms tied to class-affinity concepts pay +1 OP, up to 5 for the crawl.",
     ],
   },
   {
@@ -116,7 +118,7 @@ const CLASS_PATHS: ClassPath[] = [
       "Neighborhood bosses +1 OP, city bosses +2 OP on Customs Terminal.",
       "Home-floor boss misses charge half XP.",
       "The first Customs Terminal boss miss costs 0 XP.",
-      "Affinity recipes pay +1 OP, up to 5 for the crawl.",
+      "Rooms tied to class-affinity concepts pay +1 OP, up to 5 for the crawl.",
     ],
   },
 ];
@@ -222,8 +224,8 @@ const GUIDE_STEPS: Array<{ target: GuideTarget; title: string; body: string }> =
   },
   {
     target: "recipes",
-    title: "Collect the recipes",
-    body: "Use the lower-right tabs to open the Recipe Tree, your Cookbook index. Every room names the OpenUSD terms it uses, and clearing it unlocks those nodes, so the tree records what you have authored.",
+    title: "Review OpenUSD concepts",
+    body: "OpenUSD Concepts is your learning record. Every room names the terms and techniques it uses, and clearing that room marks those concepts as learned.",
   },
   {
     target: "class",
@@ -319,7 +321,7 @@ function cookbookUrl(path: string) {
 // same nameplate so beats never read as unattributed narration.
 function SystemLine({ text, tone }: { text: string; tone: "intro" | "aside" | "apply" }) {
   return <div className={`system-line ${tone}`}>
-    <span className="system-avatar">SYS</span>
+    <img className="system-avatar" src={systemSprite} alt="The System, a tiny game-show host" />
     <div>
       <span className="system-tag">THE SYSTEM</span>
       <p>{text}</p>
@@ -473,7 +475,13 @@ function Landing({ onStart, hasProgress, nextQuest, quests, floors }: {
       </div>
 
       <section className="landing-transmission">
-        <div className="transmission-tag">SYSTEM BROADCAST · ORIENTATION · YOU CANNOT SKIP THIS</div>
+        <div className="transmission-host">
+          <img src={systemSprite} alt="The System, your host" />
+          <div>
+            <span>THE SYSTEM</span>
+            <div className="transmission-tag">SYSTEM BROADCAST · ORIENTATION · YOU CANNOT SKIP THIS</div>
+          </div>
+        </div>
         <p>
           Welcome, Contestant. Congratulations on the courage it took to press a button. Something broke the world
           where 3D gets made — film, games, simulation, all of it. Was it me? That is under review. What is left is a
@@ -929,7 +937,7 @@ function ScenePreview({ revision, panelRef, spotlit }: {
   }, [revision]);
 
   return <section className={`preview-card panel ${spotlit ? "spotlight" : ""}`} ref={panelRef}>
-    <div className="panel-heading"><span><Boxes size={15} /> CITY FEED</span><em>{status}</em></div>
+    <div className="panel-heading"><span><Boxes size={15} /> CITY FEED <GuideInfoTooltip target="feed" /></span><em>{status}</em></div>
     <div className="preview-viewport" ref={host}><div className="view-corners" /><span className="axis">Y ↑<br />X ↗</span></div>
     <div className="preview-meta"><span>STAGE: world/root.usda</span><span>PLAN VIEW</span><span>UP: Y</span></div>
   </section>;
@@ -947,6 +955,12 @@ function InfoTooltip({ children, label }: { children: React.ReactNode; label: st
     <button type="button" aria-label={label}><CircleAlert size={16} /></button>
     <span role="tooltip">{children}</span>
   </span>;
+}
+
+function GuideInfoTooltip({ target }: { target: GuideTarget }) {
+  const step = GUIDE_STEPS.find((item) => item.target === target);
+  if (!step) return null;
+  return <InfoTooltip label={`About ${step.title}`}>{step.body}</InfoTooltip>;
 }
 
 export default function App() {
@@ -1575,7 +1589,7 @@ export default function App() {
       <div className="player-strip">
         <button className="help-button" onClick={() => setGuideStep(0)}><HelpCircle size={14} /> HOW TO PLAY</button>
         <div className="avatar">{state.contestant.slice(-2)}</div><div><small>{state.title}</small><strong>{state.contestant}</strong></div>
-        <span className={`level ${spotlight === "level" ? "spotlight" : ""}`} ref={levelRef}>LVL {state.level}</span>
+        <span className={`level ${spotlight === "level" ? "spotlight" : ""}`} ref={levelRef}>LVL {state.level} <GuideInfoTooltip target="level" /></span>
       </div>
     </header>
     <main>
@@ -1588,15 +1602,16 @@ export default function App() {
             <span>
               <Zap size={15} /> TO NEXT LEVEL
               <InfoTooltip label="About level progress">
-                This meter shows progress inside level {state.level}. Each room pays XP once. A boss miss can reduce
-                this progress to zero; at zero, one-time boss debt reduces that boss's eventual payout instead. A miss
-                cannot lower your current level.
+                This meter shows your XP progress toward the next level. Failing a boss removes XP from this meter
+                until it reaches 0. If you fail that boss again while the meter is at 0, the first additional failure
+                creates 10 XP of boss debt. That debt is deducted from the boss's XP reward when you clear it;
+                later failures do not add more debt. Your current level never decreases.
               </InfoTooltip>
             </span>
             <b>{xpIntoLevel} / {xpRequired} XP</b>
           </div>
           <div className="meter xp"><i style={{ width: `${xpProgress}%` }} /></div>
-          <div className="currency"><CircleDollarSign size={18} /><div><small>OPINION POINTS</small><b>{state.opinion_points}</b></div></div>
+          <div className="currency"><CircleDollarSign size={18} /><div><small>OPINION POINTS</small><b>{state.opinion_points}</b></div><GuideInfoTooltip target="payout" /></div>
           <p className="currency-note">
             Earned by clearing boss rooms. {nextPayingQuest
               ? <>Next payout: <b>{nextPayingQuest.title}</b> (+{nextPayingQuest.opinion_points} OP).</>
@@ -1606,7 +1621,7 @@ export default function App() {
           {state.specialization && state.class_benefits?.home_names?.length ? <p className="currency-note">Home floors: {state.class_benefits.home_names.join(", ")}. Perks never skip a room or reveal an answer.</p> : null}
         </section>
         <section className={`inventory panel ${spotlight === "consumables" ? "spotlight" : ""}`} ref={consumablesRef}>
-          <div className="panel-heading"><span><FlaskConical size={15} /> CONSUMABLES</span><button className="restock-link" onClick={() => setActiveTab("kiosk")}>SAFEROOM</button></div>
+          <div className="panel-heading"><span><FlaskConical size={15} /> CONSUMABLES <GuideInfoTooltip target="consumables" /></span><button className="restock-link" onClick={() => setActiveTab("kiosk")}>SAFEROOM</button></div>
           {pendingSpend === "hint_tokens"
             ? <div className={`inventory-item confirming ${activeQuest?.free_hint ? "class-free" : ""}`}>
                 <span className="item-icon rare"><Lightbulb size={17} /></span>
@@ -1668,7 +1683,7 @@ export default function App() {
         </section>
         <section className={`inventory panel key-items ${spotlight === "keyitems" ? "spotlight" : ""}`} ref={keyItemsRef}>
           <div className="panel-heading">
-            <span><Backpack size={15} /> KEY ITEMS</span>
+            <span><Backpack size={15} /> KEY ITEMS <GuideInfoTooltip target="keyitems" /></span>
             {trophiesUnstamped >= trophyOpCost
               ? <button className="restock-link" onClick={() => setActiveTab("kiosk")}>CASH IN</button>
               : <em>{keyItems.length}</em>}
@@ -1797,7 +1812,7 @@ export default function App() {
           {activeTab === "feed" && <ScenePreview revision={revision} panelRef={feedRef} spotlit={spotlight === "feed"} />}
           <section className={`usda-panel panel ${reviewPending ? "review-required" : ""} ${spotlight === "usda" ? "spotlight" : ""}`} ref={usdaRef}>
             <div className="usda-heading">
-              <span><Code2 size={15} /> {playbackScene ? "FILED USDA · ORIGINAL AIR" : "AUTHORED USDA"}</span>
+              <span><Code2 size={15} /> {playbackScene ? "FILED USDA · ORIGINAL AIR" : "AUTHORED USDA"} <GuideInfoTooltip target="usda" /></span>
               <div className="usda-tabs">
                 <button className={usdaMode === "before" ? "active" : ""} onClick={() => setUsdaMode("before")}>BEFORE</button>
                 <button className={usdaMode === "after" ? "active" : ""} onClick={() => setUsdaMode("after")} disabled={!usdaView.after_usda}>AFTER</button>
@@ -1837,22 +1852,22 @@ export default function App() {
         </div>
         <nav className="mode-tabs">
           <button className={activeTab === "feed" ? "active" : ""} onClick={() => setActiveTab("feed")}><Boxes size={16} /> CITY FEED</button>
-          <button className={activeTab === "skills" ? "active" : ""} onClick={() => setActiveTab("skills")}><Sparkles size={16} /> RECIPE TREE</button>
+          <button className={activeTab === "skills" ? "active" : ""} onClick={() => setActiveTab("skills")}><Sparkles size={16} /> OPENUSD CONCEPTS</button>
           <button className={activeTab === "kiosk" ? "active" : ""} onClick={() => setActiveTab("kiosk")}><ShoppingCart size={16} /> SAFEROOM</button>
         </nav>
         {activeTab === "skills" && <div className={`skill-tree panel ${spotlight === "recipes" ? "spotlight" : ""}`} ref={recipesRef}>
           <div className="section-hero">
-            <span>THE COOKBOOK INDEX</span>
+            <span>YOUR LEARNING RECORD</span>
             <div className="panel-title-row">
-              <h1>RECIPES OF POWER</h1>
-              <InfoTooltip label="About the Recipe Tree">Glossary nodes from the Cookbook graph. Clear rooms that name them. Collecting terms fills the shelf; composing them builds the city.</InfoTooltip>
+              <h1>OPENUSD CONCEPTS</h1>
+              <InfoTooltip label="About OpenUSD Concepts">Each room uses specific OpenUSD terms and techniques. Clear a room to mark its concepts as learned and add them to this record.</InfoTooltip>
             </div>
-            <small className="recipe-count">{masteredRecipes}/{recipes.length} MASTERED</small>
+            <small className="recipe-count">{masteredRecipes}/{recipes.length} LEARNED</small>
           </div>
           {recipeGroups.map(([category, nodes]) => <section className="recipe-cluster" key={category}>
             <header><span>{category.replaceAll("-", " ")}</span><b>{nodes.filter((node) => node.unlocked).length}/{nodes.length}</b></header>
             <div className="skill-grid">{nodes.map((recipe, index) => <article className={`skill-node ${recipe.unlocked ? "unlocked" : ""} ${recipe.affinity ? "affinity" : ""}`} key={recipe.id} style={{ "--i": index } as React.CSSProperties}>
-              <span className="skill-gem">{recipe.unlocked ? <Gem /> : <LockKeyhole />}</span><small>{recipe.category.replaceAll("-", " ")}</small><h3>{recipe.label}</h3><p>{recipe.unlocked ? "Authored in a cleared room. Keep the composed result inspectable." : "Undiscovered. Win a room that names this term."}</p><footer>{recipe.affinity ? "CLASS AFFINITY" : recipe.unlocked ? "MASTERED" : "UNDISCOVERED"}</footer>
+              <span className="skill-gem">{recipe.unlocked ? <Gem /> : <LockKeyhole />}</span><small>{recipe.category.replaceAll("-", " ")}</small><h3>{recipe.label}</h3><p>{recipe.unlocked ? "Learned in a cleared room and applied to your city." : "Not yet discovered. Clear a room that teaches this concept."}</p><footer>{recipe.affinity ? "CLASS AFFINITY · " : ""}{recipe.unlocked ? "LEARNED" : "NOT YET DISCOVERED"}</footer>
             </article>)}</div>
           </section>)}
         </div>}
@@ -1861,13 +1876,13 @@ export default function App() {
             <span>CONSUMABLES STORE // OPINIONS FINAL</span>
             <div className="panel-title-row">
               <h1>RESTOCK TO SURVIVE</h1>
-              <InfoTooltip label="About the Saferoom">One Opinion Point fills Hint Tokens and USD Checks to capacity. Opinion Points come from clearing boss rooms. {nextPayingQuest ? `Your next payout is ${nextPayingQuest.title}, worth ${nextPayingQuest.opinion_points}.` : "You have cleared every paying room on this route."} Three unstamped Key Items cash in for 1 OP. Restocks land in the left rail.</InfoTooltip>
+              <InfoTooltip label="About the Saferoom">The Saferoom is your between-room shop. Spend 1 Opinion Point to fully refill both Hint Tokens and USD Checks. Earn Opinion Points by clearing boss rooms, or trade three unstamped Key Items for 1 OP. At level 2, you can also choose your class here.</InfoTooltip>
             </div>
             <small className="recipe-count">{state.opinion_points} OP BANKED</small>
           </div>
           <div className={`class-choice ${spotlight === "class" ? "spotlight" : ""}`} ref={classRef}>
             <div className="class-explainer">
-              <span>CLASS PATH // AVAILABLE AT LEVEL 2</span>
+              <span>CLASS PATH // AVAILABLE AT LEVEL 2 <GuideInfoTooltip target="class" /></span>
               <p>
                 Declare a discipline. You get a starter kit, cheaper restocks, extra Opinion Points
                 on that path's home floors, and a softer boss fee there. Classes never skip rooms
@@ -1941,7 +1956,7 @@ export default function App() {
         </div>}
         <section className={`authoring-dock code-panel panel ${spotlight === "editor" ? "spotlight" : ""}`} ref={editorRef}>
           <div className="editor-toolbar">
-            <span><TerminalSquare size={15} /> {briefingRoom ? "BRIEFING DESK" : playbackScene ? "PLAYBACK TERMINAL" : "ROOM TERMINAL"}</span>
+            <span><TerminalSquare size={15} /> {briefingRoom ? "BRIEFING DESK" : playbackScene ? "PLAYBACK TERMINAL" : "ROOM TERMINAL"} <GuideInfoTooltip target="editor" /></span>
             <div><button className="active">{briefingRoom ? "NO CODE" : activeQuest?.language.toUpperCase() || "—"}</button></div>
           </div>
           {briefingRoom
@@ -1979,6 +1994,7 @@ export default function App() {
                 options={{ readOnly: reviewPending, minimap: { enabled: false }, fontSize: 13, lineHeight: 21, padding: { top: 16 }, scrollBeyondLastLine: false, tabSize: 4 }}
               />}
           <div className="run-slot" ref={runRef}>
+            <span className="run-help"><GuideInfoTooltip target="run" /></span>
             {bossDebrief
               ? <div className="boss-debrief">
                   <span>POST-FIGHT DEBRIEF</span>
@@ -2036,7 +2052,10 @@ export default function App() {
           {playbackScene && <button className="resume-live card" onClick={resumeLiveBroadcast}>
             <Tv size={14} /> BACK TO THE LIVE BROADCAST
           </button>}
-          {activeQuest && <button className="cookbook-link" onClick={() => setLessonOpen(true)}><BookOpen size={15} /> {playbackScene ? "REWATCH THE BRIEFING" : lessonRead ? "REVIEW LESSON" : "LEARN THIS ROOM"}</button>}
+          {activeQuest && <div className="cookbook-row">
+            <button className="cookbook-link" onClick={() => setLessonOpen(true)}><BookOpen size={15} /> {playbackScene ? "REWATCH THE BRIEFING" : lessonRead ? "REVIEW LESSON" : "LEARN THIS ROOM"}</button>
+            <GuideInfoTooltip target="lesson" />
+          </div>}
           {activeQuest && activeQuest.expects.length > 0 && <div className="expectations">
             <span className="expect-heading"><ListChecks size={14} /> THE TERMINAL CHECKS FOR</span>
             <ol>{activeQuest.expects.map((line, index) => {
