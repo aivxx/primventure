@@ -334,11 +334,13 @@ main { display:grid; grid-template-columns:minmax(320px,1fr) minmax(480px,1.5fr)
 @keyframes lesson-in{from{transform:translateX(100%)}to{transform:none}}
 .expectations{margin-top:12px;padding:10px 12px;background:#141217;border:1px solid #35303c}
 .expect-heading{display:flex;align-items:center;gap:6px;color:#9a93a1;font-size:7px;font-weight:700;letter-spacing:1.3px}
+.expect-heading b{margin-left:auto;color:#cfc8d6;font-size:7px;letter-spacing:.7px}
 .expectations ol{margin:8px 0 0;padding:0;list-style:none;counter-reset:expect}
 .expectations li{display:grid;grid-template-columns:14px 1fr;gap:7px;align-items:start;padding:4px 0;color:#cfc8d6;font-size:8.5px;line-height:1.55}
 .expectations li i{display:grid;place-items:center;height:13px;color:#6f6a76}
 .expectations li.passed{color:var(--green)}.expectations li.passed i{color:var(--green)}
 .expectations li.failed{color:#ff8d9c}.expectations li.failed i{color:var(--red)}
+.expectations li small{display:block;margin-top:2px;color:#d6c3c7;font-size:7.5px;line-height:1.45}
 .boss-question{display:block;position:relative;margin-top:12px;color:#d7cdaa;font-size:8px;line-height:1.45}.boss-question input,.boss-question select{display:block;width:100%;margin-top:5px;padding:8px;background:#141217;border:1px solid #514758;color:var(--cream);font:8px "IBM Plex Mono"}
 .code-panel { flex:1; min-height:350px; display:flex;flex-direction:column;border-left:0;border-right:0; }
 .authoring-dock{grid-column:2;grid-row:3;min-height:330px;margin:0;border:1px solid #37313c}

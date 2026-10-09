@@ -259,7 +259,7 @@ quests:
     level_required: 10
     exam_tasks: [explain_hydra]
     stats: {lore: 4, insight: 3}
-    brief: "SYSTEM: Hydra bridges scene data and rendering. usdview is the application; Storm is a delegate; your viewport plugin remains someone else's basement problem. Answer anyway."
+    brief: "SYSTEM: Hydra bridges scene data and rendering. usdview is the application; Storm is a delegate; the custom viewport plugin can wait in the basement. Review the parts, then answer."
     starter: ""
     language: none
     validator:
@@ -317,7 +317,7 @@ quests:
     level_required: 9
     exam_tasks: [set_model_kind, distinguish_component]
     stats: {lore: 4, craft: 3}
-    brief: "SYSTEM: A lamp post qualifies as a component. Kind it before Floor 6 assembles your regrets for you."
+    brief: "SYSTEM: A lamp post qualifies as a component. Kind it now so Floor 6 can assemble it cleanly."
     starter: |
       from pathlib import Path
       from pxr import Gf, Kind, Sdf, Usd, UsdGeom, UsdLux, UsdShade
@@ -356,7 +356,7 @@ quests:
     level_required: 10
     exam_tasks: [combine_primvar_activation_units, recap_beyond_basics]
     stats: {insight: 4, resolve: 4, craft: 3}
-    brief: "SYSTEM: Floor boss. Author a visible mesh, hide a draft, stamp units, paint a primvar. Hydra still will not render here. Competence will."
+    brief: "SYSTEM: Floor boss. Author a visible mesh, hide a draft, stamp units, paint a primvar. Hydra still will not render here, but correct scene data will carry the day."
     starter: |
       from pathlib import Path
       from pxr import Gf, Kind, Sdf, Usd, UsdGeom, UsdLux, UsdShade

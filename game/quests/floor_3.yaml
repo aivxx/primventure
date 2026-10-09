@@ -256,7 +256,7 @@ quests:
     level_required: 7
     exam_tasks: [author_external_reference, reuse_asset]
     stats: {craft: 2, lore: 2}
-    brief: "SYSTEM: Copying the sign geometry costs memory. Referencing it costs only your remaining self-respect."
+    brief: "SYSTEM: Copying the sign geometry costs memory. Referencing it keeps the geometry reusable and the memory budget calm."
     starter: |
       from pathlib import Path
       from pxr import Sdf, Usd
@@ -384,7 +384,7 @@ quests:
     level_required: 8
     exam_tasks: [create_variant_set, author_variant_opinions]
     stats: {craft: 3, lore: 2}
-    brief: "SYSTEM: Day and night belong in one asset as choices. Try to contain your astonishment."
+    brief: "SYSTEM: Day and night belong in one asset as choices. Give the switch a variant set and let the asset handle both."
     starter: |
       from pxr import Sdf, Usd
 

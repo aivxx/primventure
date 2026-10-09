@@ -3,16 +3,15 @@ lessons:
     title: Data Exchange
     objective: Distinguish data exchange implementations and preserve source provenance while translating foreign data into OpenUSD.
     intro: >-
-      Welcome to the Customs Terminal, where every crate is foreign, every manifest is incomplete,
-      and customs has misplaced the definition of "complete." Data exchange gets data into and out
-      of OpenUSD without pretending incompatible formats are secretly identical. I will be checking
-      the paperwork.
+      Welcome to the Customs Terminal, where each format arrives with its own manifest. Data
+      exchange gets data into and out of OpenUSD by mapping those differences clearly instead of
+      treating incompatible formats as identical. Let us check the paperwork together.
     beats:
       - kind: concept
         heading: Exchange maps data models
         system: >-
-          Renaming a crate does not change its contents. Customs learned this after the glTF incident
-          and the resulting sponsor inquiry.
+          Renaming a crate does not change its contents. A useful exchange maps the data inside,
+          not just the label outside.
         body: |
           Data exchange asks how data enters OpenUSD, how it leaves OpenUSD, and how concepts in one
           representation map to concepts in another. OpenUSD supplies schemas for common scene
@@ -50,8 +49,8 @@ lessons:
       - kind: concept
         heading: Extract first, transform second
         system: >-
-          First record what arrived. Then make it presentable. Reversing those steps is how the
-          terminal acquired a chandelier classified as agricultural equipment.
+          First record what arrived. Then adapt it for delivery. Keeping those steps separate
+          prevents destination choices from being mistaken for source facts.
         body: |
           Two-phase exchange separates fidelity from downstream customization. Extraction maps the
           source into OpenUSD as directly as possible, retaining source structure and intent.
@@ -68,8 +67,8 @@ lessons:
       - kind: api
         heading: Stamp provenance on the USD result
         system: >-
-          The filename can change. Authored provenance travels with the asset, which is more than I
-          can say for half this season's contestants.
+          The filename can change, but authored provenance travels with the asset and keeps its
+          origin clear.
         body: |
           Provenance records what the USD data came from and how intake treated it. customData is a
           dictionary-valued metadata field suited to pipeline-specific values; documentation is
@@ -91,8 +90,7 @@ lessons:
       - kind: work_order
         heading: Stamp the source format and intake note on the kiosk
         system: >-
-          "Universal" stops well short of "telepathic." OpenUSD still requires you to explain what
-          the foreign numbers mean.
+          OpenUSD still needs explicit provenance to explain what the source data means.
         body: |
           A crate of foreign geometry has cleared the dock, and the Intake Platform has already
           built its stand-in: one Xform at /City/ExchangeTerminal/ImportedKiosk, alone on an
@@ -124,7 +122,7 @@ lessons:
     apply:
       f8_import_depot: >-
         Stamp ImportedKiosk with sourceFormat OBJ and the exact intake documentation. The Depot
-        accepts metadata, not your solemn assurance that the crate looked foreign.
+        uses that metadata to preserve the crate's source through later copies and renames.
 
   - source: docs/data-exchange/data-exchange/exercise.md
     title: Anatomy of a Converter
@@ -137,8 +135,8 @@ lessons:
       - kind: concept
         heading: One entry point, two phases, one save
         system: >-
-          Every crate that clears this hall went through a machine somebody wrote in an afternoon.
-          Try to make yours legible to whoever inherits it.
+          Every crate that clears this hall passes through a converter. Keep yours legible for the
+          next person who maintains it.
         body: |
           A standalone converter translates files without an application's runtime in the loop. Its
           entry point collects arguments, calls a function that maps the source into OpenUSD, calls
@@ -158,8 +156,8 @@ lessons:
       - kind: concept
         heading: Export options are the caller's half of the contract
         system: >-
-          The client gets a small number of levers. Everything else is the machine's opinion, and
-          the machine does not take requests.
+          Give the client a focused set of options, and provide sensible defaults for every other
+          destination choice.
         body: |
           A converter's command line states what it accepts. An input path names the source, an
           output path names the destination, and each export option exposes one decision the caller
@@ -177,7 +175,7 @@ lessons:
       - kind: api
         heading: Sketch both phases before filling either one in
         system: >-
-          Two functions and a caller. It looks like nothing, which is rather the point.
+          Two focused functions and one caller make the converter's responsibilities easy to see.
         body: |
           Write the phases as named functions with the signatures they will keep. Extraction takes
           the source and destination paths and returns a Usd.Stage. Transformation takes that stage
@@ -249,8 +247,7 @@ lessons:
       - kind: work_order
         heading: Run the crate through both phases
         system: >-
-          Two working halves with nothing between them is the most common way a conversion produces
-          an empty directory.
+          Extraction and transformation both need to run before the result is saved.
         body: |
           The converter on the bench is half assembled. Extraction is finished and already runs. It
           creates the output stage, defines the crate prim it maps the source onto, and hands that
@@ -283,21 +280,21 @@ lessons:
     apply:
       f8_converter_anatomy: >-
         Declare meters inside the transformation phase, then run the extracted stage through it
-        before the save. An empty phase nobody calls converts nothing twice over.
+        before the save so the destination unit contract is authored.
 
   - source: docs/data-exchange/data-extraction/exercise-extracting-geometry.md
     title: Extracting a Mesh
     objective: Parse foreign geometry and author its vertices, topology, normals, and polygonal subdivision behavior as a UsdGeom.Mesh.
     intro: >-
       The dock has delivered OBJ text and no plugin to interpret it. You will read the manifest
-      yourself, extract the geometry, and author a mesh with the sort of precision customs normally
-      reserves for confiscation notices. The vertices have already retained counsel.
+      directly, extract the geometry, and author a mesh whose data faithfully represents the
+      source.
     beats:
       - kind: concept
         heading: Extraction preserves the source representation
         system: >-
-          We are translating evidence. Improvements happen later, under brighter lights and with
-          more waivers.
+          Record the source faithfully first. Improvements belong in the later transformation
+          phase.
         body: |
           Geometry extraction reads the source representation and writes the closest corresponding
           OpenUSD schema data. For OBJ, vertex records begin with "v", object names begin with "o",
@@ -315,7 +312,7 @@ lessons:
         heading: Mesh topology uses two ordered arrays
         system: >-
           Faces arrive in groups. USD asks for one queue and a list explaining where each group
-          ends. The terminal calls this efficiency and employs six clerks to oversee it.
+          ends. Together, those two arrays preserve each polygon boundary.
         body: |
           OBJ groups vertex indices per face. UsdGeom.Mesh stores all face indices in one flattened
           faceVertexIndices array and stores the number of indices belonging to each face in the
@@ -331,8 +328,7 @@ lessons:
       - kind: api
         heading: Parse vertices and define the mesh
         system: >-
-          Eight vertices enter. One typed prim leaves. This is the cleanest transaction the
-          Customs Terminal has processed in years.
+          Eight vertices enter, and one typed mesh prim carries them into OpenUSD.
         body: |
           Read foreign text with normal Python I/O, convert numeric values to Gf.Vec3f objects, then
           define a UsdGeom.Mesh and author its schema attributes. CreatePointsAttr accepts a default
@@ -360,7 +356,7 @@ lessons:
       - kind: api
         heading: Author complete polygonal topology
         system: >-
-          A pile of points is cargo arranged with suspicious confidence. A mesh requires topology.
+          Points provide positions; topology turns those positions into mesh faces.
         body: |
           Flatten each source face's indices and append its length to faceVertexCounts. OBJ face
           indices are one-based in text and must be converted to zero-based indices if the parser
@@ -449,8 +445,8 @@ lessons:
       - kind: concept
         heading: Source names are not always valid prim names
         system: >-
-          Material.001 is a perfectly good name in the application that exported it and an
-          impossibility here.
+          Material.001 is valid in the source application, but it must be sanitized for use as an
+          OpenUSD prim name.
         body: |
           Prim names are identifiers built from letters, digits, and underscores, so a source name
           carrying a period, a space, or a dash cannot be used as written. Tf.MakeValidIdentifier
@@ -468,7 +464,7 @@ lessons:
       - kind: api
         heading: Define the material and its preview surface
         system: >-
-          Two prims and one connection. The terminal has processed worse in triplicate.
+          Two prims and one connection form the material's usable surface graph.
         body: |
           Define the material at the sanitized path and the shader as a child of it, then name the
           shader implementation and loft the result. Sdf.Path.AppendChild builds the child path
@@ -491,7 +487,7 @@ lessons:
       - kind: api
         heading: Map the source properties, then bind
         system: >-
-          Shininess becomes roughness through arithmetic nobody enjoys explaining twice.
+          Convert source shininess into the roughness value UsdPreviewSurface expects.
         body: |
           CreateInput authors a namespaced input on the shader, so the diffuse color arrives as
           inputs:diffuseColor and the specular color as inputs:specularColor. Colors map straight
@@ -557,15 +553,15 @@ lessons:
     title: Complete Extraction
     objective: Evaluate whether extracted geometry is faithful, complete, legible, and suitable as a foundation for later transformations.
     intro: >-
-      The Overseer counts authored data, checks the bounds, and files discrepancies in triplicate.
-      Intentions are filed elsewhere. A mesh must carry enough information for consumers to
-      understand what was extracted; a promising thumbnail earns nothing at this window.
+      The Overseer checks authored data, bounds, and topology against the extraction contract. A
+      mesh must carry enough information for consumers to understand what was extracted; a
+      thumbnail alone cannot establish that contract.
     beats:
       - kind: concept
         heading: Extraction is the fidelity baseline
         system: >-
-          Before customs rearranges the cargo, someone must record how it arrived. Apparently that
-          someone is you, because the cameras are already rolling.
+          Before the terminal rearranges the cargo, record how it arrived so later transformations
+          start from a faithful baseline.
         body: |
           The extraction phase maps source data into OpenUSD as directly as possible. Output that
           resembles the source is more legible, easier to debug, easier to round-trip, and provides
@@ -617,8 +613,8 @@ lessons:
       - kind: api
         heading: Author points and a trustworthy extent
         system: >-
-          The Overseer accepts eight corners and two bounds. A ninth corner triggers an audit and,
-          for reasons nobody will explain, confetti.
+          The contract calls for eight corners and an extent containing exactly two bounds:
+          minimum, then maximum.
         body: |
           Schema accessors enforce the expected OpenUSD value types. For known points, author
           Gf.Vec3f values and either set the expected extent directly or compute it from the points
@@ -682,9 +678,8 @@ lessons:
     title: Hierarchy and Axes
     objective: Restructure extracted prims under a referenceable root and normalize stage and local transform conventions.
     intro: >-
-      The Axis Switchyard has received a flat shipment, a Z-up declaration, and absolutely no
-      shared ancestor. This is considered three separate emergencies for billing purposes. You will
-      give the asset a usable hierarchy and point vertical toward the ceiling we currently insure.
+      The Axis Switchyard has received a flat shipment, a Z-up declaration, and no shared ancestor.
+      You will give the asset a usable hierarchy and align its vertical convention for delivery.
     beats:
       - kind: concept
         heading: Faithful extraction may be awkward to consume
@@ -707,8 +702,7 @@ lessons:
       - kind: api
         heading: Reparent root prims with NamespaceEditor
         system: >-
-          Move the cargo under /World, then stamp /World as the entrance. Even customs can
-          understand one front door on a favorable day.
+          Move the cargo under /World, then make /World the clear entry point for the asset.
         body: |
           Capture the existing pseudo-root children before defining /World so the move list holds
           only the prims that arrived from extraction. Usd.NamespaceEditor queues namespace edits; ApplyEdits applies
@@ -731,8 +725,8 @@ lessons:
       - kind: concept
         heading: Up axis is a stage-wide convention
         system: >-
-          Vertical is settled law in this room. Legal handled that after Floor Four rotated
-          ninety degrees and claimed artistic intent.
+          Up axis is a stage-wide convention. Declare it clearly, and rotate spatial data when the
+          convention changes.
         body: |
           upAxis metadata declares which stage axis consumers should treat as vertical. OpenUSD
           permits Y or Z. Changing the token declares a convention, while existing points and
@@ -768,8 +762,8 @@ lessons:
       - kind: work_order
         heading: Convert the shipment to Y-up and park the kiosk
         system: >-
-          A changed label leaves the shipment exactly where it stood, though the accident now
-          conforms to paperwork.
+          Changing the up-axis label leaves every authored coordinate where it was; a real
+          conversion also transforms the spatial data.
         body: |
           The Axis Switchyard has the shipment on a stage that declares Z as the up axis, with one
           Xform at /City/ExchangeTerminal/ImportedKiosk and untyped ancestors above it where Define
@@ -801,7 +795,7 @@ lessons:
     apply:
       f8_axis_switchyard: >-
         Declare Y-up and add one translate op placing ImportedKiosk at (10, 0, -4). The switchyard
-        accepts converted coordinates, not motivational speeches about vertical.
+        needs both the declared convention and the authored placement.
 
   - source: docs/data-exchange/data-transformation/exercise-export-option.md
     title: Export Options
@@ -832,8 +826,7 @@ lessons:
       - kind: concept
         heading: A declaration alone leaves the geometry where it was
         system: >-
-          Relabeling vertical is not the same as making it vertical. Legal has asked me to repeat
-          that at every opportunity.
+          Relabeling vertical is not the same as rotating the data to match the new convention.
         body: |
           OBJ is Y-up, so a converter that declares Y is stating a fact about the source. A caller
           who asks for Z is asking for a different coordinate convention, and SetStageUpAxis only
@@ -911,9 +904,9 @@ lessons:
     title: Units and Transformation
     objective: Design reusable transformation steps that normalize linear units and adapt extracted USD for downstream workflows.
     intro: >-
-      The Meter Gauge has found a unitless crate wearing an inches label and is preparing to make
-      it everyone's problem. Transformation is where source-faithful data becomes destination-useful
-      data. Declare the units, preserve the convention, and try not to build a hundred-meter lamp.
+      The Meter Gauge has found a unitless crate with an inches label. Transformation is where
+      source-faithful data becomes destination-useful data. Declare the units, preserve the
+      convention, and keep the asset at its intended physical scale.
     beats:
       - kind: concept
         heading: Transformation serves the destination
@@ -935,8 +928,8 @@ lessons:
       - kind: concept
         heading: metersPerUnit declares linear scale
         system: >-
-          One scene unit can be a meter, centimeter, or regrettable surprise. The metadata exists
-          so downstream tools can read the scale directly and leave the furniture out of it.
+          One scene unit can represent a meter, centimeter, or another declared scale. The metadata
+          lets downstream tools read that scale directly.
         body: |
           metersPerUnit is stage metadata that states how many meters one scene unit represents.
           A value of 1.0 means meters, 0.01 means centimeters, and 0.0254 means inches. It is a
@@ -953,8 +946,8 @@ lessons:
       - kind: api
         heading: Author the destination unit contract
         system: >-
-          Centimeters are 0.01 meters. The Gauge knows this, the audience knows this, and now the
-          form can stop blinking red.
+          Centimeters are 0.01 meters. Author that value so every downstream consumer can read the
+          same scale.
         body: |
           UsdGeom provides free functions for geometric stage metadata. The LinearUnits constants
           are readable numeric values, and an explicit float is also accepted.
@@ -973,8 +966,8 @@ lessons:
       - kind: concept
         heading: Minimize transformation for round trips
         system: >-
-          Every clever rewrite is another confession future-you must reverse. Future-you has
-          retained separate counsel.
+          Every transformation adds work to a future round trip, so keep rewrites minimal and
+          document any information they lose.
         body: |
           Extensive restructuring, pruning, and optimization can be difficult or impossible to
           invert during reimport. Round-trip workflows should minimize transformations, preserve
@@ -1032,15 +1025,14 @@ lessons:
     title: Asset Validation
     objective: Encode and check asset contracts that make OpenUSD content structurally compliant and interoperable.
     intro: >-
-      The Validation Warden checks contracts, reports failures, and keeps the crate on the dock
-      until every required opinion exists. How the asset feels is filed under entertainment. I find
-      the whole procedure deeply soothing and the contestants generally do not.
+      The Validation Warden checks contracts, reports actionable failures, and keeps the crate on
+      the dock until every required opinion exists. Clear rules help each asset move forward.
     beats:
       - kind: concept
         heading: Validation checks interoperability contracts
         system: >-
-          A stage can open successfully and still be unsuitable for exchange. So can a contestant,
-          according to casting.
+          A stage can open successfully and still be unsuitable for exchange. Validation checks
+          the additional contract the destination requires.
         body: |
           Asset validation complements unit and integration tests by inspecting the USD output
           itself. A validator checks defined rules so an asset is more likely to be interchangeable,
@@ -1073,8 +1065,7 @@ lessons:
       - kind: api
         heading: Author and inspect a minimal contract
         system: >-
-          One root, Y-up, component kind. Three stamps between the crate and freedom. Four if the
-          Warden dislikes your handwriting.
+          One root, Y-up, and component kind provide three clear terms in the asset contract.
         body: |
           Stage metadata is authored through Usd.Stage and UsdGeom APIs. Model kind is authored
           through Usd.ModelAPI with a Kind token. Validators should reopen the saved output and
@@ -1096,8 +1087,8 @@ lessons:
       - kind: concept
         heading: Validation belongs throughout intake
         system: >-
-          Validate early enough to blame the correct step. Engineering calls this hygiene; the
-          broadcast calls it how penalties get assigned.
+          Validate after each major phase so a failure points clearly to the step that introduced
+          it.
         body: |
           Run checks after extraction to catch incorrect source mapping and after transformation to
           catch broken destination contracts. Failures should identify the responsible rule and the
@@ -1112,8 +1103,8 @@ lessons:
       - kind: work_order
         heading: Author the three contract terms the concourse requires
         system: >-
-          Checking only that the file exists is attendance, and attendance has never cleared a
-          crate.
+          Checking that the file exists is only the start; validate the authored contract inside
+          it as well.
         body: |
           The crate on the Validation Concourse holds a stage with a single Xform at /World and no
           stage metadata on it. It opens without complaint and parses cleanly, and it states nothing
@@ -1142,23 +1133,22 @@ lessons:
           structure, metadata, model hierarchy, dependencies, and geometry contracts.
     apply:
       f8_validate_warden: >-
-        Make /World the default prim, declare Y-up, and set its kind to component. The Warden has
-        three boxes, no discretion, and excellent penmanship.
+        Make /World the default prim, declare Y-up, and set its kind to component. These three
+        authored terms complete the required contract.
 
   - source: docs/data-exchange/asset-validation/exercise-asset-validation-testing.md
     title: End-to-End Intake
     objective: Test an OBJ-to-OpenUSD pipeline from explicit extraction through provenance stamping and final contract validation.
     intro: >-
-      The Customs Engine is the city boss because seven separate clerks became one machine and
-      discovered confidence. It expects a parsed OBJ cube, a compliant asset interface, honest
-      geometric conventions, and provenance that survives delivery. One missing stamp and the
-      terminal closes with you on the import side.
+      The Customs Engine brings the full intake pipeline together. It expects a parsed OBJ cube, a
+      compliant asset interface, honest geometric conventions, and provenance that survives
+      delivery. Complete each term to clear the terminal.
     beats:
       - kind: concept
         heading: Test the delivered stage end to end
         system: >-
-          Unit tests inspect gears. This room starts the Engine, feeds it a crate, and watches which
-          wall fails first.
+          Unit tests inspect individual gears. This room runs the complete Engine and verifies how
+          all of those parts work together.
         body: |
           An end-to-end intake test begins with representative foreign input, executes extraction
           and transformation, saves the resulting USD, reopens it, and validates the complete
@@ -1222,8 +1212,7 @@ lessons:
       - kind: api
         heading: Reopen and assert the contract
         system: >-
-          Trust remains the terminal's current approach to elevators and has no place in a
-          validation strategy.
+          Reopen the saved stage and verify its authored contract exactly as a consumer will.
         body: |
           Reopening the stage proves that every required opinion was serialized. Query schema APIs
           and composed prims exactly as a consumer would, and include diagnostic messages that

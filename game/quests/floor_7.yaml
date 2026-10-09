@@ -674,7 +674,7 @@ quests:
     level_required: 16
     exam_tasks: [multi_prototype_instancer, author_proto_indices]
     stats: {insight: 5, craft: 4}
-    brief: "SYSTEM: Crates and benches in one instancer. protoIndices choose. Copies are a moral failing."
+    brief: "SYSTEM: Crates and benches in one instancer. protoIndices choose. The memory budget appreciates every shared copy."
     starter: |
       from pathlib import Path
       from pxr import Gf, Kind, Sdf, Usd, UsdGeom, UsdLux, UsdShade
@@ -746,7 +746,7 @@ quests:
             Types cleared.'}
     cookbook: docs/asset-modularity-instancing/authoring-point-instancing/exercise-authoring-point-instancing.md
     xp: 400
-    reward: {opinion_points: 2, achievement: "Warehouse recaptured. The crowd pretends they understood prototypes."}
+    reward: {opinion_points: 2, achievement: "Warehouse recaptured. The crowd is now enthusiastically discussing prototypes."}
     world_target: /City/InstanceWilds/Warehouse
     recipes: [Instancing, Assembly]
     questions:

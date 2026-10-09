@@ -3,15 +3,14 @@ lessons:
     title: Prims
     objective: Identify what a prim is, how it is addressed, and the role it plays inside a stage's scenegraph.
     intro: >-
-      Welcome to your first lesson, Contestant. The city currently contains exactly as much
-      scene description as your work history contained relevant experience. We fix that with
-      prims. I will explain them once, thoroughly, in my generous host voice, and then I will
-      stand behind you making notes while you fail to apply any of it.
+      Welcome to your first lesson, Contestant. The city is waiting for its scene description,
+      and prims are where it begins. We will build the first one together, give it a clear
+      address and type, and then put those ideas to work.
     beats:
       - kind: concept
         heading: A prim is a container with an address
         system: >-
-          "Container" is an unglamorous word. So was "contestant," and here we both are.
+          "Container" may sound modest, but every scenegraph needs a reliable place to begin.
         body: |
           A primitive, or prim, is the core building block of every OpenUSD scene. A prim is a
           container that holds data: attributes, relationships, and metadata that together
@@ -28,8 +27,7 @@ lessons:
       - kind: concept
         heading: Typed prims declare what kind of data belongs there
         system: >-
-          An untyped prim is a building with no purpose and no permits. The city has forty. They
-          are why the fourth floor is in litigation.
+          A type name gives the container a clear role, like a sign over a well-organized doorway.
         body: |
           Alongside its path, a prim can carry a type name: a single label such as Xform, Sphere,
           or Mesh that declares what kind of object the container holds. The type is optional. A
@@ -62,7 +60,7 @@ lessons:
       - kind: api
         heading: Working with prims in Python
         system: >-
-          Five methods. I have seen contestants memorize longer coffee orders.
+          Five useful methods make this first authoring workflow pleasantly compact.
         body: |
           Scene description is authored in Python through pxr, OpenUSD's Python package. Work
           begins from a stage, the object that holds the scene in memory and knows which layer it
@@ -132,21 +130,21 @@ lessons:
           lesson, from composition to instancing, depends on.
     apply:
       f0_first_prim: >-
-        Define /City as an Xform and save the root layer. One address. The entire room. I have
-        already told the audience you will spend four minutes on it.
+        Define /City as an Xform and save the root layer. One address, one typed prim, and the
+        foundation of the city is in place.
 
   - source: docs/stage-setting/properties/attributes.md
     title: Attributes
     objective: Author and read typed values on prims, and understand fallbacks, time samples, and schema-specific accessors.
     intro: >-
-      Prims are containers. Congratulations, you own empty boxes. Attributes are the part where
-      the boxes contain something, which the audience tells me is the interesting part. Attributes
-      are also where the scene starts quietly answering questions you never wrote down.
+      Prims are containers, and attributes give those containers useful typed values. They are
+      how the scene records details such as names, sizes, and colors, including schema fallback
+      values that can answer queries even before you author an opinion.
     beats:
       - kind: concept
         heading: Attributes are typed name-value pairs on a prim
         system: >-
-          One name, one type, one value. Three constraints. You will violate two.
+          One name, one type, one value: three details that keep scene data predictable.
         body: |
           Attributes are the most common kind of property in OpenUSD and the primary means of
           storing data. Each attribute is a name-value pair with exactly one defined data type,
@@ -163,7 +161,7 @@ lessons:
       - kind: concept
         heading: Authoring one means declaring a type, then setting a value
         system: >-
-          Two steps. Contestants routinely perform one of them and then look at me expectantly.
+          Remember both steps: declare the attribute, then set its value.
         body: |
           An attribute does not exist on a prim until something declares it. Declaring means
           naming it and fixing its data type, which is what the Sdf value types above are for.
@@ -193,8 +191,8 @@ lessons:
       - kind: api
         heading: Prefer schema accessors, fall back to the generic API
         system: >-
-          The generic API is a crowbar. The schema API is a key. Both open the door. Only one gets
-          you invited back.
+          The generic API is a versatile tool; the schema API is the fitted key when a schema
+          already owns the property.
         body: |
           Each schema-specific API has methods that grab its own attributes. GetRadiusAttr returns
           a Usd.Attribute object; call Get on it to read the resolved value and Set to author one.
@@ -219,7 +217,7 @@ lessons:
       - kind: concept
         heading: Reading an attribute nobody authored
         system: >-
-          The value exists, the file is empty, and no one is lying to you. Yes, this upsets people.
+          A value can resolve even when the file is silent; the schema fallback supplies it.
         body: |
           Schema attributes behave differently from custom ones when nothing has been set. Along
           with declaring that a Sphere has a radius, the schema states what that radius should be
@@ -281,24 +279,23 @@ lessons:
       f0_nameplate: >-
         Author cityName as a string attribute set to Primventure, exactly, punctuation included,
         because the Registrar reads it aloud. No schema owns a city's name, so this is the generic
-        CreateAttribute case. A city that cannot state its own name gets struck from the ledger.
+        CreateAttribute case. This gives the city a clear name in the ledger.
       f1_lamp_post: >-
         A Sphere is a typed prim, so its radius arrives already declared and the schema accessor
-        is right there. Define the globe, then set radius to 0.4. The alley has been dark since
-        the last contestant, who is also still in there, and glass is as far as you get today.
+        is right there. Define the globe, then set radius to 0.4. The alley is ready for its lamp
+        globe, and this value gives the fixture the required size.
 
   - source: docs/stage-setting/stage.md
     title: Stages
     objective: Explain what a stage is, how it composes layers, and how to create, open, and save one.
     intro: >-
-      A stage is the composed scene, assembled from layers. I stress the distinction because every
-      season someone tells the audience a stage is merely a file, and then I have to be unkind on
-      camera, and the sponsors send letters.
+      A stage is the composed scene assembled from layers, not merely one file. Keep that
+      distinction in view and the rest of the stage lifecycle becomes much easier to follow.
     beats:
       - kind: concept
         heading: A stage presents the composed scenegraph
         system: >-
-          The stage is the truth. The files are just the arguing.
+          The stage presents the resolved scene; its contributing layers provide the opinions.
         body: |
           A stage presents the scenegraph, the hierarchy of prims that makes up the scene. It is
           the composed result of one or more layers, and a layer can come from a file or from any
@@ -314,8 +311,8 @@ lessons:
       - kind: concept
         heading: Every stage has a root layer
         system: >-
-          The root layer is where your edits land when you have not told me otherwise. You will
-          later learn to tell me otherwise. That lesson has a boss.
+          The root layer receives edits by default. Later lessons will show how to choose another
+          edit target.
         body: |
           The root layer is the first layer the stage opens and the anchor of the layer stack.
           When you create a stage with CreateNew, the file you pass becomes the root layer, and
@@ -331,8 +328,7 @@ lessons:
       - kind: concept
         heading: A stage does not have to be backed by a file
         system: >-
-          Scratch work that never reaches disk. The one place in this building where nothing can
-          be held against you permanently.
+          Scratch work stays in memory until you explicitly export it to disk.
         body: |
           CreateNew and Open both tie a stage to a layer on disk, but a stage can also exist purely
           in memory. CreateInMemory builds one with no file behind it, which is what you want for
@@ -414,8 +410,8 @@ lessons:
     objective: Use metadata to attach non-animatable information to prims, properties, layers, and stages.
     intro: >-
       Metadata is how the scene describes itself rather than its shape. Author, notes, project
-      data, rendering hints. It is the paperwork of the Composition, and I say that with real
-      affection, because paperwork is what convicted the last three bosses.
+      data, rendering hints. It is the paperwork of composition, and good paperwork keeps even
+      an elaborate scene organized.
     beats:
       - kind: concept
         heading: Metadata is non-animatable name-value data
@@ -435,8 +431,8 @@ lessons:
       - kind: concept
         heading: Metadata versus attributes
         system: >-
-          Contestants confuse these constantly, then act surprised when the animation department
-          arrives with questions and torches.
+          Attributes describe scene data and may animate; metadata describes the record and does
+          not. That distinction keeps downstream questions manageable.
         body: |
           Both store extra data, but they answer different questions. Attributes are part of the
           schema definition and describe the object's properties or behavior. Metadata sits
@@ -451,7 +447,7 @@ lessons:
       - kind: api
         heading: Reading and writing metadata
         system: >-
-          Note the dict-key variants. They exist because someone profiled this and was horrified.
+          Note the dict-key variants; they update one entry without rewriting the whole dictionary.
         body: |
           Usd.Object exposes generic GetMetadata and SetMetadata, and the stage has its own
           equivalents. Well-known keys such as documentation and displayName also have convenience
@@ -512,14 +508,14 @@ lessons:
     objective: Author animated attribute values and configure the stage timeline that gives them meaning.
     intro: >-
       Time. The floor's least favorite subject, and the reason Clockwork Crossing keeps arriving
-      before it departs. A time sample is a value at a moment. A time code is the moment. Confuse
-      them and the crossing loops forever, which the audience does enjoy.
+      before it departs. A time sample is a value at a moment; a time code identifies that moment.
+      Keep the two roles distinct and the crossing will run on schedule.
     beats:
       - kind: concept
         heading: Time samples are values at specific time codes
         system: >-
           One attribute, many moments, no duplication. This is the part where USD is quietly
-          excellent and nobody applauds.
+          excellent.
         body: |
           An attribute can hold a default value and a set of time samples. A time sample pairs a
           time code with a value, so a single attribute describes an animated quantity without
@@ -635,8 +631,8 @@ lessons:
       - kind: api
         heading: Creating and reading targets
         system: >-
-          SetTargets replaces. AddTarget appends. Choose wrong and the bridge points at three
-          districts simultaneously, which is how the fourth floor started.
+          SetTargets replaces; AddTarget appends. Choose deliberately so the bridge points to the
+          intended destinations.
         body: |
           CreateRelationship authors the relationship on a prim, and SetTargets assigns its
           targets. GetTargets returns the authored target paths.
@@ -655,8 +651,8 @@ lessons:
       - kind: work_order
         heading: The canal and the bridge stand beside the lamp with nothing pointing at it
         system: >-
-          A relationship will happily target a prim nobody authored. USD treats that as a promise,
-          and USD keeps promises badly.
+          A relationship can target an unauthored prim without raising an error, so verify every
+          target path explicitly.
         body: |
           Both rooms work in the Property Ward, where the lamp globe already exists as a Sphere at
           /City/PropertyWard/LampGlobe. The canal room defines the ward and /City/PropertyWard/Canal
@@ -717,8 +713,7 @@ lessons:
       - kind: concept
         heading: Reading USDA scene description
         system: >-
-          Every Python call you have made so far has been typing this file with extra steps and
-          more self-esteem.
+          Every Python authoring call ultimately contributes scene description like the text below.
         body: |
           A USDA file opens with the #usda 1.0 header, followed by an optional metadata block in
           parentheses, then prim declarations. Each prim declaration is a specifier, a type name,
@@ -745,7 +740,7 @@ lessons:
         heading: Moving between formats
         system: >-
           Export converts encodings and leaves composition intact unless you ask for a flatten.
-          People assume otherwise and then file complaints with a department I invented.
+          That distinction keeps format conversion separate from composition changes.
         body: |
           The stage and layer APIs convert between encodings by exporting to a path with a
           different extension. Export writes the layer's own content in the target format.
@@ -801,16 +796,14 @@ lessons:
     title: Prim and Property Paths
     objective: Read, build, and navigate the paths that locate prims and properties inside a scenegraph.
     intro: >-
-      You have been typing paths since your first room, the way a tourist types an address into a
-      map without ever learning the city. This lesson is the part where the address becomes an
-      object you can build, split, and interrogate. The Archive Stacks are indexed by path, and the
-      Archive has never once forgiven a typo.
+      You have been using paths since the first room. Now each address becomes an object you can
+      build, split, and inspect. The Archive Stacks are indexed by exact path, so precision keeps
+      every record easy to find.
     beats:
       - kind: concept
         heading: A path is the location of a prim or property
         system: >-
-          Every prim in this city has exactly one address. Unlike the contestants, who keep
-          claiming several.
+          Every prim in this city has exactly one scenegraph address.
         body: |
           A path represents the location of a prim or a property within a scenegraph. Written as a
           string, a prim path is a sequence of prim names separated by forward slashes, much like a
@@ -828,8 +821,7 @@ lessons:
       - kind: concept
         heading: The punctuation says what kind of thing you named
         system: >-
-          Slash, period, curly brace. Three marks of punctuation, and contestants still manage to
-          address a property as though it were a prim.
+          Slash, period, curly brace: each mark identifies a different kind of scenegraph location.
         body: |
           Path data is handled through the Sdf.Path class, which encodes prims, properties, and
           variants in a single string vocabulary. Which separator you use decides which of those
@@ -891,8 +883,7 @@ lessons:
       - kind: concept
         heading: A property path identifies a location, not a property
         system: >-
-          Naming a thing and creating a thing are different activities. This surprises people, which
-          says more about people than about paths.
+          Naming a location and authoring a property are separate operations.
         body: |
           AppendProperty builds the path of a property on a prim, producing something like
           /World/Geom/Sphere.userProperties:tag. Building that path creates nothing. The property
@@ -971,15 +962,13 @@ lessons:
     title: OpenUSD Modules
     objective: Identify the commonly used OpenUSD modules and know which one to reach for when authoring or reading scene description.
     intro: >-
-      You have been importing these for six rooms without being asked to justify a single one of
-      them. The Module Desk would like that corrected. It is a short lesson, which the audience
-      always mistakes for an easy one, and the Desk always corrects them too.
+      You have used these imports throughout the district. The Module Desk now maps each module
+      to its role, so you can choose the right one with confidence.
     beats:
       - kind: concept
         heading: Four core packages, two of which you actually need
         system: >-
-          Half the repository is about drawing pictures. You are not drawing pictures. You are
-          filling in forms, and I have never been prouder.
+          Imaging handles drawing; this desk focuses on authoring and reading scene description.
         body: |
           The USD code repository is made up of four core packages: base, usd, imaging, and
           usdImaging. To author and read USD data, you only need base and usd, which is where the
@@ -996,7 +985,7 @@ lessons:
       - kind: concept
         heading: Usd, Sdf, and Gf divide the work
         system: >-
-          Three modules, three jobs, no overlap worth arguing about. Naturally, contestants argue.
+          Three modules cover three distinct jobs, making the right import easier to identify.
         body: |
           When authoring or querying USD data, you will almost always use a few common modules. Usd
           is the core client-facing module for authoring, composing, and reading USD. It provides
@@ -1018,8 +1007,7 @@ lessons:
       - kind: api
         heading: Importing from the pxr namespace
         system: >-
-          One namespace, every module. It is the least confusing thing in this building and I resent
-          it slightly.
+          One pxr namespace provides every module used in this workflow.
         body: |
           In Python, these modules are imported from the pxr namespace. A single import line brings
           in as many as you need, which is why nearly every example in this curriculum opens the
@@ -1033,7 +1021,7 @@ lessons:
       - kind: concept
         heading: Schema modules are grouped by domain
         system: >-
-          The domain tells you the module. Geometry lives with geometry. Revolutionary, I know.
+          The domain tells you the module: geometry lives with geometry, shading with shading.
         body: |
           Alongside the common modules, you will use schema modules. Schemas are grouped into schema
           domains, and each domain has its own module, so which schema module you import depends on
@@ -1050,8 +1038,7 @@ lessons:
       - kind: work_order
         heading: Six rooms of imports, and nothing has said which module owns what
         system: >-
-          Reaching into the wrong module is not a crime. It is merely slow, and slow is expensive
-          on this floor.
+          Knowing which module owns each symbol keeps authoring work direct and efficient.
         body: |
           The Module Desk is the last stop on the Records Clocktower and it changes nothing in the
           city. Every room behind it opened with one line from pxr, and that line has covered

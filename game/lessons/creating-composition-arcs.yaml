@@ -40,8 +40,8 @@ lessons:
       - kind: api
         heading: Edit the root layer's subLayerPaths
         system: >-
-          The list is public, mutable, and consequential. This is more authority than contestants
-          usually receive before the first commercial break.
+          The list is public, mutable, and consequential. Use that control to make the intended
+          strength order explicit.
         body: |
           GetRootLayer returns the Sdf.Layer anchoring the stage. Its subLayerPaths field is an
           ordered, list-editable sequence of asset paths. Relative paths are resolved relative to
@@ -121,7 +121,7 @@ lessons:
       - kind: concept
         heading: First listed is strongest
         system: >-
-          This rule is short enough for the live audience to chant. They will still chant it backward.
+          Keep the rule close at hand: the first listed sublayer is the strongest.
         body: |
           subLayerPaths is ordered from strongest to weakest. When two sublayers author different
           values for the same property, the opinion in the earlier listed layer wins. The weaker
@@ -156,8 +156,8 @@ lessons:
       - kind: work_order
         heading: Promote lighting ahead of layout on the Marquee
         system: >-
-          LIVRPS uses "local" with the confidence of a term that knows it will be misunderstood.
-          I admire that.
+          In LIVRPS, "local" means the entire current layer stack, including its recursive
+          sublayers.
         body: |
           The marquee at /City/ArcHighlands/Marquee takes its sign-off text from two workstreams.
           layout.usda authors /World/Marquee with signOff set to DRAFT. lighting.usda authors the
@@ -200,8 +200,8 @@ lessons:
       - kind: concept
         heading: Sublayers cannot make siblings
         system: >-
-          Listing the same layer three times produces one prim and a great deal of confidence. Only
-          one of those is useful.
+          Listing the same layer three times still contributes at one authored path. To create
+          three sibling prims, give each reference its own destination.
         body: |
           A sublayer contributes every spec at the path it was authored. Listing one sphere layer
           three times therefore contributes three opinions to the same sphere, because nothing in
@@ -300,7 +300,8 @@ lessons:
       - kind: concept
         heading: References map reusable scene description
         system: >-
-          One asset, several towers, and only one file to blame. This is operational maturity.
+          One asset can supply several towers while remaining a single independently maintained
+          source.
         body: |
           A reference arc composes a source prim and its descendants onto a destination prim. An
           external reference names another layer; an internal reference targets a prim in the
@@ -317,7 +318,7 @@ lessons:
         heading: Default prim supplies an omitted target
         system: >-
           If you omit the address, the source had better name its front door. The Gatekeeper
-          considers guessing beneath both of you.
+          therefore checks that the source layer declares the intended default prim.
         body: |
           An external reference consists of an asset path and, optionally, a prim path. If the
           prim path is omitted, USD targets the referenced layer's default prim. If that layer has
@@ -388,15 +389,14 @@ lessons:
     apply:
       f5_skyline_references: >-
         Define two destination prims referencing skyscraperA.usd and one referencing
-        skyscraperE.usd. The skyline wants reuse, not three independently maintained monuments to poor judgment.
+        skyscraperE.usd. The skyline needs three placements backed by two reusable source assets.
 
   - source: docs/creating-composition-arcs/encapsulation/what-is-encapsulation.md
     title: Encapsulation
     objective: Structure an asset so every required prim and relationship target is contained beneath its referenced root.
     intro: >-
-      A cube arrives with its material binding and without its material. This is considered
-      avant-garde only by people who do not maintain pipelines. Put every dependency under the
-      asset's default prim before Reference Docks loses another shipment.
+      A cube arrives with its material binding but without its material. Put every dependency
+      under the asset's default prim so the complete asset travels through the reference.
     beats:
       - kind: concept
         heading: Composition follows the targeted subtree
@@ -416,8 +416,8 @@ lessons:
       - kind: concept
         heading: Relationships must survive remapping
         system: >-
-          A binding to a missing material is still a relationship. It is simply a relationship
-          with the emotional range of this city's procurement office.
+          A binding can remain authored even when its material is missing. Encapsulation keeps the
+          relationship target available after composition.
         body: |
           Relationship targets such as material bindings are paths. If a cube under /World binds
           to /Looks/Red, referencing /World brings the cube but not its sibling /Looks, leaving
@@ -452,7 +452,8 @@ lessons:
       - kind: work_order
         heading: Move the material inside the asset root
         system: >-
-          It worked in the asset file is the traditional opening statement before the boss music.
+          Working in the source file is only the first step; test the asset from a consuming stage
+          to verify that every dependency crosses the reference boundary.
         body: |
           The kiosk asset at Reference Docks is a cube and one red material, and the open question
           is where that material sits relative to the prim a consumer will reference. Nothing in
@@ -553,7 +554,8 @@ lessons:
       - kind: concept
         heading: The target prim moves the boundary
         system: >-
-          Aim one level too low and a correctly built asset arrives half dressed. The asset was fine.
+          Target one level too low and even a correctly built asset arrives without dependencies
+          that sit above the selected prim.
         body: |
           A reference can name a source prim as well as an asset path, and the encapsulation
           boundary is measured against whatever prim is named. Targeting the Cube inside a well
@@ -607,7 +609,7 @@ lessons:
     intro: >-
       One lamp with a switch on it beats two lamps filed separately, and one character with an
       outfit variant set beats tracking coats in a spreadsheet. The wardrobe department has opinions
-      about how many switches is too many, and for once they are correct.
+      about how many switches are useful, because every combination carries an authoring cost.
     beats:
       - kind: concept
         heading: One controller, many variations
@@ -823,14 +825,14 @@ lessons:
     objective: Author payload arcs and control their loaded state through the OpenUSD Python API.
     intro: >-
       The harbor contains three buildings disguised as cargo and would prefer not to unpack them
-      until requested. Payloads grant that wish while preserving composition. The Harbor Master
-      calls this laziness because efficiency threatens his staffing model.
+      until requested. Payloads grant that wish while preserving composition and keeping the
+      manifest available for inspection.
     beats:
       - kind: concept
         heading: Payloads compose deferred content
         system: >-
-          The crate remains visible in the manifest while its expensive descendants sleep. I have
-          requested the same arrangement for contestants.
+          The crate remains visible in the manifest while its expensive descendants sleep, ready
+          to load when the work calls for them.
         body: |
           A payload arc maps source scene description onto a destination prim like a reference,
           but its contributed content can be loaded or unloaded. When unloaded, the payload arc
@@ -860,7 +862,8 @@ lessons:
       - kind: api
         heading: Add, unload, and load
         system: >-
-          Three methods operate the cargo doors. The harbor still employs seventeen people to lose the keys.
+          Three methods operate the cargo doors: AddPayload authors the arc, while Load and Unload
+          control its composed state.
         body: |
           GetPayloads returns the UsdPayloads editing interface and AddPayload authors the arc in
           the current edit target. Load and Unload operate on a composed prim's load state rather
@@ -911,20 +914,20 @@ lessons:
     apply:
       f5_sealed_crate: >-
         Payload sm_bldgF.usd onto all three building destination prims and save the manifest.
-        They may sleep until summoned; the validators, regrettably, never do.
+        The building contents may remain deferred until a consumer loads them.
 
   - source: docs/creating-composition-arcs/references-payloads/what-are-payloads.md
     title: Payload Semantics
     objective: Choose payloads for deferred scene description and manage stage load sets efficiently.
     intro: >-
       A city can be too large to load merely because someone opened the file. Payloads let you
-      inspect the map before manifesting every warehouse, vehicle, and regrettable statue. Memory
-      usage falls, load time improves, and the sponsors claim credit.
+      inspect the map before manifesting every warehouse, vehicle, and statue. Memory usage falls,
+      load time improves, and the working set stays focused.
     beats:
       - kind: concept
         heading: References with a load gate
         system: >-
-          A reference enters immediately. A payload waits for its cue, unlike every contestant in casting.
+          A reference enters immediately, while a payload waits for its load cue.
         body: |
           Payloads and references both compose a targeted source hierarchy at a destination prim.
           Their defining difference is population control: reference content is always composed,
@@ -975,7 +978,7 @@ lessons:
         heading: A crate that stays readable while unloaded
         system: >-
           If unloading the warehouse also erases the sign telling you where the warehouse is,
-          your interface has joined the boss faction.
+          the interface cannot help users decide what to load. Keep lightweight labels outside the payload.
         body: |
           The block at Payload Berth now carries three deferred buildings, and /World/CargoCrate is
           the crate the Harbor Master keeps demanding be opened. That crate is not on the stage
@@ -1016,7 +1019,8 @@ lessons:
       - kind: concept
         heading: Inherits broadcast through a namespace
         system: >-
-          Change one source, update every inheritor in this composition context. The audience calls it magic; payroll calls it leverage.
+          Change one source and every inheritor in this composition context updates with it. One
+          shared address makes coordinated edits efficient.
         body: |
           An inherits arc applies prim and property specs from a source prim hierarchy to a
           destination prim. Unlike a reference, an inherit source acts as a global namespace that
@@ -1226,7 +1230,7 @@ lessons:
     intro: >-
       Some defaults should lose gracefully whenever anyone has a more specific opinion.
       Specializes was built for this noble surrender. It occupies the weakest seat in LIVRPS and
-      still somehow has a longer title than the floor boss.
+      supplies a reusable fallback without blocking stronger authored choices.
     beats:
       - kind: concept
         heading: Specializes supplies fallback specs
@@ -1550,7 +1554,7 @@ lessons:
       - kind: concept
         heading: Local refinement rides a translated path
         system: >-
-          One pyramid changes and its neighbours never learn about it. Precisely scoped vandalism.
+          One pyramid changes while its neighbors remain untouched: the correction is precisely scoped.
         body: |
           Local refinement is what happens when the arc targets an encapsulated prim. That target is
           re-pathed on reference, so each aggregate composes its own copy of the source at its own
@@ -1566,7 +1570,7 @@ lessons:
       - kind: api
         heading: Read the target path to predict the reach
         system: >-
-          The path tells you the blast radius before you author anything. Read it first.
+          The path tells you the scope of an edit before you author anything. Read it first.
         body: |
           Inspecting the arcs on a composed prim shows which source paths it points at. A root-level
           target indicates a global reach, while a target beneath an aggregate indicates a
@@ -1620,9 +1624,8 @@ lessons:
     title: Prim Composition
     objective: Explain how specs and opinions form composed prims and direct authoring to a chosen edit target.
     intro: >-
-      A composed prim may look singular while dozens of specs argue beneath it. This is the
-      central illusion holding the city together. You will learn where opinions live, how they
-      combine, and how not to vandalize the strongest layer by accident.
+      A composed prim may look singular while dozens of specs contribute beneath it. You will
+      learn where opinions live, how they combine, and how to author safely in the intended layer.
     beats:
       - kind: concept
         heading: Prims are composed from specs
@@ -1693,7 +1696,8 @@ lessons:
       - kind: concept
         heading: Edit targets choose the authored layer
         system: >-
-          The current edit target is where your next opinion lands. Check it before swinging; restoration is not in the prize budget.
+          The current edit target is where your next opinion lands. Check it before authoring so
+          the change goes into the intended layer.
         body: |
           A stage edit target maps scene paths to a particular layer and composition node. For
           straightforward layer-stack editing, stage.SetEditTarget(layer) directs subsequent Usd
@@ -1760,14 +1764,14 @@ lessons:
     title: Tracing Composition
     objective: Inspect prim and property stacks to identify authored sources and explain the winning opinion.
     intro: >-
-      The sign says five things in five composition dialects and displays one value. Guessing is
-      for game shows with smaller liability waivers. You will trace the stack, identify the
-      strongest authored opinion, and leave every weaker arc alive for evidence.
+      The sign says five things in five composition dialects and displays one value. Trace the
+      stack, identify the strongest authored opinion, and leave every weaker arc alive as evidence.
     beats:
       - kind: concept
         heading: Composition resolves one opinion at a time
         system: >-
-          A stage with thousands of prims is merely this argument repeated until the debugger asks for leave.
+          A stage with thousands of prims applies this same per-property resolution repeatedly, so
+          a focused trace is your best guide.
         body: |
           Composition strength is evaluated for each field and property. A strong spec may supply
           one value while a weaker spec supplies another property that has no stronger opinion.
@@ -1853,14 +1857,15 @@ lessons:
     title: LIVRPS Strength Ordering
     objective: Apply Local, Inherits, Variant sets, References, Payloads, Specializes ordering within recursive composition contexts.
     intro: >-
-      LIVRPS is the ordering law of the Composition and the only phrase Archivist Prime enjoys
-      hearing pronounced. It determines which opinion survives when layer stacks disagree.
-      Memorize the order, then understand the recursion, or the Archive will notice the difference.
+      LIVRPS is the ordering law of the Composition. It determines which opinion wins when layer
+      stacks disagree. Learn the order, then follow how it applies recursively across connected
+      layer stacks.
     beats:
       - kind: concept
         heading: Six categories, strongest to weakest
         system: >-
-          Local, Inherits, Variant sets, References, Payloads, Specializes. The crowd has set it to music; counsel has intervened.
+          Local, Inherits, Variant sets, References, Payloads, Specializes: the complete order from
+          strongest to weakest.
         body: |
           LIVRPS orders composition categories from strongest to weakest: Local opinions, Inherits,
           Variant sets, References, Payloads, and Specializes. The acronym describes both the arc

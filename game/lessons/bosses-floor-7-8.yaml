@@ -13,12 +13,11 @@ reviews:
     intro: >-
       The Intake Platform stamped provenance on the kiosk, filed the mapping between OBJ records
       and USD schemas, and pulled the first vertices off the dock into a mesh. The Overseer reads
-      what those three left behind and accepts nothing vaguer than authored data.
+      what those three left behind and checks it against the authored-data contract.
     work_order:
       heading: The published cube carries the coordinates it arrived with
       system: >-
-        The Overseer accepts eight corners and a note saying who put them there. Intentions are
-        filed in a different building.
+        The contract calls for eight corners and a note recording their inspection.
       body: |
         The Dock Overseer inspects the city as it currently stands rather than a fresh stage.
         /World/Cube is already in it, published when the cube came off the crate, and the kiosk
@@ -40,7 +39,7 @@ reviews:
         - "documentation is metadata describing the prim, not a property hanging off it."
     apply: >-
       Type /World/Cube as a Mesh, author the eight unit corners in the listed order, and stamp the
-      clearance note in documentation. The Overseer files discrepancies in triplicate.
+      clearance note in documentation. The Overseer will verify each authored value.
 
   - quest: f8_unit_gauge
     objective: >-
@@ -49,7 +48,7 @@ reviews:
     intro: >-
       Transform Junction separated the facts of the source from the choices made for the
       destination, then pointed vertical at the ceiling. Linear units are the other half of that
-      same declaration, and the Gauge has noticed nobody made it.
+      same declaration, and the Gauge is ready for that value.
     work_order:
       heading: The terminal declares which way is up and not what a unit is worth
       system: >-

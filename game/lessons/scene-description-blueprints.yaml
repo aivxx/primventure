@@ -5,13 +5,13 @@ lessons:
     intro: >-
       Schema Square has spent two seasons trading crates labeled "probably geometry." Today we
       introduce schemas, which tell a prim what it is and what properties come with the job. The
-      audience has been instructed not to applaud until something in this borough has a type name.
+      next round begins when the borough has a clear type name.
     beats:
       - kind: concept
         heading: Schemas are the blueprints behind a prim
         system: >-
           A blueprint answers two questions: what is this thing, and what is it allowed to carry.
-          Contestants historically answer neither.
+          Schemas make both answers explicit.
         body: |
           Schemas give meaning to prims. They answer what an element is and what capabilities it
           has, and they define the data models used to encode and interchange 3D and non-3D
@@ -38,8 +38,7 @@ lessons:
       - kind: concept
         heading: IsA schemas state what a prim is
         system: >-
-          One identity per prim. The borough tried multiple identities and produced the fourth
-          floor.
+          One IsA identity per prim keeps its data model unambiguous.
         body: |
           IsA schemas, also called typed schemas or prim schemas, essentially tell a prim what it
           is. Because of that, a prim can only subscribe to one IsA schema at a time. The
@@ -85,8 +84,7 @@ lessons:
       - kind: api
         heading: Working with schemas in Python
         system: >-
-          Define, then set. Two calls. I have watched contestants attempt them in the other order
-          and then blame the registry.
+          Define, then set: the first call creates the typed prim, and the second authors its value.
         body: |
           Each schema class exposes a Define method that authors the prim with the correct type
           name and returns a typed object, along with accessors for the properties that schema
@@ -167,8 +165,7 @@ lessons:
     apply:
       f2_market_stall: >-
         Define the Stall with UsdGeom.Cube and author size 2 through the schema. Schema Square
-        accepts typed goods only, and the untyped inventory was confiscated by a boss with a
-        clipboard.
+        is ready for typed goods, and the schema keeps the inventory clearly labeled.
 
   - source: docs/scene-description-blueprints/scope.md
     title: Scope
@@ -176,12 +173,12 @@ lessons:
     intro: >-
       Every borough eventually needs a yard, which is to say a place to put things that is not
       itself a thing. Scope is that prim. It holds, it labels, it refuses to move, and it has
-      never once been accused of being interesting.
+      a quiet but important organizational role.
     beats:
       - kind: concept
         heading: A Scope is a grouping prim
         system: >-
-          An empty folder with civic ambitions. I have met contestants with less structure.
+          Think of a Scope as an empty folder with a useful place in the city plan.
         body: |
           In OpenUSD, a Scope is a special type of prim used primarily as a grouping mechanism in
           the scenegraph. It does not represent any geometry or renderable content itself and
@@ -225,8 +222,8 @@ lessons:
       - kind: api
         heading: Defining and identifying Scopes in Python
         system: >-
-          Define to author, IsA to confirm. The second call exists because contestants keep
-          asserting things about prims they never typed.
+          Define to author, IsA to confirm. The second call verifies the type before your script
+          relies on it.
         body: |
           Two functions cover most work with Scopes. UsdGeom.Scope.Define defines a new Scope at
           a specified path on a given stage. The generic prim.IsA check confirms that a prim's
@@ -306,7 +303,7 @@ lessons:
     intro: >-
       Crane Row has a crane, and the crane is on the ground, because so far nobody in this
       borough has authored a transformation. Xform is the prim that fixes that. It is also where
-      contestants learn that transformations happen in an order, and that the order is authored.
+      you will see that transformations happen in an authored order.
     beats:
       - kind: concept
         heading: An Xform stores transformation data for its children
@@ -333,8 +330,7 @@ lessons:
       - kind: concept
         heading: UsdGeom, imageable prims, and transformability
         system: >-
-          Two base classes and one concrete type. Read this beat and you will stop guessing which
-          prims can be moved.
+          Two base classes and one concrete type make transformability explicit.
         body: |
           UsdGeom defines the 3D graphics-related prim and property schemas that together form a
           basis for interchanging geometry between digital content creation tools in a graphics
@@ -356,8 +352,7 @@ lessons:
       - kind: api
         heading: Defining an Xform and adding transform ops
         system: >-
-          The op is a thing you add, not a value you set. Contestants who miss that end up with a
-          crane and a strong opinion about nothing.
+          Add the transform op first, then set its value; both steps are needed to place the crane.
         body: |
           UsdGeom.Xform.Define defines a new Xform prim at a specified path on a given stage. A
           transformation is then authored by adding a transform operation to that prim.
@@ -389,8 +384,8 @@ lessons:
       - kind: concept
         heading: Why the order of operations matters
         system: >-
-          Rotate then move, or move then rotate. The borough has made this mistake at scale and
-          the results are visible from the fourth floor.
+          Rotate then move, or move then rotate: the same operations can produce visibly different
+          results.
         body: |
           An Xform prim's transformation is not a single value but a sequence of operations
           combined in the order the prim records. Different orders can yield different results,
@@ -409,8 +404,8 @@ lessons:
       - kind: work_order
         heading: The crane has no prim on Crane Row and no translation on it
         system: >-
-          Adding the op twice is my favorite outcome here. Nothing errors and the crane arrives at
-          a location nobody requested.
+          Adding the same op twice may not raise an error, but it changes the op order and can move
+          the crane somewhere unintended.
         body: |
           Crane Row is the next neighborhood along from the yard, and the crane belongs at
           /City/BlueprintBorough/Crane. It has to be an Xform, so that whatever hangs beneath it
@@ -504,7 +499,7 @@ lessons:
         heading: Checking compatibility, then setting the components
         system: >-
           The bool check is one line and it is the line that separates a transform from an
-          exception. Contestants skip it exactly once.
+          exception. Make it a routine part of the workflow.
         body: |
           Wrapping a prim in UsdGeom.XformCommonAPI produces an object that evaluates as false
           when the prim is not compatible, so the bool operator is how compatibility is verified
@@ -557,7 +552,7 @@ lessons:
       - kind: work_order
         heading: The lift has no translation, no scale, and nothing confirming the API accepts it
         system: >-
-          Not every prim accepts this API. The ones that do not will tell you, provided you asked.
+          Not every prim accepts this API, so confirm compatibility before authoring.
         body: |
           The Lift belongs on Crane Row, beside the crane you raised with a single translate op.
           It needs to be an Xform at /City/BlueprintBorough/Lift standing four units along and

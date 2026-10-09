@@ -5,13 +5,13 @@ lessons:
     intro: >-
       Schema Square taught you that a type name is a credential. Lumen Row is where you learn that
       some credentials arrive with wiring. Lights are typed prims like any other, with one wrinkle
-      in their property names that has ended more runs than the boss on this floor.
+      in their property names that is worth checking carefully.
     beats:
       - kind: concept
         heading: UsdLux is the schema domain for lights
         system: >-
-          A light is scene description, not a button in somebody's renderer. I will be repeating
-          that, because half of you have already reached for the button.
+          A light is scene description, not a private renderer setting. That distinction keeps it
+          portable across USD-aware tools.
         body: |
           UsdLux is the schema domain that standardizes lights. Because a light is described by a
           type rather than by an application's private settings, any USD-aware renderer reads the
@@ -29,7 +29,7 @@ lessons:
       - kind: api
         heading: A light defines like any other typed prim
         system: >-
-          You already know this call. I am mostly here to watch you discover that you know it.
+          This call follows the same typed-prim pattern you already know.
         body: |
           Prefer the schema class when you know the type you want. Define takes the stage and a
           path, authors the type name, creates any missing ancestors, and hands back the typed
@@ -61,8 +61,7 @@ lessons:
       - kind: concept
         heading: A light's controls live under the inputs namespace
         system: >-
-          Here it is. The wrinkle. Read it twice and you will be spared the indignity waiting two
-          beats from now.
+          Here is the key detail: the inputs prefix and colon are part of the property name.
         body: |
           A light's emissive controls are grouped under a namespace. A namespace is a prefix and a
           colon on the front of a property name, and for lights that prefix is inputs. So the
@@ -165,22 +164,21 @@ lessons:
     apply:
       f2_street_lamp: >-
         Define the StreetLamp as a SphereLight, then set its intensity to 750 through the schema
-        accessor. The attribute being graded is inputs:intensity, namespace and all. Lumen Row has
-        been dark for two seasons and the audience has stopped pretending to be surprised.
+        accessor. The attribute being graded is inputs:intensity, namespace and all. Lumen Row is
+        ready to light up.
 
   - source: docs/composition-basics/layers.md
     title: Layers and Sublayers
     objective: Compose modular scene description with sublayers and control conflicting local opinions through layer ordering.
     intro: >-
-      City Hall attempted to store the entire Composition in one file. The file survived; City
-      Hall did not. Layers let separate voices contribute to one stage without rewriting each
+      City Hall once attempted to store the entire Composition in one file. Layers offer a more
+      practical plan: separate voices contribute to one stage without rewriting each
       other, provided you remember which voice is shouting from the top of the list.
     beats:
       - kind: concept
         heading: Layers hold scene description
         system: >-
-          A layer is one witness. The stage delivers the verdict. This distinction would have
-          shortened several trials and one season finale.
+          A layer contributes one account; the stage presents the composed result.
         body: |
           A layer is a file or resource containing scene description data. It may be a .usd,
           .usda, or .usdc file, data from a file-format plugin, or a non-file-backed resource.
@@ -196,8 +194,8 @@ lessons:
       - kind: concept
         heading: Sublayers form a local layer stack
         system: >-
-          Photoshop is permitted as an analogy for exactly one arc. The legal department has
-          underlined "exactly."
+          Image layers are a useful analogy for this arc, as long as we stop the comparison at
+          sublayers.
         body: |
           Sublayering is one composition arc. A layer's subLayerPaths metadata includes other
           layers so their prim and property opinions participate in the same local layer stack.
@@ -213,8 +211,7 @@ lessons:
       - kind: api
         heading: Author and inspect sublayers
         system: >-
-          First is strongest. I repeat this because the Permit Desk has two faces and both deny
-          hearing it.
+          First is strongest. Keep that ordering visible when the Permit Desk compares opinions.
         body: |
           Sdf.Layer.subLayerPaths is an ordered list from strongest to weakest. The containing
           layer's direct opinions are stronger than opinions from its sublayers. When sublayers
@@ -268,21 +265,21 @@ lessons:
     apply:
       f3_layer_registry: >-
         Add district_registry.usda to the root layer's subLayerPaths, then save the root. City Hall
-        requires a weaker, inspectable voice and has weaponized the filing deadline.
+        needs a weaker, inspectable contribution in its layer stack.
 
   - source: docs/composition-basics/specifiers.md
     title: Prim Specifiers
     objective: Use def, over, and class specifiers to establish prim existence, author non-destructive overrides, and create abstract composition sources.
     intro: >-
       Specifier Court recognizes three legal states: concrete, corrective, and abstract. It calls
-      them def, over, and class because plain language was ruled inadmissible. Classify each prim
-      correctly or the traversal will ignore the wrong witness.
+      them def, over, and class. Classify each prim correctly so traversal includes the intended
+      scene content.
     beats:
       - kind: concept
         heading: Every prim spec has intent
         system: >-
-          The declaration says whether the building exists, merely complains, or serves as a
-          blueprint. Zoning remains furious.
+          The declaration says whether the building exists, modifies another declaration, or
+          serves as a blueprint.
         body: |
           A specifier records how a prim spec in a layer should contribute to composition. The
           three values are def, over, and class. Multiple prim specs at the same path can compose
@@ -295,8 +292,7 @@ lessons:
       - kind: concept
         heading: Def, over, and class
         system: >-
-          One exists, one edits, one haunts the architecture as pure potential. The casting office
-          was unusually efficient.
+          One establishes existence, one edits, and one supplies reusable abstract opinions.
         body: |
           def, short for define, establishes that a concrete prim exists. over, short for override,
           sparsely contributes opinions intended to combine with a definition or class from a
@@ -314,8 +310,7 @@ lessons:
       - kind: api
         heading: Author and inspect specifiers
         system: >-
-          Three constructors, three intentions, and one courtroom boss pretending the distinction
-          is philosophical.
+          Three constructors express three distinct authoring intentions.
         body: |
           DefinePrim authors a def, OverridePrim authors an over, and CreateClassPrim authors a
           class. GetSpecifier returns the resolved Sdf specifier token. SetSpecifier can change the
@@ -379,8 +374,8 @@ lessons:
         Define CourtKiosk as a Cube so the Court can traverse it. A kiosk made entirely of opinions
         sells nothing but appeals.
       f3_over_case: >-
-        Use the existing appeal over to author size 8 locally. The evidence stays untouched, which
-        disappoints the demolition sponsor.
+        Use the existing appeal over to author size 8 locally. The weaker source remains untouched,
+        which is exactly what a non-destructive override should do.
 
   - source: docs/composition-basics/references.md
     title: References
@@ -394,7 +389,7 @@ lessons:
         heading: References graft reusable hierarchies
         system: >-
           One source, many destinations, fewer opportunities for someone to fix two copies and
-          forget the third. The audience has seen that episode.
+          forget the third.
         body: |
           A reference is a composition arc that composes a source prim and its descendants onto a
           destination prim. External references identify another layer and optionally a prim path.
@@ -428,8 +423,7 @@ lessons:
       - kind: api
         heading: Add, target, and clear references
         system: >-
-          GetReferences hands you the controls rather than the asset. Pulling the lever remains your
-          responsibility and, regrettably, your screen time.
+          GetReferences hands you the editor; AddReference is the call that authors the arc.
         body: |
           prim.GetReferences() returns a Usd.References editor for the current edit target.
           AddReference authors a reference list operation. Supply only an asset path to use that
@@ -492,21 +486,21 @@ lessons:
     apply:
       f3_reference_license: >-
         Add arcade_sign.usda to ArcadeSign's references and let its default prim supply the target.
-        The licensing desk accepts arcs and rejects photocopies on aesthetic grounds.
+        The licensing desk prefers one reusable source over a street of copied assets.
 
   - source: docs/composition-basics/default-prim.md
     title: Default Prim
     objective: Set a top-level default prim that provides the entry point when a layer is referenced or payloaded without an explicit prim path.
     intro: >-
-      The asset has two root prims and no front door. Visitors currently choose one by panic. A
+      The asset has two root prims and no front door. A
       default prim marks the intended entrance, satisfies usdchecker, and prevents references from
       composing an exquisitely organized absence.
     beats:
       - kind: concept
         heading: The asset entry point
         system: >-
-          Every building needs a front door. Floor four maintains that a trapdoor qualifies, hence
-          the litigation.
+          Every building benefits from a clear front door, and every reusable asset benefits from
+          a clear entry point.
         body: |
           A default prim is a top-level prim named by defaultPrim metadata on the stage's root
           layer. It identifies the primary hierarchy consumers should treat as the asset's entry
@@ -524,7 +518,7 @@ lessons:
         heading: References use the default
         system: >-
           Omit the source path only after naming the entrance. Otherwise the reference waits
-          outside and files a complaint.
+          outside with no entry point to compose.
         body: |
           An external reference or payload normally identifies both a layer and a source prim path.
           When the path is omitted, USD consults the target layer's defaultPrim metadata. This
@@ -536,8 +530,7 @@ lessons:
       - kind: api
         heading: Set and verify the default
         system: >-
-          SetDefaultPrim takes a prim. Contestants keep offering strings and a firm belief that
-          "/Kiosk" should be obvious.
+          SetDefaultPrim takes a prim object, not the string path "/Kiosk".
         body: |
           Define or retrieve the top-level prim, pass that Usd.Prim to stage.SetDefaultPrim, and
           save the root layer. GetDefaultPrim verifies the selection. A later reference can then
@@ -560,7 +553,7 @@ lessons:
       - kind: work_order
         heading: The asset has two roots and no defaultPrim
         system: >-
-          A nested lobby remains a lobby. The Gate has rejected stronger metaphors.
+          A nested lobby remains nested; the default prim must be at the root level.
         body: |
           kiosk_asset.usda sits on disk beside the Quarter with two root prims in it: /Kiosk, which
           carries an assetRole of information, and /Scratch, a Scope for working data. On the city
@@ -591,21 +584,19 @@ lessons:
     apply:
       f3_default_gate: >-
         Set the asset stage's /Kiosk prim as default before saving it. The waiting reference has an
-        asset path, no prim path, and the patience of a televised boss.
+        asset path and no prim path, so defaultPrim supplies the missing entry point.
 
   - source: docs/composition-basics/strength-ordering.md
     title: LIVRPS Strength Ordering
     objective: Predict which opinion wins across composition arcs and author non-destructive local overrides over referenced, payloaded, or specialized data.
     intro: >-
       Six arcs enter the LIVRPS Labyrinth. One opinion leaves. Deterministic strength ordering picks
-      the winner, which is a disappointment to everyone here who was counting on save time,
-      confidence, seniority, or pastries.
+      the winner, regardless of save time, confidence, seniority, or pastries.
     beats:
       - kind: concept
         heading: Composition resolves opinions
         system: >-
-          A stage is the verdict after every layer has finished arguing. I admire the efficiency
-          and resent the precedent.
+          A stage is the resolved result after every contributing layer has supplied its opinions.
         body: |
           An opinion is authored scene description about a prim, property, metadata field, or
           namespace. During composition, USD gathers contributing opinions, orders them by
@@ -637,7 +628,7 @@ lessons:
       - kind: concept
         heading: Strength ordering is recursive
         system: >-
-          The maze contains smaller mazes. The architect received an award and several subpoenas.
+          The maze contains smaller mazes, but the same deterministic ordering applies at each one.
         body: |
           LIVRPS is applied recursively at composition nodes. A referenced prim is first composed
           from its own local layers and arcs; that result then participates through the reference
@@ -649,8 +640,8 @@ lessons:
       - kind: api
         heading: Override and inspect the result
         system: >-
-          Author one local value and six competing departments become historical context. This is
-          the closest the broadcast comes to wish fulfillment.
+          Author one local value and the weaker arc opinions remain available as compositional
+          context.
         body: |
           Author a property directly on the destination prim to create a local opinion stronger
           than referenced or variant values. GetPrimStack and an attribute's GetPropertyStack expose
@@ -676,7 +667,7 @@ lessons:
       - kind: work_order
         heading: The destination has no local opinion
         system: >-
-          Saving last earns you nothing. This rule has rearranged executives across all ten floors.
+          Saving last does not change strength; composition structure determines which opinion wins.
         body: |
           Two weaker source layers sit on disk in the Quarter, each holding a single value.
           baron_sign.usda defines /BaronSign with a marquee reading THE BARON OWNS THIS.
@@ -716,9 +707,9 @@ lessons:
     title: Variant Sets
     objective: Create named alternatives, author variant-specific opinions in edit contexts, and select the composed choice without deleting other variants.
     intro: >-
-      Variant Gallery offers day or night, red or blue, calm or regrettably enraged. One asset holds
+      Variant Gallery offers day or night, red or blue, calm or dramatically stormy. One asset holds
       every choice, which spares the city another block of duplicate assets in novelty mustaches.
-      The Curator has already selected incorrectly on your behalf.
+      The Curator has left the final selection for this round.
     beats:
       - kind: concept
         heading: Sets contain named choices

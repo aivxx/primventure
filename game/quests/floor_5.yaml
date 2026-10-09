@@ -97,7 +97,7 @@ quests:
     level_required: 10
     exam_tasks: [author_sublayers, separate_workstreams]
     stats: {craft: 3, lore: 3}
-    brief: "SYSTEM: Geometry and shading filed a joint complaint. Give each a weaker layer. A third department will be considered evidence of panic."
+    brief: "SYSTEM: Geometry and shading filed a joint complaint. Give each a weaker layer. Two departments are enough paperwork for this room."
     starter: |
       from pathlib import Path
       from pxr import Sdf, Usd, UsdGeom

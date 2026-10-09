@@ -24,17 +24,17 @@ from .store import (
 
 
 TAUNTS = [
-    "The System has inspected your opinions. Several have filed for witness protection.",
-    "A bold layer. Incorrect, but bold. The crowd has been told this was intentional.",
-    "Your authored intent and the composed result are no longer on speaking terms.",
-    "SYSTEM: Hydra remained operational throughout your collapse. The distinction will appear in the incident report.",
-    "SYSTEM: Deleting the draft would have been faster. Also, a certification fail.",
+    "Run incomplete. Review the failed checks, adjust the authored opinions, and try again.",
+    "Validation found a mismatch. The checks below show what to revise before the next run.",
+    "The authored intent and composed result differ. Trace the reported checks and bring them back together.",
+    "SYSTEM: The stage stayed open, and the failed checks are ready for review. Make the next edit and retry.",
+    "SYSTEM: This run did not clear. Keep the draft, use the feedback below, and try again.",
 ]
 VICTORIES = [
-    "VALIDATION GREEN. The Composition reluctantly returns one city block.",
-    "Critical composition hit. Somewhere, a weaker opinion quietly expires.",
-    "Room cleared. The System always believed in you, retroactively.",
-    "SYSTEM: Competent. Unsettling. Proceed.",
+    "VALIDATION GREEN. The Composition returns one more city block to service.",
+    "Critical composition hit. The intended opinion now resolves cleanly.",
+    "Room cleared. Strong work; the city is taking shape.",
+    "SYSTEM: Validation passed. Nicely authored. Proceed.",
 ]
 
 

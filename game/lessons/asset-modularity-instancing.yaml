@@ -5,14 +5,14 @@ lessons:
     intro: >-
       Welcome to the Prototype Wilds, where the scenery repeats and the memory bill does not have
       to. Give several prims the same referenced asset, mark them instanceable, and OpenUSD can
-      make their shared structure somebody else's problem. The Mirror Forge calls this imitation.
-      Engineering calls it surviving the floor.
+      share their common structure efficiently. The Mirror Forge calls this a well-rehearsed
+      ensemble.
     beats:
       - kind: concept
         heading: Repeated assets can share one prototype
         system: >-
-          Three benches with three full hierarchies is a memory leak wearing municipal furniture.
-          The audience calls it abundance. The memory allocator has filed a dissent.
+          Three benches do not need three full hierarchies. Let the memory allocator reuse one
+          design.
         body: |
           Scenegraph instancing turns repeated prim subgraphs into shared runtime prototypes.
           Each repeated object remains an explicit instance prim in the scenegraph, while its
@@ -29,7 +29,7 @@ lessons:
       - kind: concept
         heading: References provide the reusable structure
         system: >-
-          The Forge can only mirror something that exists. Even its fraud has prerequisites.
+          The Forge can only mirror authored composition. Give every instance a shared source.
         body: |
           Author each copy as a prim with a reference to the same asset, then set the prim's
           instanceable metadata to true. The reference is the composition arc from which OpenUSD
@@ -45,8 +45,7 @@ lessons:
       - kind: api
         heading: Reference and mark every copy
         system: >-
-          One loop, three benches, no artisanal duplication. The sponsors briefly believe this
-          show has standards.
+          One loop, three benches, and one shared asset keep the pattern compact and consistent.
         body: |
           Define each instance root, add the same asset reference, and mark the root instanceable.
           Save the layer after all metadata and composition arcs are authored.
@@ -107,14 +106,14 @@ lessons:
     intro: >-
       Scenegraph instancing is a contract with the Mirror Forge: you name the copies, OpenUSD
       decides which hidden structure they share. The roots remain yours to move and label. Reach
-      into their reflected descendants, however, and the Sentinel introduces you to immutability
-      with all the warmth of a sealed floor.
+      into their reflected descendants, however, and the Sentinel demonstrates their read-only
+      boundary.
     beats:
       - kind: concept
         heading: Four roles define the system
         system: >-
-          Four nouns for one optimization. The legal department demanded nine, so consider this
-          mercy.
+          Four terms describe the optimization: instanceable prim, instance root, prototype, and
+          instance proxy.
         body: |
           A prototype is a unique shared substructure. An instance is one repetition of that
           prototype in the scene. The instanceable prim, also called the instance prim, is the
@@ -213,8 +212,7 @@ lessons:
     apply:
       f7_shared_prototypes: >-
         Say how many prototypes three arc-free instanceable prims produce, and name the one part of
-        an instance that stays editable. Learn which surface is yours before the Thickets hand you
-        three benches.
+        an instance that stays editable. Identify the editable root before authoring changes.
 
   - source: docs/asset-modularity-instancing/refining-scenegraph-instances/scenegraph-deinstance-refinement.md
     title: Selective Deinstancing
@@ -222,7 +220,7 @@ lessons:
     intro: >-
       Occasionally one copy develops a personality, usually after exposure to stickers. Clear
       instanceable on that copy and its descendants become editable again. The other mirrors keep
-      sharing, the city keeps most of its savings, and the Forge files a narrowly scoped complaint.
+      sharing, and the city keeps most of its savings while making room for the exception.
     beats:
       - kind: concept
         heading: Deinstancing restores descendant editability
@@ -243,7 +241,7 @@ lessons:
       - kind: concept
         heading: Siblings keep sharing
         system: >-
-          One bench leaves the mirror cult. The other two retain their group rate.
+          One bench leaves the shared prototype. The other two keep sharing.
         body: |
           Instanceable metadata is evaluated per prim, so clearing it on one copy leaves siblings
           untouched and compatible siblings continue sharing their existing prototype.
@@ -258,8 +256,8 @@ lessons:
       - kind: api
         heading: Deinstance before editing descendants
         system: >-
-          Order matters. First leave the hall of mirrors, then redecorate. The reverse order is
-          merely televised failure.
+          Order matters. First leave the shared prototype, then edit descendants; instance proxies
+          are read-only.
         body: |
           Clear instanceable on the selected root before retrieving and editing its descendants.
           Root-level metadata can also be authored after deinstancing, though it was already
@@ -283,8 +281,8 @@ lessons:
       - kind: work_order
         heading: One bench needs an edit its proxies refuse
         system: >-
-          A unique exception is refinement. Nine hundred unique exceptions are a new asset library
-          assembled during a panic.
+          A unique exception is refinement. Many unique exceptions become a new asset library in
+          practice, so choose the boundary deliberately.
         body: |
           Three benches stand at the Scenegraph Thickets, BenchA, BenchB, and BenchC, each
           referencing bench.usda and each carrying instanceable true. All three share one
@@ -314,20 +312,20 @@ lessons:
     apply:
       f7_deinstance_sticker: >-
         Set only BenchC instanceable false and give it the displayName Unique Sticker Bench.
-        BenchA and BenchB stay in the mirror arrangement; their union has excellent counsel.
+        BenchA and BenchB stay in the shared mirror arrangement.
 
   - source: docs/asset-modularity-instancing/authoring-point-instancing/exercise-authoring-point-instancing.md
     title: Authoring a Point Instancer
     objective: Create a UsdGeom.PointInstancer with explicit prototypes, prototype indices, and local-space positions.
     intro: >-
-      A thousand cargo copies do not each deserve a speaking role in the scenegraph. Point
-      instancing packs them into arrays, which is efficient, compact, and deeply unpopular with
-      anyone hoping to click every crate. The Point Wastes respect throughput, not sentiment.
+      A thousand cargo copies do not each need a separate prim in the scenegraph. Point instancing
+      packs them into arrays for efficient, compact populations when individual prim paths are not
+      required.
     beats:
       - kind: concept
         heading: One prim can represent vast repetition
         system: >-
-          One prim, hundreds of thousands of objects. The casting department has been dissolved.
+          One prim can efficiently represent hundreds of thousands of repeated objects.
         body: |
           UsdGeom.PointInstancer is a typed schema for representing large numbers of repeated
           objects compactly. Instead of defining one scenegraph prim for every copy, it stores
@@ -343,8 +341,8 @@ lessons:
       - kind: concept
         heading: Three properties are required
         system: >-
-          Prototypes, indices, positions. Three arrays stand between you and an empty warehouse.
-          The audience has started a countdown without authorization.
+          Prototypes, indices, and positions are the three coordinated inputs that populate the
+          warehouse.
         body: |
           The prototypes relationship lists the prim hierarchies available for repetition.
           protoIndices contains one integer per instance and selects an entry in that ordered
@@ -360,8 +358,8 @@ lessons:
       - kind: api
         heading: Define, target, index, and place
         system: >-
-          The incantation is short. The resulting cargo field is not. Please distinguish those
-          facts before the camera pans wide.
+          A short authoring sequence can produce a large cargo field because the instances share
+          their prototypes.
         body: |
           Define the PointInstancer, create a prototype prim with a reference, target it through
           CreatePrototypesRel, then author matching protoIndices and positions arrays.
@@ -391,8 +389,7 @@ lessons:
       - kind: work_order
         heading: The PointInstancer has none of its three properties
         system: >-
-          Index 1 cannot select the only prototype at index 0. Arithmetic remains undefeated on
-          all ten floors.
+          With one prototype at index 0, every protoIndices entry must be 0.
         body: |
           In the Point Wastes, /World/Scatter is defined as a PointInstancer and
           /World/Scatter/Prototypes/Crate is defined as an Xform that already references
@@ -423,22 +420,21 @@ lessons:
     apply:
       f7_point_scatter: >-
         Target the cargo prototype, author four zero protoIndices, and place four crates at X
-        positions 0, 2, 4, and 6. The Wastes accept arrays; individual crate biographies were cut.
+        positions 0, 2, 4, and 6. The arrays provide the complete population description.
 
   - source: docs/asset-modularity-instancing/authoring-point-instancing/point-instancing-intro.md
     title: Point Instancing
     objective: Choose and control multiple explicit prototypes in a PointInstancer, including optional per-instance transforms and identifiers.
     intro: >-
-      The Point Wastes have upgraded from one kind of repetition to several, which management
-      insists counts as biodiversity. One relationship supplies the ordered prototype roster.
-      protoIndices assigns the roles, and the transform arrays arrange the cast without granting
-      any of them a prim trailer.
+      The Point Wastes now combine several kinds of repeated objects. One relationship supplies
+      the ordered prototype roster, protoIndices selects the roles, and the transform arrays
+      arrange the population without giving each instance a prim path.
     beats:
       - kind: concept
         heading: Point instancing is vectorized scene description
         system: >-
-          The data is hidden in giant arrays. It is efficient, exact, and hostile to dramatic
-          clicking.
+          The data lives in coordinated arrays: efficient and exact for populations that do not
+          need individual prim paths.
         body: |
           A PointInstancer stores repetitions as array attributes rather than one prim per copy.
           Its prototypes are explicit prim hierarchies targeted by a relationship. This makes it
@@ -454,8 +450,8 @@ lessons:
       - kind: concept
         heading: Multiple prototypes share one index space
         system: >-
-          Crate is zero. Bench is one. The Forge calls this identity theft; computer science calls
-          it an index.
+          Crate is zero and Bench is one because protoIndices addresses the ordered prototype
+          roster.
         body: |
           The prototypes relationship is an ordered list. Every element of protoIndices is a
           zero-based index into that list, so changing target order changes what existing index
@@ -471,8 +467,8 @@ lessons:
       - kind: api
         heading: Author a mixed scatter
         system: >-
-          Two prototypes, four placements, zero duplicated warehouses. The sponsor logo will be
-          added to all of them in post.
+          Two prototypes and four placements produce a mixed population without duplicated
+          subgraphs.
         body: |
           Create both prototype prims, set the ordered relationship targets once, and use
           protoIndices to choose the prototype at each point. orientations, scales, and ids are
@@ -530,8 +526,8 @@ lessons:
       - kind: work_order
         heading: One prototype target cannot describe two objects
         system: >-
-          Move one peanut, rewrite the positions array. The city tried sparse array opinions once.
-          We now refer to that district in the past tense.
+          Moving one instance requires authoring the complete positions array because array
+          opinions resolve as whole values.
         body: |
           The scatter in the Point Wastes holds crates only: /World/Scatter carries one prototype
           target, four zero indices, and four positions along X. Benches are meant to stand among
@@ -571,7 +567,7 @@ lessons:
     objective: Trace how a five-asset library of components and assemblies composes, through references alone, into a warehouse of 44,408 prims.
     intro: >-
       The Warehouse District contains 44,408 prims assembled from five useful assets and one
-      alarming confidence in reuse. Your task is to read the lineup left to right, learn which
+      deliberate reuse strategy. Your task is to read the lineup left to right, learn which
       assets are leaves and which are built from leaves, and see how twenty-five arrangements of
       one rack become a building that nobody had to author twice.
     beats:
@@ -682,10 +678,9 @@ lessons:
     title: Nested Instancing
     objective: Build instanceable aggregates whose contents also use instancing while managing prototype complexity and memory tradeoffs.
     intro: >-
-      The Mirror Forge has placed mirrors inside mirrors and submitted the result as an assembly.
-      This is nested instancing, and unlike most boss tactics it can be an excellent optimization.
-      Used deliberately, it scales cities. Used indiscriminately, it scales prototype complexity
-      until the memory graph becomes the real final boss.
+      The Mirror Forge has placed mirrors inside mirrors and assembled the result. This is nested
+      instancing, and it can be an excellent optimization. Used deliberately, it scales cities;
+      used indiscriminately, it scales prototype complexity instead.
     beats:
       - kind: concept
         heading: Instances can contain instances
@@ -724,8 +719,8 @@ lessons:
       - kind: api
         heading: Instance the aggregate boundary
         system: >-
-          bench_row.usda already contains the inner arrangement. Your job is one outer promise,
-          not an archaeological expedition through its seats.
+          bench_row.usda already contains the inner arrangement. Add one outer instance boundary
+          without reopening its seats.
         body: |
           When an aggregate asset already contains instanceable descendants, reference that asset
           at a new prim and mark the aggregate root instanceable. OpenUSD composes the nested
@@ -748,8 +743,8 @@ lessons:
       - kind: work_order
         heading: The aggregate row is neither composed nor shared
         system: >-
-          Every unique composition can demand another prototype. The Forge considers this a
-          collection. Your profiler will use stronger language.
+          Every unique composition can demand another prototype. Use the profiler to confirm that
+          each additional prototype earns its cost.
         body: |
           At the Mirror Furnace, bench_row.usda is published in the assets folder and already
           contains its own instanceable bench descendants, so the inner level of sharing is
@@ -782,17 +777,16 @@ lessons:
     apply:
       f7_nested_aggregates: >-
         Define nested instancing in one sentence, and name the part of a component asset besides
-        geometry that most often repays sharing. Survey the Furnace before it asks you to author
-        an aggregate.
+        geometry that most often repays sharing. Survey the Furnace, then author the aggregate at
+        the appropriate boundary.
 
   - source: docs/asset-modularity-instancing/asset-modularity/what-is-asset-modularity.md
     title: Asset Modularity
     objective: Explain how layer stacks and composition arcs make modular content reuse the foundation of large OpenUSD scenes.
     intro: >-
       Before the Wilds start repeating anything, somebody has to decide what the repeatable thing
-      is. Break the project into parts, let separate teams own the parts, compose the parts back
-      into a scene. The Forge would prefer you author every bolt by hand, which is precisely why
-      nobody who has ever met a deadline does.
+      is. Break the project into parts, let separate teams own the parts, and compose the parts
+      back into a scene. Clear ownership and composition boundaries keep those parts reusable.
     beats:
       - kind: concept
         heading: A scene composes through its root layer stack
@@ -875,8 +869,8 @@ lessons:
       - kind: concept
         heading: Libraries extend reuse past one project
         system: >-
-          Architecture from the CAD tool, digital humans from a vendor, pallets from whoever
-          answered the email. The composed stage does not ask where anything came from.
+          Architecture from the CAD tool, digital humans from a vendor, and pallets from a library
+          can all meet on one composed stage.
         body: |
           Modularity inside one project extends across projects through asset catalogs and
           libraries. A library shares parts among several assets, so a pallet can be used directly
@@ -938,10 +932,9 @@ lessons:
     title: What Instancing Declares
     objective: Contrast composition's open refinement with instancing's declared deduplication, and state what each approach costs at runtime.
     intro: >-
-      The Wilds are about to ask you to give something up. Composition lets you repeat an asset and
-      then edit every copy, which is generous and, at forty thousand copies, ruinous. Instancing is
-      a signed statement that certain copies are closed for edits. The Forge finds the paperwork
-      distasteful.
+      Composition lets you repeat an asset and edit every copy, but that flexibility has a runtime
+      cost at large scale. Instancing clearly declares that certain copies are closed for edits,
+      trading some flexibility for efficient sharing.
     beats:
       - kind: concept
         heading: The local layer stack is where refinement happens
@@ -1008,7 +1001,8 @@ lessons:
       - kind: concept
         heading: Instancing declares the answer in advance
         system: >-
-          Yes, yes, we know they are identical. Nobody touched them. Please stop looking.
+          Without an instance declaration, the runtime must inspect repeated content to discover
+          whether it is still identical.
         body: |
           It would be useful to be able to say up front that a particular scene element is not open
           to refinement. That statement is instancing, a declarative deduplication of modular
@@ -1060,8 +1054,7 @@ lessons:
     apply:
       f7_dedup_declaration: >-
         Say what a runtime must do to deduplicate ordinary composed repetition, what instancing
-        declares instead, and what the declaration costs you. Sign the waiver before the Thickets
-        hand you three benches.
+        declares instead, and what editability the declaration trades for sharing.
 
   - source: docs/asset-modularity-instancing/authoring-scenegraph-instancing/exercise-nested-instancing.md
     title: Nested Instancing in Practice
@@ -1096,8 +1089,8 @@ lessons:
       - kind: concept
         heading: The shared subgraph stops taking local opinions
         system: >-
-          A creator posed every box by hand for realism. The prototype has reviewed those poses and
-          selected one.
+          Moving the instance boundary to the rack makes every copy share one internal box
+          arrangement.
         body: |
           Before nesting, each pallet in the scenario showed its own decal arrangement, because a
           creator authored local opinions on the individual boxes to give them unique positions and
@@ -1184,9 +1177,9 @@ lessons:
     title: Instance Editability and Refinement
     objective: Apply the three rules of instance editability and identify the refinement techniques that work through the editable instance root.
     intro: >-
-      Three rules, and the Thickets will hold you to all of them. Prototypes are a runtime fiction.
-      Instance proxies are politely immovable. The instanceable prim is yours, and every refinement
-      technique on this floor is a different way of exploiting that one loophole.
+      Three rules define the available authoring surfaces. Prototypes are runtime objects, instance
+      proxies are read-only, and the instanceable prim remains editable. Every refinement technique
+      on this floor uses that supported boundary.
     beats:
       - kind: concept
         heading: Three rules decide where an opinion can land
@@ -1207,8 +1200,8 @@ lessons:
       - kind: concept
         heading: The two invalid overrides go wrong differently
         system: >-
-          One produces an error. The other produces nothing at all, which is worse, because
-          nothing looks a great deal like success from a distance.
+          An instance-proxy override is rejected, while a prototype-path override becomes a
+          dangling opinion. Neither changes the shared content.
         body: |
           A prototype path such as /__Prototype_01 appears in a tree view and looks addressable. An
           over authored at that path composes as a dangling override completely unrelated to the
@@ -1302,8 +1295,8 @@ lessons:
     apply:
       f7_editability_rules: >-
         Say what a prototype override and an instance proxy override each accomplish, then define
-        refinement in terms of the instanceable prim. Learn the three rules before the Thickets ask
-        you to bend them.
+        refinement in terms of the instanceable prim. Use the three rules to choose a supported
+        authoring target.
 
   - source: docs/asset-modularity-instancing/refining-scenegraph-instances/scenegraph-variant-set-refinement.md
     title: Refinement Using Variant Sets
@@ -1637,9 +1630,9 @@ lessons:
     title: Broadcasted Refinement
     objective: Broadcast one opinion to many instances through a shared inherit or specialize target instead of authoring each instance separately.
     intro: >-
-      Adding the same arc bench by bench is honest work and terrible engineering. Inherits and
-      specializes were built to broadcast, so put a class prim inside the assembly, point every copy
-      at it, and author once. The Forge will receive the message on all channels simultaneously.
+      Adding the same arc bench by bench repeats the same work. Inherits and specializes can
+      broadcast instead: put a class prim inside the assembly, point every copy at it, and author
+      once for the whole group.
     beats:
       - kind: concept
         heading: Inherits and specializes broadcast downstream opinions
@@ -1665,8 +1658,7 @@ lessons:
       - kind: concept
         heading: One opinion is cheaper than many identical ones
         system: >-
-          The alternative is authoring the same arc box by box until the pallet is finished or you
-          are.
+          Broadcasting avoids authoring the same arc separately on every box in the pallet.
         body: |
           The warehouse counts make the comparison direct. Plain instancing composes 1,711 prims,
           1,450 instances, and three prototypes. Broadcasting a stamp to every box on one pallet
@@ -1779,7 +1771,7 @@ lessons:
       - kind: concept
         heading: Promotion turns one point into a real subgraph
         system: >-
-          The crate gets a prim path, a transform, and eventually a speaking role.
+          Promotion gives the crate a prim path, a transform, and room for unique opinions.
         body: |
           Promotion means turning a point instance into a full-fledged subgraph on the stage so it
           can be overridden the way any other prim can. It starts with pruning the point, then
@@ -1800,7 +1792,7 @@ lessons:
       - kind: api
         heading: Hide the id, reference the asset, place the prim
         system: >-
-          Two lines to remove a crate, three to give it a career.
+          Prune the point instance, then define a full prim in its place.
         body: |
           Author the id on the instancer, then define the promoted prim, reference the same asset
           the prototype uses, and place it where the point stood.

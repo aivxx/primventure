@@ -4,17 +4,18 @@
 reviews:
   - quest: f0_gatekeeper
     objective: >-
-      Define typed containers and give each one a named value, on the stage you have been
-      composing into since the intake desk.
+      Enter Prim Threshold, complete its district challenge, and pass the Gatekeeper by defining
+      typed containers with the exact named values the district requires.
     intro: >-
-      Prim Threshold asked three questions: where an opinion lands, what carries it, and what
-      names its value. The Gatekeeper asks all three at once and accepts nothing vaguer than a
-      typed prim holding a named string.
+      This is Prim Threshold's district challenge. Complete the work order in the terminal, then
+      run it for the Gatekeeper's review. When all four terminal requirements pass, the route
+      beyond Prim Threshold opens.
+      Prim Threshold's earlier rooms asked where an opinion lands, what carries it, and what names
+      its value. The Gatekeeper now asks for all three at once.
     work_order:
       heading: The Threshold has no district name and no container
       system: >-
-        The Gatekeeper accepts typed containers carrying named data. It has rejected the word
-        "vibes" in writing.
+        The Gatekeeper welcomes typed containers carrying explicitly named data.
       body: |
         The Departure Gate closes out Prim Threshold. Behind you are the intake desk, the first
         prim, and the nameplate, so /City should still be standing as an Xform with the city's
@@ -26,17 +27,19 @@ reviews:
         attribute nobody has authored has no value to read at all rather than a blank one.
 
         The gate needs /City typed as an Xform with cityName reading Primventure, /City/Threshold
-        defined as an Xform, and a string attribute districtName on it set to Prim Threshold. The
-        exactness is the part that bites: a string value carries its punctuation and
-        capitalisation, and CreateAttribute wants Sdf.ValueTypeNames.String named explicitly
-        rather than inferred.
+        explicitly defined as an Xform, and a string attribute districtName on it set to Prim
+        Threshold. A prim existing at the correct path is not enough: its authored type must be
+        Xform rather than untyped. String values are equally exact: CreateAttribute wants
+        Sdf.ValueTypeNames.String named explicitly rather than inferred.
       points:
         - "An untyped prim declares nothing about what it holds, which is not the same as holding nothing."
+        - "/City/Threshold must carry the authored type Xform; existing at the right path is not sufficient."
         - "CreateAttribute takes an explicit Sdf value type, and Set() then writes the value."
         - "String values are exact, punctuation and capitalisation included."
     apply: >-
-      Define /City as an Xform with cityName reading Primventure, define /City/Threshold as an
-      Xform, and give it a string districtName of Prim Threshold.
+      Enter the district by defining /City as an Xform with cityName reading Primventure. Then draw
+      on what you learned to define /City/Threshold as an Xform and give it a string districtName
+      of Prim Threshold. Run the terminal; passing all four requirements opens the gate.
 
   - quest: f2_relationship_bridge
     objective: >-
@@ -114,7 +117,7 @@ reviews:
     work_order:
       heading: The vault records neither its format nor what it archives
       system: >-
-        The Warden rejects vague forms. Bring the address, not the general vicinity.
+        The Warden needs exact addresses so every archive record resolves cleanly.
       body: |
         Warden Foundry keeps the archive at the top of the property ward. The stacks are shelved,
         the clock across the ward is running, and the vault at /City/Archive/WardenVault is meant
@@ -127,7 +130,7 @@ reviews:
 
         A working archive needs the WardenVault defined as an Xform with a formatNote of usda, an
         archives relationship targeting the clock, and a shelfCount of 12 on the stacks. Addressing
-        is where this goes wrong: a prim path and a property path differ by the dot, so
+        is the key detail: a prim path and a property path differ by the dot, so
         /City/Archive/Stacks names the container and /City/Archive/Stacks.shelfCount names one
         property on it.
       points:
@@ -178,7 +181,7 @@ reviews:
       Let each prim's schema declare what it is, and author every value through the accessor that
       schema owns.
     intro: >-
-      Floor 2 was one long argument that a prim's type is not decoration. The Marshal reads the
+      Floor 2 established that a prim's type is not decoration. The Marshal reads the
       whole borough as a single manifest: geometry, grouping, transform, and light, each declared
       by the schema that owns it.
     work_order:
@@ -199,7 +202,7 @@ reviews:
         A declared borough needs the borough as an Xform, the stall as a Cube with size 2.0, the
         yard as a Scope, the crane as an Xform translated to (0, 12, 0), the lift as an Xform
         scaled to (2, 2, 2), and the street lamp as a SphereLight with inputs:intensity of 750. The
-        namespaces are where this fails quietly: transform values live on xformOp attributes with
+        namespaces require special attention: transform values live on xformOp attributes with
         their op order declared alongside, and a light's intensity is inputs:intensity, so dropping
         the prefix authors a custom attribute while the schema's own keeps its fallback.
       points:
@@ -249,8 +252,8 @@ reviews:
       schema type it carries.
     intro: >-
       Measure Yard taught you to count what stands on a stage and to declare what its numbers
-      mean. Neither said what any of it is for. Kind is that opinion, and Floor 6 will assemble
-      your regrets out of it.
+      mean. Neither said what any of it is for. Kind supplies that role, and later floors will use
+      it to assemble model hierarchies.
     work_order:
       heading: The lamp post has a schema type and no role
       system: >-

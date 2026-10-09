@@ -5,13 +5,13 @@ lessons:
     intro: >-
       Floor six opens with definitions, which the Foundry insists on before it stamps anything.
       An asset is not a file that happens to be large. It is a named, versioned, structured
-      container, and four principles decide whether yours survives contact with collaborators.
+      container, and four principles help it work smoothly across collaborators.
     beats:
       - kind: concept
         heading: An asset is a container, not a file
         system: >-
-          Everyone in this building says "asset" and means something slightly different. I
-          stopped arbitrating and started charging admission.
+          "Asset" can mean different things across a production. Here it means a named, versioned,
+          structured container of resources.
         body: |
           An asset in OpenUSD is a named, versioned, and structured container of one or more
           resources. Those resources may include composable layers, textures, volumetric data,
@@ -52,8 +52,8 @@ lessons:
       - kind: api
         heading: Read the interface before opening the stage
         system: >-
-          A legible asset can be interrogated from the outside. So can I, but the answers cost
-          considerably more.
+          A legible asset answers useful questions from the outside, before a consumer composes
+          its heavier contents.
         body: |
           Much of what these principles promise is observable without composing anything heavy.
           A layer reports its own default prim, and a composed stage reports the root prims a
@@ -71,8 +71,8 @@ lessons:
       - kind: work_order
         heading: A delivery arrives with no stated structure
         system: >-
-          Four questions, asked in the same order every time. The Foundry finds this comforting
-          and the delivery drivers find it unbearable.
+          Ask the same four questions each time: is the asset legible, modular, performant, and
+          navigable?
         body: |
           The Principles Ward takes in a building as a folder of layers with no stated entry
           point. Filenames carry dates and identifiers that meant something to the exporter,
@@ -120,8 +120,8 @@ lessons:
       - kind: concept
         heading: The root layer is the interface
         system: >-
-          One supported way in. The building has fire exits too, and I would rather you did not
-          discover them during a live broadcast.
+          Publish one supported way in so consumers can find the stable interface without exploring
+          implementation paths.
         body: |
           An asset designed to be opened as a stage, or added to a scene by referencing, has a
           root layer that serves as its foundation. That root layer is the asset interface layer,
@@ -218,15 +218,15 @@ lessons:
     objective: Build a referenceable asset around one default prim and safely move existing root prims beneath it.
     intro: >-
       An asset without an entry point is a building with twelve doors and no address. The
-      Composition already has enough of those, and three are currently broadcasting depositions.
-      Give downstream users one supported way in, then make certain the asset travels with all
+      Composition already has enough of those. Give downstream users one supported way in, then
+      make certain the asset travels with all
       of its organs attached.
     beats:
       - kind: concept
         heading: One root prim defines the asset
         system: >-
-          The pseudo-root looks important because the interface draws it at the top. So does my
-          podium, and neither one can be referenced as your asset.
+          The pseudo-root appears at the top of the interface, but it is not a defined prim and
+          cannot be referenced as the asset entry point.
         body: |
           An OpenUSD asset is a named, versioned, structured container for resources such as
           layers, textures, and volumes. An asset intended to be opened as a stage or composed
@@ -285,8 +285,8 @@ lessons:
       - kind: work_order
         heading: Root prims share no ancestor prim
         system: >-
-          A mesh that arrives without its material files itself as evidence. Minimalism is the
-          defense it never wins.
+          A mesh that arrives without its material reveals an incomplete asset boundary. Keep both
+          beneath the entry point.
         body: |
           In the Principles Ward a single Cube stands at /Hull with nothing above it. At the
           Portfolio Promenade gate the shape repeats, with /City/CrownDistrict alone in its layer.
@@ -334,8 +334,8 @@ lessons:
       - kind: concept
         heading: Some assets publish many doors
         system: >-
-          A library with one default prim is a shop that sells the building rather than the
-          paint. Popular with nobody.
+          A material library often publishes many individual entries, so choosing one default prim
+          would misrepresent the interface.
         body: |
           A library asset, such as a palette of related materials, may have no single entry point
           at all. Each defined material in it is meant to be referenced individually by downstream
@@ -390,7 +390,7 @@ lessons:
         heading: The palette hides its entries under one root
         system: >-
           Encapsulation is the quiet half of this page, and the half that produces warnings at
-          three in the morning.
+          composition time when a published entry reaches outside its boundary.
         body: |
           The Principles Ward keeps a palette layer holding a dozen related materials, each one
           intended to be picked up on its own by a different building. The layer opens cleanly and
@@ -537,9 +537,8 @@ lessons:
     title: Partition for Navigability
     objective: Partition an asset hierarchy with scopes and agree the naming and access conventions that keep it legible.
     intro: >-
-      What does it mean for a sphere to be parented to a material? Nobody knows, and the Foundry
-      has stopped accepting submissions on the subject. Partition the hierarchy so the question
-      never comes up.
+      A sphere parented to a material has no clear organizational meaning. Partition the hierarchy
+      so geometry and materials each have an understandable place.
     beats:
       - kind: concept
         heading: Partitions remove ambiguous parentage
@@ -562,8 +561,8 @@ lessons:
       - kind: concept
         heading: Conventions carry the access semantics
         system: >-
-          There is no field OpenUSD will refuse to let you override. The underscores are a
-          request, and I have watched people ignore them on live television.
+          OpenUSD does not prohibit overrides on these fields. Underscores communicate an access
+          convention, so document and apply that convention consistently.
         body: |
           OpenUSD places no restriction on which fields may be overridden on a prim, so stable
           editing is a matter of agreement rather than enforcement. Collaborators establish
@@ -642,13 +641,13 @@ lessons:
     objective: Partition geometry and materials beneath an asset entry point using clear scope prims.
     intro: >-
       Encapsulation got everything inside the building. It did not stop the materials department
-      from sleeping in the geometry stairwell. Partition the namespace before a downstream user
-      opens the asset and assumes this was intentional.
+      from sharing the geometry stairwell. Partition the namespace so downstream users can quickly
+      distinguish modeling and surfacing contributions.
     beats:
       - kind: concept
         heading: Partition by responsibility
         system: >-
-          A flat hierarchy is easy to create and expensive to explain on live television.
+          A flat hierarchy is easy to create and harder for every downstream user to navigate.
         body: |
           Encapsulation answers what belongs to the asset. Partitioning answers where a user
           should look for each kind of contribution. Grouping meshes beneath Geometry and
@@ -681,8 +680,8 @@ lessons:
       - kind: api
         heading: Define and classify partitions
         system: >-
-          IsA asks the prim what it is. Naming a mesh "DefinitelyAMaterial" only fools interns and
-          one unusually trusting sponsor.
+          IsA asks the prim what it is. Names are helpful for navigation, but schema predicates
+          provide the reliable type check.
         body: |
           Schema predicates classify prims by their actual type. NamespaceEditor can then reparent
           existing prims beneath the corresponding scope while preserving namespace-dependent
@@ -753,13 +752,13 @@ lessons:
     intro: >-
       Modeling and shading have requested separate files, separate tools, and separate witnesses.
       This is healthy pipeline design. Give each workstream a layer, then compose them in an order
-      everyone can argue about reproducibly.
+      everyone can inspect and reproduce.
     beats:
       - kind: concept
         heading: Layers are workstream products
         system: >-
-          One giant file is technically collaboration in the same way a locked elevator is
-          technically a meeting room.
+          One giant file creates edit contention. Separate workstream layers let contributors
+          iterate independently.
         body: |
           Production assets rarely come from one tool, user, or department. A layer can represent
           the distinct product of a modeling, surfacing, rigging, simulation, or other workstream,
@@ -846,8 +845,7 @@ lessons:
     apply:
       f6_workstream_split: >-
         Append shading.usda before geometry.usda so its sparse override is stronger and the cube
-        still comes from geometry. The two departments are separated; the opinion order remains
-        under my jurisdiction.
+        still comes from geometry. The workstreams remain separate and their opinion order is explicit.
 
   - source: docs/asset-structure/workstreams/adding-user-workstreams.md
     title: Add a Surfacing Workstream
@@ -960,13 +958,13 @@ lessons:
     intro: >-
       Consumers should not need a committee meeting to decide whether your asset is heavy. Give
       them a thin interface to reference and let that interface carry the payload decision inside.
-      The bulk may sleep; the contract remains awake and increasingly judgmental.
+      The bulk may sleep while the contract remains available.
     beats:
       - kind: concept
         heading: Reference the interface, payload the contents
         system: >-
-          The catalog card stays on the shelf when the warehouse is closed. This is more planning
-          than the fourth floor received.
+          The catalog card stays on the shelf when the warehouse is closed: lightweight interface
+          data remains readable while heavy contents are unloaded.
         body: |
           In the reference-payload pattern, downstream scenes reference the asset's interface
           layer. The interface's entry point internally payloads a separate contents layer. Users
@@ -1087,8 +1085,8 @@ lessons:
       - kind: concept
         heading: The interface declares its own conventions
         system: >-
-          A shopfront with no address, no orientation, and no units is not minimalism. It is a
-          missing person report.
+          A shopfront still needs an address, orientation, and units. A thin interface should state
+          each of those contracts explicitly.
         body: |
           Stage metadata belongs to the layer that declares it, so the interface authors its own.
           The entry point prim is defined and recorded as the default prim, the linear unit is
@@ -1234,8 +1232,8 @@ lessons:
       - kind: work_order
         heading: The accent parameter sits below the boundary
         system: >-
-          A parameter nobody can find is a parameter nobody uses. The client will find it anyway,
-          by opening something they should not.
+          A parameter is useful only when consumers can discover it. Loft it above the payload so
+          nobody needs to inspect implementation layers.
         body: |
           The building at the Parameter Loft now ships as an interface and a contents layer. The
           interface defines /World, records it as the default prim, and payloads the contents. The
@@ -1275,9 +1273,8 @@ lessons:
     title: Parameterize the Asset Interface
     objective: Expose stable downstream controls with variant sets, inherited primvars, collections, and relationships.
     intro: >-
-      The client will request another color before this card closes. Expose a supported parameter
-      now, or watch them descend into Looks with a flashlight and contractual immunity. I enjoy
-      neither outcome, though the broadcast numbers disagree.
+      The client may request another color at any time. Expose a supported parameter now so
+      downstream users can make that change without depending on the internal Looks hierarchy.
     beats:
       - kind: concept
         heading: Parameters make reuse intentional
@@ -1344,7 +1341,8 @@ lessons:
       - kind: work_order
         heading: The entry point publishes no parameters
         system: >-
-          Three million color variants is a prototype breeding program, and zoning has noticed.
+          Millions of color variants create unnecessary prototypes. Use a lightweight primvar for
+          a freely varying color value.
         body: |
           At the Parameter Loft the asset is a single prim: /World, defined as an Xform and already
           recorded as the stage default prim. That is the whole stage. The entry point is well
@@ -1375,8 +1373,8 @@ lessons:
           implementation details.
     apply:
       f6_accent_parameter: >-
-        Create constant Float3 primvar accentColor on /World and set it to red. The client may now
-        change the awning without entering the shader district under an assumed name.
+        Create constant Float3 primvar accentColor on /World and set it to red. The client can now
+        change the awning through the published interface.
 
   - source: docs/asset-structure/asset-parameterization/exercise-asset-parameterization.md
     title: Drive an Asset With an Inherited Primvar
@@ -1516,7 +1514,7 @@ lessons:
       - kind: concept
         heading: Each public variant authors a selection
         system: >-
-          An empty switch with two labels is excellent theater and poor asset publishing.
+          A public switch needs matching authored behavior behind each label.
         body: |
           Variant names on the entry point are half the wiring. Inside each public variant's edit
           context, author the matching selection on the nested variant set, so selecting public
@@ -1705,14 +1703,14 @@ lessons:
     objective: Classify a complete referenceable asset as a component and author its asset identity through Usd.ModelAPI.
     intro: >-
       The Model Heights do not care that the house resembles a house. They require metadata,
-      because architecture without zoning is merely an expensive surprise. Register the asset as
-      a component and give the ledger a name it can subpoena.
+      because appearance alone does not communicate a model role. Register the asset as a
+      component and give the asset ledger a stable name.
     beats:
       - kind: concept
         heading: Kind is a second hierarchy
         system: >-
-          Schema type says what the prim is. Kind says what role it plays. My title says host; the
-          incident reports suggest weather system.
+          Schema type says what the prim is. Kind says what role it plays. Keeping those two
+          classifications separate makes the model hierarchy clear.
         body: |
           kind is prim-level metadata from the Kind registry. It classifies a prim's role in the
           model hierarchy independently of schema type, so an Xform can be a component, assembly,
@@ -1769,7 +1767,8 @@ lessons:
       - kind: work_order
         heading: The house carries no model role
         system: >-
-          Renaming an Xform "Component" is paperwork performed by interpretive dance.
+          Renaming an Xform "Component" does not author kind metadata. Use Usd.ModelAPI so tools
+          can query the role directly.
         body: |
           In the Model Heights the house stands complete: /City/AssetFoundry/House is defined as an
           Xform and recorded as the stage default prim. Structurally that is already an asset entry
@@ -1807,8 +1806,7 @@ lessons:
     objective: Classify an aggregate asset as an assembly and populate it with referenced component models.
     intro: >-
       One house is a component. Several reusable houses arranged into a block are an assembly.
-      Several copied houses flattened into one file are a future apology, and our sponsors have
-      capped the apology budget.
+      Referencing those houses preserves their reuse and keeps the block modular.
     beats:
       - kind: concept
         heading: Assemblies aggregate models
@@ -1846,7 +1844,7 @@ lessons:
         heading: Reference a component beneath an assembly
         system: >-
           The block receives a sign by reference. Copying the sign would violate both modularity
-          and a licensing arrangement I refuse to summarize.
+          and the asset's single-source publishing contract.
         body: |
           Set assembly kind on the aggregate root, define a child placement prim, then add a
           reference to the component asset. When the external layer has defaultPrim metadata, the
@@ -1869,8 +1867,7 @@ lessons:
       - kind: work_order
         heading: An empty root where a block belongs
         system: >-
-          A block that owns every mesh, every material, and every regret has graduated from
-          assembly to hoarding.
+          An assembly should arrange reusable models rather than own copies of every mesh and material.
         body: |
           The block layer in the Model Heights opens with /World defined as an Xform and recorded
           as the stage default prim, and nothing beneath it. The large building is already
@@ -1903,21 +1900,21 @@ lessons:
     apply:
       f6_assembly_brief: >-
         Mark /World an assembly, then define six lots and reference lrg_bldgF.usd on each. The
-        skyline needs an aggregate, not a flattened confession.
+        skyline needs a modular aggregate rather than flattened copies.
 
   - source: docs/asset-structure/model-hierarchy/exercise-groups.md
     title: Organize Models with Groups
     objective: Insert group-kind prims that organize related models without creating new component boundaries.
     intro: >-
       North and South are structurally meaningful, visually invisible, and excellent names for
-      avoiding six siblings in one undifferentiated heap. Give the lots group metadata. The zoning
-      board cannot see geometry, but it can smell a flat hierarchy.
+      avoiding six siblings in one undifferentiated list. Give the lots group metadata so the
+      model hierarchy records that organization.
     beats:
       - kind: concept
         heading: Groups organize model children
         system: >-
-          A group is a labeled shelf. The catalog lists products, and this distinction has
-          defeated larger corporations than yours.
+          A group is a labeled shelf for models. It organizes components without becoming a
+          component itself.
         body: |
           A group is a model kind used to organize related models. It creates a valid intermediate
           node in model hierarchy without claiming to be a leaf component or a domain-specific
@@ -1948,8 +1945,8 @@ lessons:
       - kind: api
         heading: Author group partitions
         system: >-
-          Two Xforms, two tokens, no visible change. The audience dislikes invisible work, which
-          is why I control the score.
+          Two Xforms and two kind tokens make no visible change, but they give model-aware tools a
+          useful structure to traverse.
         body: |
           Define each partition as a prim suitable for containing children and use Usd.ModelAPI to
           author Kind.Tokens.group. Existing assembly kind on /World remains unchanged.
@@ -2003,7 +2000,7 @@ lessons:
     apply:
       f6_street_groups: >-
         Define /World/North and /World/South as Xforms and mark both as groups beneath the existing
-        assembly. Six naked children are not a district plan, regardless of spreadsheet quality.
+        assembly. The two groups turn six direct children into a navigable district plan.
 
   - source: docs/asset-structure/model-hierarchy/exercise-variation-workstream.md
     title: Drive Variation From the Assembly
@@ -2118,9 +2115,8 @@ lessons:
     title: Enforce Model Hierarchy
     objective: Design model hierarchies that are operational, shallow, consistent, extensible, and valid around component boundaries.
     intro: >-
-      The Zoning Golem has arranged component over assembly over group, which is less a hierarchy
-      than a distress signal. Restore the approved structure and learn why kind metadata is one of
-      the few labels the composition engine takes personally.
+      The Zoning Golem has arranged component over assembly over group, reversing the valid model
+      hierarchy. Restore the approved structure and see why kind metadata matters to composition.
     beats:
       - kind: concept
         heading: The component boundary prunes traversal
@@ -2142,8 +2138,8 @@ lessons:
       - kind: concept
         heading: Operational and consistent models
         system: >-
-          "Operational" means the asset arrives ready to work, not ready to explain which other
-          seven files someone forgot.
+          "Operational" means the asset arrives ready for its intended use, with the dependencies
+          required by the site's published contract.
         body: |
           Component and assembly assets should be easily referenceable and include the dependencies
           their consumers require, such as material bindings or skeleton setups. The exact
@@ -2225,9 +2221,9 @@ lessons:
     title: Apply Scalable Asset Structure
     objective: Apply legibility, modularity, performance, and navigability to publish a complete, reusable asset contract.
     intro: >-
-      Final capstone. The Null Monarch has removed meaning while leaving every prim exactly where
-      it can cause maximum ambiguity. Reassert the stage contract, the model role, the timeline,
-      and the reusable composition arc before the city becomes an undocumented pile of matter.
+      Final capstone. The Null Monarch has removed the metadata while leaving every prim in place.
+      Reassert the stage contract, model role, timeline, and reusable composition arc so the city
+      is explicit and portable again.
     beats:
       - kind: concept
         heading: Four principles govern the structure
@@ -2285,8 +2281,8 @@ lessons:
       - kind: api
         heading: Reassert the capstone contract
         system: >-
-          Six authored facts stand between the city and null. I have seen bosses defeated with
-          less, though never by this procurement process.
+          Six authored facts restore the city contract. Each belongs to a specific API, and
+          together they make the result complete.
         body: |
           Author each contract through its owning API: stage metadata on Usd.Stage, axis metadata
           through UsdGeom, model kind through Usd.ModelAPI, and the composition arc on the
@@ -2311,8 +2307,8 @@ lessons:
       - kind: work_order
         heading: The stage contract is unauthored
         system: >-
-          The Monarch specializes in omissions. One missing metadata field and it will argue the
-          city is technically sideways, timeless, and not your problem.
+          The Monarch specializes in omissions. Restore every metadata field so the city has an
+          explicit axis, timeline, entry point, and owner-visible contract.
         body: |
           The accumulated city reaches the Root Throne with every prim from the earlier floors
           still standing, /City and /City/CrownDistrict included. The matter of the city is intact

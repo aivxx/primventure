@@ -11,7 +11,7 @@ quests:
     level_required: 18
     exam_tasks: ["7.2", compose_portfolio, preserve_contracts]
     stats: {craft: 5, lore: 5}
-    brief: "SYSTEM: Both branches are clear. Present a payload of cargo and a pipeline note. Tourists will be refunded in sarcasm."
+    brief: "SYSTEM: Both branches are clear. Present a payload of cargo and a pipeline note. Tourists may receive a complimentary map."
     starter: |
       from pathlib import Path
       from pxr import Usd, UsdGeom
@@ -42,7 +42,7 @@ quests:
     level_required: 18
     exam_tasks: ["8.1", set_edit_target, inspect_property_stack]
     stats: {insight: 5, craft: 3}
-    brief: "SYSTEM: Root is strongest. The notes layer is weaker. Set the edit target before you author or you will redecorate the wrong file and call it debugging."
+    brief: "SYSTEM: Root is strongest. The notes layer is weaker. Set the edit target before you author so the opinion lands in the intended file."
     starter: |
       from pathlib import Path
       from pxr import Sdf, Usd
@@ -130,7 +130,7 @@ quests:
     level_required: 18
     exam_tasks: ["8.3", author_layer_offset]
     stats: {insight: 5, craft: 4}
-    brief: "SYSTEM: The clip starts at frame 0. The shot wants it at 10. Use LayerOffset and leave sample baking to contestants who enjoy unpaid overtime."
+    brief: "SYSTEM: The clip starts at frame 0. The shot wants it at 10. Use LayerOffset and let composition handle the timing without baking samples."
     starter: |
       from pathlib import Path
       from pxr import Sdf, Usd
@@ -250,7 +250,7 @@ quests:
     level_required: 19
     exam_tasks: ["6.1", "6.2", "6.3", customizing_usd_concepts]
     stats: {lore: 6, insight: 5}
-    brief: "SYSTEM: Concept raid. This arena is usd-core. It will not compile your plugin, generate a schema, or host an AssetResolver. Answer honestly. Pretending otherwise is how careers become LinkedIn myths."
+    brief: "SYSTEM: Concept raid. This arena is usd-core. It will not compile your plugin, generate a schema, or host an AssetResolver. Keep those boundaries in view as you answer."
     starter: ""
     language: none
     validator:
@@ -349,7 +349,7 @@ quests:
     level_required: 19
     exam_tasks: ["2.1", "3.1", "8.x", recap_mcq]
     stats: {lore: 6, insight: 6}
-    brief: "SYSTEM: Archivist Prime permits no memorized incantations. Original questions. If you copy a dump, the crowd will know."
+    brief: "SYSTEM: Archivist Prime wants your own reasoning, not memorized incantations. Answer the original questions and show what you know."
     starter: |
       from pathlib import Path
       from pxr import Gf, Kind, Sdf, Usd, UsdGeom, UsdLux, UsdShade
@@ -415,7 +415,7 @@ quests:
     level_required: 20
     exam_tasks: ["1.1", "2.x", "7.2", capstone_stage_authoring]
     stats: {craft: 6, insight: 6, resolve: 6}
-    brief: "SYSTEM: The Null Monarch leaves matter standing after meaning disappears. Reassert the city contract, instance a sign, and keep Y-up. Last fight. No C++. No mercy for missing default prims."
+    brief: "SYSTEM: The Null Monarch leaves matter standing after meaning disappears. Reassert the city contract, instance a sign, and keep Y-up. Last fight. No C++. Remember the default prim."
     starter: |
       from pathlib import Path
       from pxr import Gf, Kind, Sdf, Usd, UsdGeom, UsdLux, UsdShade
@@ -449,7 +449,7 @@ quests:
     xp: 800
     reward:
       opinion_points: 7
-      achievement: "Colosseum clear. Contestant USD-01 remains underqualified and employed."
+      achievement: "Colosseum clear. Contestant USD-01 is certified and ready for the next build."
     world_target: /City
     recipes: [Default Prim, Instancing, Kind]
     questions:

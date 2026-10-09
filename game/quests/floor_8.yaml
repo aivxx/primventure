@@ -82,7 +82,7 @@ quests:
     level_required: 15
     exam_tasks: [map_source_concepts, identify_schema_gaps]
     stats: {lore: 4, insight: 3}
-    brief: "SYSTEM: State which OBJ record becomes which USD schema before a single vertex is authored. Extraction is a specification the dock can be held to, and the terminal has run out of patience for improvisation."
+    brief: "SYSTEM: State which OBJ record becomes which USD schema before a single vertex is authored. Extraction is a specification the dock can rely on, so map the route before the cargo moves."
     starter: ''
     language: none
     validator:
@@ -234,7 +234,7 @@ quests:
             Must Agree cleared.'}
     cookbook: docs/data-exchange/data-extraction/what-is-data-extraction.md
     xp: 260
-    reward: {opinion_points: 1, achievement: "New achievement! You extracted geometry without pretending OBJ is USD."}
+    reward: {opinion_points: 1, achievement: "New achievement! You extracted OBJ geometry into a proper USD mesh."}
     world_target: /City/ExchangeTerminal/ExtractedCube
     recipes: [Attribute]
     questions:
@@ -465,7 +465,7 @@ quests:
     level_required: 16
     exam_tasks: [obj_to_usd_pipeline, validate_stage_contract]
     stats: {insight: 5, resolve: 5, craft: 4}
-    brief: "SYSTEM: City boss. Extract the OBJ cube, stamp provenance, pass the contract. The Engine processes data; your feelings remain an unsupported format."
+    brief: "SYSTEM: City boss. Extract the OBJ cube, stamp provenance, pass the contract. The Engine processes data; fortunately, this pipeline has a clear specification."
     starter: |
       from pathlib import Path
       from pxr import Gf, Kind, Sdf, Usd, UsdGeom, UsdLux, UsdShade

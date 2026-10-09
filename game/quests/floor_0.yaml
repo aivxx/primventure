@@ -115,7 +115,8 @@ quests:
       # This boss opens your accumulated city. Author every graded opinion below.
       # 1. Define /City with type Xform.
       # 2. Keep /City.cityName set to 'Primventure'.
-      # 3. Define /City/Threshold with type Xform.
+      # 3. Define /City/Threshold with the authored type Xform.
+      #    A prim at the correct path but without that type does not pass.
       # 4. Create a string attribute /City/Threshold.districtName set to 'Prim Threshold'.
       stage.GetRootLayer().Save()
     language: python
@@ -123,7 +124,10 @@ quests:
       assertions:
       - prim_type: {path: /City, value: Xform}
       - attribute_equals: {path: /City.cityName, value: Primventure}
-      - prim_type: {path: /City/Threshold, value: Xform}
+      - prim_type:
+          path: /City/Threshold
+          value: Xform
+          message: "/City/Threshold must be explicitly typed Xform; an untyped prim does not pass"
       - attribute_equals: {path: /City/Threshold.districtName, value: Prim Threshold}
     cookbook: docs/stage-setting/properties/attributes.md
     xp: 100

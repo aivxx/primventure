@@ -286,7 +286,7 @@ quests:
     level_required: 12
     exam_tasks: [organize_prim_hierarchy, encapsulate_materials]
     stats: {insight: 3, lore: 3}
-    brief: "SYSTEM: Geometry lives under World. Materials filed a separate ZIP. Encapsulate Looks or the next reference will arrive nude."
+    brief: "SYSTEM: Geometry lives under World. Materials filed a separate ZIP. Encapsulate Looks so the next reference arrives fully shaded."
     starter: |
       from pathlib import Path
       from pxr import Gf, Kind, Sdf, Usd, UsdGeom, UsdLux, UsdShade

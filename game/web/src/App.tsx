@@ -352,18 +352,18 @@ function rememberView(patch: Partial<StoredView>) {
 const TICKER = [
   "A NEW CONTESTANT HAS ENTERED THE COMPOSITION",
   "THE BROADCAST IS LIVE IN EVERY REMAINING TIMEZONE",
-  "NO EXPERIENCE REQUIRED · NONE DETECTED EITHER",
+  "NO EXPERIENCE REQUIRED · THE BRIEFINGS WILL GET YOU STARTED",
   "TEN FLOORS · ONE OPENS AT A TIME · THE REST STAY SEALED",
-  "THE PREVIOUS CONTESTANT DECLINED TO READ THE BRIEF",
-  "SPONSORS RECOMMEND A STRATEGY · PANIC FAILED FOCUS TESTING",
+  "THE PREVIOUS CONTESTANT LEFT A VERY ORGANIZED LAYER STACK",
+  "SPONSORS RECOMMEND A STRATEGY · CURIOSITY TESTED WELL",
   "NOTHING HERE IS PERMANENT EXCEPT THE CITY YOU BUILD",
 ];
 
 const SPONSORS = [
   "THIS SEGMENT IS BROUGHT TO YOU BY THE ESTATE OF THE FOURTH FLOOR",
   "SPONSOR: A FIRM THAT NO LONGER RESOLVES · TERMS UNAVAILABLE",
-  "VIEWER DISCRETION IS ADVISED · THE SYSTEM DECLINED",
-  "STANDINGS UPDATE HOURLY · YOUR NAME REMAINS CONSPICUOUSLY ABSENT",
+  "VIEWER CURIOSITY IS ADVISED · THE SYSTEM APPROVES",
+  "STANDINGS UPDATE HOURLY · YOUR NEXT CLEAR IS WAITING",
 ];
 
 function BroadcastChrome() {
@@ -431,7 +431,7 @@ function Landing({ onStart, hasProgress, nextQuest, quests, floors }: {
     <div className="landing-inner">
       <header className="landing-hero">
         <div className="landing-mark"><span>P</span></div>
-        <span className="landing-eyebrow">SEASON 01 · LIVE, UNRENDERED, AND MILDLY EMBARRASSED</span>
+        <span className="landing-eyebrow">SEASON 01 · LIVE, UNRENDERED, AND READY TO COMPOSE</span>
         <h1 data-text="PRIMVENTURE">PRIMVENTURE</h1>
         <p className="landing-tagline">
           “You brought a keyboard to a dungeon. Finally, someone read the job description.”
@@ -460,7 +460,7 @@ function Landing({ onStart, hasProgress, nextQuest, quests, floors }: {
             </div>
             <div>
               <dt>SKILL LEVEL</dt>
-              <dd>UNDERQUALIFIED</dd>
+              <dd>READY TO LEARN</dd>
             </div>
             <div>
               <dt>STATUS</dt>
@@ -476,36 +476,35 @@ function Landing({ onStart, hasProgress, nextQuest, quests, floors }: {
           <img src={systemSprite} alt="The System, your host" />
           <div>
             <span>THE SYSTEM</span>
-            <div className="transmission-tag">SYSTEM BROADCAST · ORIENTATION · YOU CANNOT SKIP THIS</div>
+            <div className="transmission-tag">SYSTEM BROADCAST · ORIENTATION · START HERE</div>
           </div>
         </div>
         <p>
-          Welcome, Contestant. Congratulations on the courage it took to press a button. Something broke the world
+          Welcome, Contestant. Your timing is excellent: something broke the world
           where 3D gets made — film, games, simulation, all of it. Was it me? That is under review. What is left is a
           city that no longer makes sense. Rooms disagree with each other. Buildings have forgotten their own shape.
           Two floors are in litigation over which one is the fourth floor. I have taken no sides, publicly.
         </p>
         <p>
-          The city is called <b>the Composition</b>. I have sealed it into ten floors, for your safety and my ratings.
+          The city is called <b>the Composition</b>. I have sealed it into ten floors, for your safety and a manageable quest log.
           Every room holds exactly one thing that no longer works. Repair the thing and the room lets you leave. Finish
           a floor and I release whatever has been pacing at the top of it, because a season needs structure. No, I will
-          not tell you what it is. Half the fun is yours. The other half is mine, and mine is bigger.
+          not tell you what it is. Discovery is part of the fun, and I have prepared dramatic lighting.
         </p>
         <p>
           You have been <b>filed as a Primwright</b> — my term for someone who writes the instructions that tell a 3D
-          scene what it is. Save the gratitude. Your interview consisted of me skimming one line of your work history,
-          laughing, and printing a badge. It reads <em>Contestant #USD-01</em>. <em>Primwright</em>.
-          <em> Underqualified</em>. I ran out of room before I ran out of adjectives.
+          scene what it is. Your badge is already printed. It reads <em>Contestant #USD-01</em>. <em>Primwright</em>.
+          <em> City Restorer</em>. The printer charged extra for the second line. Worth it.
         </p>
         <p>
-          House rules, which you will ignore in roughly four minutes. I assign the work. Real tooling grades it.
-          Every failure therefore reaches an impartial third party and me, personally, out loud.
+          House rules: I assign the work, and real tooling grades it. If a run fails, the checks will show you what to
+          revise before you try again.
           Nothing you build is ever taken from you. Legal insisted. Everything you get right, the city keeps forever,
-          which I am told is called a portfolio and which I am told humans enjoy. Begin whenever you are ready. The
-          audience is already seated. They were promised a spectacle, and so far they have you.
+          which is called a portfolio and is considerably more useful than the commemorative mug. Begin whenever you
+          are ready. The audience is already seated, and the city is ready for its first repair.
           <span className="caret" />
         </p>
-        <div className="transmission-sign">— THE SYSTEM · HOST, JUDGE, AND NOT YOUR FRIEND</div>
+        <div className="transmission-sign">— THE SYSTEM · HOST, GUIDE, AND VALIDATION ENTHUSIAST</div>
       </section>
 
       <section className="landing-overview" aria-labelledby="game-overview-title">
@@ -993,6 +992,7 @@ export default function App() {
   const [bossDebrief, setBossDebrief] = useState<{ checks: string[]; message: string } | null>(null);
   const [resetting, setResetting] = useState(false);
   const [checks, setChecks] = useState<boolean[]>([]);
+  const [checkMessages, setCheckMessages] = useState<string[]>([]);
   const [usdaView, setUsdaView] = useState<USDAView>({ before_usda: "", after_usda: "" });
   const [usdaMode, setUsdaMode] = useState<"before" | "after">("before");
   const [reviewPending, setReviewPending] = useState(false);
@@ -1139,6 +1139,7 @@ export default function App() {
     setPendingSpend(null);
     setPendingBossRun(false);
     setChecks([]);
+    setCheckMessages([]);
     const owesReview = localStorage.getItem(USDA_REVIEW_KEY) === activeQuest.id;
     setReviewPending(owesReview);
     setUsdaMode(activeQuest.completed || owesReview ? "after" : "before");
@@ -1334,6 +1335,7 @@ export default function App() {
       // up with the checklist as long as the stage opened at all.
       const stageChecks = result.results.filter((item) => !item.rule.startsWith("question_"));
       setChecks(stageChecks.length === activeQuest.expects.length ? stageChecks.map((item) => item.passed) : []);
+      setCheckMessages(stageChecks.length === activeQuest.expects.length ? stageChecks.map((item) => item.message) : []);
       const payout = result.state.opinion_points - state.opinion_points;
       const xpEarned = Math.max(0, result.state.xp - state.xp);
       setUsdaView({
@@ -2106,12 +2108,19 @@ export default function App() {
             <GuideInfoTooltip target="lesson" />
           </div>}
           {activeQuest && activeQuest.expects.length > 0 && <div className="expectations">
-            <span className="expect-heading"><ListChecks size={14} /> THE TERMINAL CHECKS FOR</span>
+            <span className="expect-heading">
+              <ListChecks size={14} /> THE TERMINAL CHECKS FOR
+              {checks.length > 0 && <b>{checks.filter(Boolean).length} / {checks.length} PASSED</b>}
+            </span>
             <ol>{activeQuest.expects.map((line, index) => {
               const verdict = checks[index];
               return <li className={verdict === undefined ? "" : verdict ? "passed" : "failed"} key={line}>
-                <i>{verdict === undefined ? <Circle size={12} /> : verdict ? <CheckCircle2 size={12} /> : <XCircle size={12} />}</i>
-                <span>{line}</span>
+                <i>{verdict === undefined
+                  ? <Circle size={12} aria-label="Not checked" />
+                  : verdict
+                    ? <CheckCircle2 size={12} aria-label="Passed" />
+                    : <XCircle size={12} aria-label="Failed" />}</i>
+                <span>{line}{verdict === false && checkMessages[index] && <small>{checkMessages[index]}</small>}</span>
               </li>;
             })}</ol>
           </div>}
