@@ -172,12 +172,12 @@ quests:
     brief: "SYSTEM: Delivery wants one file. Flatten the composed cube into a package. The workstream stays behind with the production crew."
     starter: |
       from pathlib import Path
-      from pxr import Sdf, Usd
+      from pxr import Sdf, Usd, UsdGeom
 
       folder = Path(STAGE_PATH).parent
       part = Usd.Stage.CreateNew(str(folder / "part.usda"))
-      part.DefinePrim("/World", "Xform")
-      part.DefinePrim("/World/Cube", "Cube")
+      UsdGeom.Xform.Define(part, "/World")
+      UsdGeom.Cube.Define(part, "/World/Cube")
       part.GetRootLayer().Save()
 
       composed = Usd.Stage.CreateInMemory()

@@ -133,7 +133,7 @@ quests:
           if line.startswith("o ") and points:
               break
       cube_points = points[:8]
-      # TODO: Define Mesh /World/Cube and set its points to cube_points.
+      # TODO: Define /World/Cube as a UsdGeom.Mesh and set its points to cube_points.
       stage.GetRootLayer().Save()
     language: python
     validator:
@@ -209,8 +209,8 @@ quests:
 
       stage = Usd.Stage.Open(STAGE_PATH)
       # This boss opens your accumulated city. Author every graded opinion below.
-      # 1. Define /World/Cube with type Mesh.
-      # 2. Define /World/Cube with type Mesh.
+      # 1. Define /World/Cube as a UsdGeom.Mesh.
+      # 2. Keep /World/Cube typed as a UsdGeom.Mesh.
       # 3. Set /World/Cube.points to [[1.0, 1.0, 1.0], [1.0, 1.0, -1.0], [1.0, -1.0, 1.0], [1.0, -1.0, -1.0], [-1.0, 1.0, 1.0], [-1.0, 1.0, -1.0], [-1.0, -1.0, 1.0], [-1.0, -1.0, -1.0]].
       # 4. Set /World/Cube metadata documentation to 'Dock Overseer: Points and Extent Must Agree cleared.'.
       stage.GetRootLayer().Save()
@@ -472,7 +472,7 @@ quests:
 
       stage = Usd.Stage.Open(STAGE_PATH)
       # This boss opens your accumulated city. Author every graded opinion below.
-      # 1. Define /World/Cube with type Mesh.
+      # 1. Define /World/Cube as a UsdGeom.Mesh.
       # 2. Set the stage default prim to /World.
       # 3. Set stage up axis to Y.
       # 4. Set stage metersPerUnit to 0.01.

@@ -363,7 +363,7 @@ quests:
 
       stage = Usd.Stage.Open(STAGE_PATH)
       # This boss opens your accumulated city. Author every graded opinion below.
-      # 1. Define /World/Hero with type Mesh.
+      # 1. Define /World/Hero as a UsdGeom.Mesh.
       # 2. Set the stage default prim to /World.
       # 3. Set stage up axis to Y.
       # 4. Set stage metersPerUnit to 0.01.

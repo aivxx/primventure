@@ -140,10 +140,10 @@ quests:
     stats: {craft: 2, insight: 1}
     brief: "SYSTEM: The Court has opinions about a kiosk with no legal existence. Give it a def before zoning notices become sentient."
     starter: |
-      from pxr import Usd
+      from pxr import Usd, UsdGeom
 
       stage = Usd.Stage.Open(STAGE_PATH)
-      # TODO: Define /City/CompositionQuarter/CourtKiosk as a Cube.
+      # TODO: Define /City/CompositionQuarter/CourtKiosk as a UsdGeom.Cube.
       stage.GetRootLayer().Save()
     language: python
     validator:
@@ -155,7 +155,7 @@ quests:
     xp: 110
     reward: Concrete Docket
     world_target: /City/CompositionQuarter/CourtKiosk
-    recipes: [Def, Specifier]
+    recipes: [Def, Specifier, UsdGeom.Cube.Define]
 
   - id: f3_over_case
     title: Override the Billboard With an Over

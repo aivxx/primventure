@@ -73,6 +73,11 @@ lessons:
           UsdGeom.Xform.Define, which reaches the same result without spelling the type as a
           string.
 
+          An Xform is a transformable container, not visible geometry by itself. Geometry schemas
+          such as UsdGeom.Sphere and UsdGeom.Cube create prims with actual shape and provide
+          shape-specific attributes such as radius and size. A common hierarchy uses Xforms to
+          organize the scene and places geometric prims beneath them.
+
           Both forms hand back a Usd.Prim you can then inspect. Authoring only changes memory, so
           the layer still has to be saved before anything else can read it.
         code: |
@@ -254,6 +259,11 @@ lessons:
           The city needs a name, the lamp globe needs a radius of 0.4, and the Threshold needs its
           district label.
 
+          The Property Ward and LampGlobe serve different roles. /City/PropertyWard is an Xform
+          that organizes and transforms the district; it has no visible shape of its own.
+          /City/PropertyWard/LampGlobe is a Sphere, so defining it with UsdGeom.Sphere creates the
+          geometric prim and exposes the radius attribute owned by the Sphere schema.
+
           None of those values is authored, and they are absent in two different ways. cityName
           and districtName belong to no schema, so nothing has declared them and there is nothing
           to read at all. The Sphere schema declares its radius as double radius = 1, so the
@@ -282,10 +292,9 @@ lessons:
         because the Registrar reads it aloud. No schema owns a city's name, so this is the generic
         CreateAttribute case. This gives the city a clear name in the ledger.
       f1_lamp_post: >-
-        Establish /City/PropertyWard as an Xform, then define the Sphere beneath it at
-        /City/PropertyWard/LampGlobe. Its radius arrives already declared through the schema, so
-        use that accessor to set it to 0.4. This creates the district container before adding its
-        first fixture.
+        Establish /City/PropertyWard as an Xform container, then create the actual geometry by
+        defining a UsdGeom.Sphere beneath it at /City/PropertyWard/LampGlobe. The Sphere schema
+        declares its radius attribute, so use that accessor to set it to 0.4.
 
   - source: docs/stage-setting/stage.md
     title: Stages
@@ -553,22 +562,26 @@ lessons:
 
           stage.GetRootLayer().Save()
       - kind: api
-        heading: Authoring and querying samples
+        heading: Get the schema attribute, then author its samples
         system: >-
           The second argument to Set is the entire difference between animation and a very
           confident still image.
         body: |
-          Passing a time code to Set authors a sample; omitting it authors the default value. Get
-          takes the same optional time code and resolves the value at that moment.
+          First retrieve the attribute object from the schema wrapper. For a UsdGeom.Cube, call
+          GetSizeAttr() on the Cube object; it returns the Usd.Attribute that stores size.
+          Passing a time code to that attribute's Set method authors a sample, while omitting the
+          time authors the default value. Get takes the same optional time code and resolves the
+          value at that moment.
         code: |
-          attr.Set(value)             # default value
-          attr.Set(value, timeCode)   # time sample
+          clock = UsdGeom.Cube.Define(stage, "/City/PropertyWard/Clock")
+          size_attr = clock.GetSizeAttr()
 
-          attr.Get()                  # resolved default
-          attr.Get(timeCode)          # resolved value at that time
+          size_attr.Set(1.0, 1)       # sample at time code 1
+          size_attr.Set(10.0, 48)     # sample at time code 48
 
-          attr.GetTimeSamples()       # [1.0, 48.0]
-          attr.ValueMightBeTimeVarying()
+          size_attr.Get(1)            # 1.0
+          size_attr.Get(48)           # 10.0
+          size_attr.GetTimeSamples()  # [1.0, 48.0]
       - kind: work_order
         heading: The clock holds no time samples and the stage declares no range
         system: >-
@@ -580,17 +593,21 @@ lessons:
           cycle rather than sit still, size 1.0 at time code 1 and 10.0 at time code 48, and the
           crossing needs the stage to declare the span those two moments belong to.
 
+          The clock must be a UsdGeom.Cube rather than another Xform. An Xform can organize and
+          transform children, but it does not define visible geometry or own a size attribute.
+          Defining a Cube creates the geometric prim and gives its schema wrapper GetSizeAttr().
+
           The clock's size carries no time samples. Unauthored, it resolves to the Cube schema's
           fallback at every moment; authored once without a time, it holds one default value that
           resolves identically at time code 1 and at time code 48. The timeline is absent too,
           since startTimeCode and endTimeCode are stage metadata rather than values on the
           attribute, and nothing has declared either of them.
 
-          Set size twice on that one attribute, passing a time code alongside each value, so the
-          layer records two samples and interpolation covers the span between them. Declare the
-          range separately through the stage's start and end time codes. The detail is that
-          omitting the time authors the default value instead of a sample, in which case the
-          second call overwrites the first rather than adding to it.
+          Retrieve the Cube's size attribute with GetSizeAttr(), then call Set twice on that one
+          attribute, passing a time code alongside each value. The layer records two samples and
+          interpolation covers the span between them. Declare the range separately through the
+          stage's start and end time codes. Omitting the time authors the default value instead of
+          a sample, in which case the second call overwrites the first rather than adding to it.
         points:
           - "Set(value) and Set(value, time) author different things. Mixing them up leaves a static default."
           - "Metadata cannot be time sampled, so animated data belongs on attributes."
@@ -603,9 +620,10 @@ lessons:
           authored moments.
     apply:
       f1_clockwork_room: >-
-        Define a Cube at /City/PropertyWard/Clock, then sample its size attribute twice: 1.0 at time
-        code 1 and 10.0 at time code 48. Two samples, one attribute. Set it once without a time and
-        the clock face simply sits there being confident.
+        Define a Cube at /City/PropertyWard/Clock, retrieve its size attribute with GetSizeAttr(),
+        then sample that attribute twice: 1.0 at time code 1 and 10.0 at time code 48. Two samples,
+        one attribute. Set it once without a time and the clock face simply sits there being
+        confident.
 
   - source: docs/stage-setting/properties/relationships.md
     title: Relationships

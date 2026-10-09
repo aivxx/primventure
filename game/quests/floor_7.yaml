@@ -681,8 +681,8 @@ quests:
 
       stage = Usd.Stage.Open(STAGE_PATH)
       # This boss opens your accumulated city. Author every graded opinion below.
-      # 1. Define /World/Scatter with type PointInstancer.
-      # 2. Define /World/Scatter as a PointInstancer with at least 4 instances and 2 prototypes.
+      # 1. Define /World/Scatter as a UsdGeom.PointInstancer.
+      # 2. Give the PointInstancer at least 4 instances and 2 prototypes.
       # 3. Author a reference on /World/Scatter/Prototypes/Crate to asset cargo.usda.
       # 4. Author a reference on /World/Scatter/Prototypes/Bench to asset bench.usda.
       # 5. Set /World/Scatter metadata documentation to 'Cargo Foreman: Two Prototypes, One Instancer cleared.'.
@@ -731,7 +731,8 @@ quests:
       # 2. Set /City/InstanceWilds/Warehouse/Office/BenchA instanceable to True.
       # 3. Set /City/InstanceWilds/Warehouse/Office/BenchB instanceable to True.
       # 4. Author a reference on /City/InstanceWilds/Warehouse/Office/BenchA to asset bench.usda.
-      # 5. Define /City/InstanceWilds/Warehouse/CrateField as a PointInstancer with at least 6 instances and 1 prototypes.
+      # 5. Define /City/InstanceWilds/Warehouse/CrateField as a UsdGeom.PointInstancer
+      #    with at least 6 instances and 1 prototype.
       # 6. Set /City/InstanceWilds/Warehouse metadata documentation to 'Warehouse District: Mix Both Instancing Types cleared.'.
       stage.GetRootLayer().Save()
     language: python

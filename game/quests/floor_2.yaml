@@ -15,7 +15,7 @@ quests:
     starter: |
       from pxr import Usd, UsdGeom
       stage = Usd.Stage.Open(STAGE_PATH)
-      # Define a Cube at /City/BlueprintBorough/Stall and set size to 2.
+      # Define a Cube using UsdGeom at /City/BlueprintBorough/Stall and set size to 2.
       stage.GetRootLayer().Save()
     language: python
     validator:
@@ -43,7 +43,7 @@ quests:
       from pxr import Usd, UsdGeom
       stage = Usd.Stage.Open(STAGE_PATH)
       # 1. Define a Scope at /City/BlueprintBorough/Yard.
-      # 2. Define a Cube at /City/BlueprintBorough/Yard/Crate and set its size to 1.
+      # 2. Define a Cube using UsdGeom at /City/BlueprintBorough/Yard/Crate and set its size to 1.
       stage.GetRootLayer().Save()
     language: python
     validator:
@@ -136,7 +136,7 @@ quests:
     starter: |
       from pxr import Usd, UsdLux
       stage = Usd.Stage.Open(STAGE_PATH)
-      # Define a SphereLight at /City/BlueprintBorough/StreetLamp,
+      # Define a SphereLight using UsdLux at /City/BlueprintBorough/StreetLamp,
       # then set its intensity to 750 through the schema accessor.
       stage.GetRootLayer().Save()
     language: python
@@ -168,7 +168,7 @@ quests:
       stage = Usd.Stage.Open(STAGE_PATH)
       # This boss opens your accumulated city. Author every graded opinion below.
       # 1. Define /City/BlueprintBorough with type Xform.
-      # 2. Define /City/BlueprintBorough/Stall with type Cube.
+      # 2. Define /City/BlueprintBorough/Stall as a UsdGeom.Cube.
       # 3. Set /City/BlueprintBorough/Stall.size to 2.
       # 4. Define /City/BlueprintBorough/Yard with type Scope.
       # 5. Define /City/BlueprintBorough/Crane with type Xform.
@@ -176,7 +176,7 @@ quests:
       # 7. Define /City/BlueprintBorough/Lift with type Xform.
       # 8. Set /City/BlueprintBorough/Lift.xformOp:scale to [2.0, 2.0, 2.0]
       #    through XformCommonAPI.
-      # 9. Define /City/BlueprintBorough/StreetLamp with type SphereLight.
+      # 9. Define /City/BlueprintBorough/StreetLamp as a UsdLux.SphereLight.
       # 10. Set /City/BlueprintBorough/StreetLamp.inputs:intensity to 750.
       stage.GetRootLayer().Save()
     language: python

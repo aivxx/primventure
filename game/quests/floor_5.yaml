@@ -856,7 +856,7 @@ quests:
 
       stage = Usd.Stage.Open(STAGE_PATH)
       # This boss opens your accumulated city. Author every graded opinion below.
-      # 1. Define /World/MainStreet with type Mesh.
+      # 1. Define /World/MainStreet as a UsdGeom.Mesh.
       # 2. Author an specializes arc on /World/MainStreet.
       # 3. Set /World/MainStreet.osm:street:maxspeed to 20.
       # 4. Make submission.usd the strongest source for /World/MainStreet.osm:street:maxspeed.

@@ -15,8 +15,9 @@ quests:
     starter: |
       from pxr import Usd, UsdGeom
       stage = Usd.Stage.Open(STAGE_PATH)
-      # 1. Define /City/PropertyWard with type Xform.
-      # 2. Define a Sphere at /City/PropertyWard/LampGlobe and set its radius to 0.4.
+      # 1. Define /City/PropertyWard as an Xform container; it has no visible shape.
+      # 2. Create the geometry by defining a UsdGeom.Sphere at
+      #    /City/PropertyWard/LampGlobe, then set its radius to 0.4.
       stage.GetRootLayer().Save()
     language: python
     validator:
@@ -75,8 +76,10 @@ quests:
     starter: |
       from pxr import Usd, UsdGeom
       stage = Usd.Stage.Open(STAGE_PATH)
-      # 1. Define a Cube at /City/PropertyWard/Clock.
-      # 2. Set its size attribute to 1.0 at time 1, then to 10.0 at time 48.
+      # 1. Create the clock's geometry by defining a UsdGeom.Cube at
+      #    /City/PropertyWard/Clock. An Xform would not provide a size attribute.
+      # 2. Get the Cube's size attribute with GetSizeAttr().
+      # 3. Set it to 1.0 at time 1, then to 10.0 at time 48.
       #    The size attribute's Set() takes a time= keyword alongside the value.
       stage.GetRootLayer().Save()
     language: python
@@ -141,7 +144,7 @@ quests:
       # 1. Define /City/PropertyWard/Bridge with type Xform.
       # 2. Create /City/PropertyWard/Bridge.destination targeting exactly ['/City/PropertyWard/LampGlobe'].
       # 3. Create /City/PropertyWard/Bridge.origin targeting exactly ['/City/PropertyWard/Canal'].
-      # 4. Keep /City/PropertyWard/Clock typed Cube.
+      # 4. Keep /City/PropertyWard/Clock typed as a UsdGeom.Cube.
       # 5. Set stage startTimeCode to 1 and endTimeCode to 48.
       # 6. Keep /City/PropertyWard/Clock.size at 1.0 at time 1 and 10.0 at time 48.
       # 7. Keep /City/Archive/Stacks.shelfCount set to 12.
