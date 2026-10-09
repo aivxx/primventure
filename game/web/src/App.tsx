@@ -298,10 +298,6 @@ function dungeonLayout(rooms: Quest[]) {
   return { height, placements, route };
 }
 
-function episodeCode(floor: number) {
-  return `S01E${String(floor).padStart(2, "0")}`;
-}
-
 function firstChangedLine(before: string, after: string): number {
   const original = before.split("\n");
   const modified = after.split("\n");
@@ -430,7 +426,7 @@ function Landing({ onStart, hasProgress, nextQuest, quests, floors }: {
           {[...TICKER, ...TICKER].map((line, index) => <em key={index}>SYSTEM // {line}</em>)}
         </div>
       </div>
-      <span className="ticker-clock">SEASON 01 · EP {floorLabel}</span>
+      <span className="ticker-clock">FLOOR {floorLabel} · LIVE SHOW</span>
     </div>
     <div className="landing-inner">
       <header className="landing-hero">
@@ -443,10 +439,11 @@ function Landing({ onStart, hasProgress, nextQuest, quests, floors }: {
         <span className="tagline-by">— YOUR HOST, THE SYSTEM</span>
         <p className="landing-context">
           Welcome to PrimVenture, Contestant #USD-01! Your world has collapsed into a series of mismanaged dungeon
-          floors, and it is your job to build the pieces back together using <b>OpenUSD</b> — the open standard for
-          describing 3D scenes across film, games, and simulation. The lessons come directly from NVIDIA's Learn OpenUSD
-          curriculum, reimagined as interactive dungeon challenges and bosses. You will be judged on every move by the
-          keepers of your world, <b>usd-core</b>, who will decide if you succeed or fail. Good luck!
+          floors, and you have been cast as the main character in the live show broadcasting every repair. Your job is
+          to build the pieces back together using <b>OpenUSD</b> — the open standard for describing 3D scenes across
+          film, games, and simulation. The lessons come directly from NVIDIA's Learn OpenUSD curriculum, reimagined as
+          interactive dungeon challenges and bosses. Every move is judged by the keepers of your world,
+          <b>usd-core</b>, who decide whether you succeed or fail. Good luck!
         </p>
       </header>
 
@@ -937,7 +934,7 @@ function ScenePreview({ revision, panelRef, spotlit }: {
   }, [revision]);
 
   return <section className={`preview-card panel ${spotlit ? "spotlight" : ""}`} ref={panelRef}>
-    <div className="panel-heading"><span><Boxes size={15} /> CITY FEED <GuideInfoTooltip target="feed" /></span><em>{status}</em></div>
+    <div className="panel-heading"><span><Boxes size={15} /> CAMERA 01 · CITY FEED <GuideInfoTooltip target="feed" /></span><em>{status}</em></div>
     <div className="preview-viewport" ref={host}><div className="view-corners" /><span className="axis">Y ↑<br />X ↗</span></div>
     <div className="preview-meta"><span>STAGE: world/root.usda</span><span>PLAN VIEW</span><span>UP: Y</span></div>
   </section>;
@@ -961,6 +958,19 @@ function GuideInfoTooltip({ target }: { target: GuideTarget }) {
   const step = GUIDE_STEPS.find((item) => item.target === target);
   if (!step) return null;
   return <InfoTooltip label={`About ${step.title}`}>{step.body}</InfoTooltip>;
+}
+
+function SystemToast({ toast, onClose }: { toast: Toast; onClose?: () => void }) {
+  return <div className={`system-toast ${toast.kind}`}>
+    <img src={systemSprite} alt="" aria-hidden="true" />
+    <div className="toast-copy">
+      <div className="toast-tag">THE SYSTEM // {toast.kind === "error" ? "VERDICT" : "LIVE UPDATE"}</div>
+      {onClose && <button onClick={onClose} aria-label="Close notification"><X /></button>}
+      <strong>{toast.title}</strong>
+      <p>{toast.message}</p>
+    </div>
+    <div className="toast-scan" />
+  </div>;
 }
 
 export default function App() {
@@ -1325,6 +1335,7 @@ export default function App() {
       const stageChecks = result.results.filter((item) => !item.rule.startsWith("question_"));
       setChecks(stageChecks.length === activeQuest.expects.length ? stageChecks.map((item) => item.passed) : []);
       const payout = result.state.opinion_points - state.opinion_points;
+      const xpEarned = Math.max(0, result.state.xp - state.xp);
       setUsdaView({
         before_usda: result.before_usda || usdaView.before_usda,
         after_usda: result.after_usda,
@@ -1335,14 +1346,18 @@ export default function App() {
       // any win, not only the ones that open a USDA review.
       if (result.success) setRevision((value) => value + 1);
       if (needsUsdaReview) {
-        setToast(null);
+        setToast({
+          kind: "success",
+          title: "VERDICT: PASSED",
+          message: `${activeQuest.title} cleared${xpEarned ? ` · +${xpEarned} XP` : ""}. City Feed updated. Review the authored USDA to continue.`,
+        });
         localStorage.setItem(USDA_REVIEW_KEY, activeQuest.id);
         setReviewPending(true);
         window.setTimeout(() => usdaRef.current?.scrollIntoView({ block: "center", behavior: "smooth" }), 80);
       } else if (!result.success) {
         setToast({
           kind: "error",
-          title: "VALIDATION FAILED",
+          title: "VERDICT: FAILED",
           message: `${result.system_message} ${result.results.filter((item) => !item.passed).map((item) => item.message).join(" ")}`,
         });
       } else if (debtBeforeClear > 0) {
@@ -1350,6 +1365,12 @@ export default function App() {
           kind: "info",
           title: "BOSS DEBT PAID",
           message: `${debtBeforeClear} XP was withheld. This clear paid ${activeQuest.boss_clear_xp ?? activeQuest.xp} XP.`,
+        });
+      } else {
+        setToast({
+          kind: "success",
+          title: "VERDICT: PASSED",
+          message: `${activeQuest.title} cleared${xpEarned ? ` · +${xpEarned} XP` : ""}. City Feed updated.`,
         });
       }
       await refresh(result.success && !needsUsdaReview);
@@ -1551,6 +1572,23 @@ export default function App() {
   const shopItems = Object.entries(state.shop || {}).filter(([, item]) => item.kind !== "upgrade");
   const status = activeQuest ? questStatus(activeQuest) : "locked";
   const visibleUsda = usdaMode === "before" ? usdaView.before_usda : usdaView.after_usda;
+  const activeFloorRooms = floors.find(([floor]) => floor === activeQuest?.floor)?.[1] || [];
+  const activeRoomIndex = activeQuest ? activeFloorRooms.findIndex((quest) => quest.id === activeQuest.id) : -1;
+  const activeRoomLabel = activeQuest?.kind.endsWith("boss")
+    ? "BOSS"
+    : `ROOM ${String(Math.max(0, activeRoomIndex) + 1).padStart(2, "0")}`;
+  const broadcastEvents = activeQuest ? [
+    `${state.contestant} ENTERED FLOOR ${String(activeQuest.floor).padStart(2, "0")} · ${activeRoomLabel}`,
+    `LIVE ASSIGNMENT · ${activeQuest.title.toUpperCase()}`,
+    running
+      ? "USD-CORE VALIDATION IN PROGRESS"
+      : reviewPending
+        ? "VERDICT: PASSED · CITY FEED UPDATED"
+        : checks.length
+          ? `${checks.filter(Boolean).length} CHECKS PASSED · ${checks.filter((check) => !check).length} FAILED`
+          : "JUDGES' MONITOR STANDING BY",
+    `${state.completed_quests.length} OF ${quests.length} ROOMS CLEARED`,
+  ] : ["THE BROADCAST IS WAITING FOR A LIVE ASSIGNMENT"];
   const questionFields = activeQuest?.questions?.map((question, index) => (
     <label className="boss-question" key={question.prompt}>{question.prompt}
       {question.choices?.length
@@ -1571,7 +1609,7 @@ export default function App() {
         quests={quests}
         floors={floors}
       />
-      {toast && <div className="system-toast error"><div className="toast-tag">SYSTEM // ALERT</div><strong>{toast.title}</strong><p>{toast.message}</p></div>}
+      {toast && <SystemToast toast={toast} />}
     </div>;
   }
 
@@ -1579,12 +1617,15 @@ export default function App() {
     <header className="topbar">
       <button className="brand" onClick={() => setShowLanding(true)} title="Replay the intro">
         <div className="brand-mark"><span>P</span></div>
-        <div><strong>PRIMVENTURE</strong><small>{playbackEpisode || playbackScene ? "SYNDICATED RERUN" : "THE COMPOSITION IS LIVE"}</small></div>
+        <div><strong>PRIMVENTURE</strong><small>{playbackEpisode || playbackScene ? "ARCHIVE REVIEW" : "THE DUNGEON IS LIVE"}</small></div>
       </button>
       <div className={`broadcast ${playbackEpisode || playbackScene ? "rerun" : ""}`}>
-        {playbackEpisode || playbackScene
-          ? <><span className="live-dot rerun" /> PLAYBACK <b>{episodeCode(playbackScene ? activeQuest!.floor : focusFloor)}</b></>
-          : <><span className="live-dot" /> ON AIR <b>{episodeCode(liveFloor)}</b></>}
+        <span className={`live-dot ${playbackEpisode || playbackScene ? "rerun" : ""}`} />
+        <span>{playbackEpisode || playbackScene ? "ARCHIVE" : "ON AIR"}</span>
+        <div>
+          <b>FLOOR {String(activeQuest?.floor ?? liveFloor).padStart(2, "0")} · {activeRoomLabel}</b>
+          <small>{activeQuest?.title || "WAITING FOR ASSIGNMENT"}</small>
+        </div>
       </div>
       <div className="player-strip">
         <button className="help-button" onClick={() => setGuideStep(0)}><HelpCircle size={14} /> HOW TO PLAY</button>
@@ -1592,6 +1633,14 @@ export default function App() {
         <span className={`level ${spotlight === "level" ? "spotlight" : ""}`} ref={levelRef}>LVL {state.level} <GuideInfoTooltip target="level" /></span>
       </div>
     </header>
+    <div className="game-ticker" aria-label="Live broadcast activity">
+      <span><i className="live-dot" /> LIVE FEED</span>
+      <div className="ticker-window">
+        <div className="ticker-track">
+          {[...broadcastEvents, ...broadcastEvents].map((line, index) => <em key={`${line}-${index}`}>{line}</em>)}
+        </div>
+      </div>
+    </div>
     <main>
       <aside className="left-rail">
         <section className={`player-card panel ${spotlight === "payout" ? "spotlight" : ""}`} ref={payoutRef}>
@@ -1812,7 +1861,7 @@ export default function App() {
           {activeTab === "feed" && <ScenePreview revision={revision} panelRef={feedRef} spotlit={spotlight === "feed"} />}
           <section className={`usda-panel panel ${reviewPending ? "review-required" : ""} ${spotlight === "usda" ? "spotlight" : ""}`} ref={usdaRef}>
             <div className="usda-heading">
-              <span><Code2 size={15} /> {playbackScene ? "FILED USDA · ORIGINAL AIR" : "AUTHORED USDA"} <GuideInfoTooltip target="usda" /></span>
+              <span><Code2 size={15} /> JUDGES' MONITOR · {playbackScene ? "FILED USDA" : "AUTHORED USDA"} <GuideInfoTooltip target="usda" /></span>
               <div className="usda-tabs">
                 <button className={usdaMode === "before" ? "active" : ""} onClick={() => setUsdaMode("before")}>BEFORE</button>
                 <button className={usdaMode === "after" ? "active" : ""} onClick={() => setUsdaMode("after")} disabled={!usdaView.after_usda}>AFTER</button>
@@ -2039,9 +2088,9 @@ export default function App() {
       </section>
       <aside className="editor-rail">
         <section className="challenge-card">
-          <div className="eyebrow"><span>{playbackScene ? "PLAYBACK SCENE · " : "LIVE · "}{activeQuest?.kind.replaceAll("_", " ").toUpperCase() || "NO SIGNAL"}</span><b>+{activeQuest?.boss_clear_xp ?? activeQuest?.xp ?? 0} XP{activeQuest?.opinion_points ? ` · +${activeQuest.opinion_points} OP` : ""}</b></div>
+          <div className="eyebrow"><span>{playbackScene ? "ARCHIVED ASSIGNMENT · " : "LIVE ASSIGNMENT · "}{activeQuest?.kind.replaceAll("_", " ").toUpperCase() || "NO SIGNAL"}</span><b>+{activeQuest?.boss_clear_xp ?? activeQuest?.xp ?? 0} XP{activeQuest?.opinion_points ? ` · +${activeQuest.opinion_points} OP` : ""}</b></div>
           <h2>{activeQuest?.title || "Waiting for the System"}</h2><p>{activeQuest?.brief}</p>
-          {playbackScene && activeQuest && <p className="playback-note">Originally aired as {episodeCode(activeQuest.floor)}. The audience is watching the recap. Your live assignment has not moved.</p>}
+          {playbackScene && activeQuest && <p className="playback-note">Archived from Floor {String(activeQuest.floor).padStart(2, "0")}. The audience is watching the review while your live assignment remains unchanged.</p>}
           <div className="objective"><ChevronRight size={16} /><span><small>NEIGHBORHOOD</small>{activeQuest?.neighborhood}</span></div>
           {activeQuest && <div className="learning-route">
             <span className={lessonRead ? "done" : ""}><b>1</b> LEARN</span><i />
@@ -2134,6 +2183,6 @@ export default function App() {
         </div>
       </section>
     </div>}
-    {toast && <div className={`system-toast ${toast.kind}`}><div className="toast-tag">SYSTEM // {toast.kind === "error" ? "ALERT" : "ANNOUNCEMENT"}</div><button onClick={() => setToast(null)} aria-label="Close notification"><X /></button><strong>{toast.title}</strong><p>{toast.message}</p><div className="toast-scan" /></div>}
+    {toast && <SystemToast toast={toast} onClose={() => setToast(null)} />}
   </div>;
 }
