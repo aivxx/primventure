@@ -15,21 +15,23 @@ quests:
     starter: |
       from pxr import Usd, UsdGeom
       stage = Usd.Stage.Open(STAGE_PATH)
-      # Define a Sphere at /City/PropertyWard/LampGlobe and set its radius to 0.4.
+      # 1. Define /City/PropertyWard with type Xform.
+      # 2. Define a Sphere at /City/PropertyWard/LampGlobe and set its radius to 0.4.
       stage.GetRootLayer().Save()
     language: python
     validator:
       assertions:
+        - prim_type: {path: /City/PropertyWard, value: Xform}
         - prim_type: {path: /City/PropertyWard/LampGlobe, value: Sphere}
         - attribute_equals: {path: /City/PropertyWard/LampGlobe.radius, value: 0.4}
     cookbook: docs/stage-setting/properties/attributes.md
     xp: 80
     reward: Glazier's Caliper
     world_target: /City/PropertyWard/LampGlobe
-    recipes: [UsdGeom.Sphere.Define, UsdGeom.Sphere.GetRadiusAttr]
+    recipes: [UsdGeom.Xform.Define, UsdGeom.Sphere.Define, UsdGeom.Sphere.GetRadiusAttr]
 
   - id: f1_binding_canal
-    title: Point the Canal at the Lamp It Feeds
+    title: Set the Canal's Destination to the Lamp
     floor: 1
     floor_name: Records Clocktower
     neighborhood: Binding Canal
@@ -42,60 +44,22 @@ quests:
     starter: |
       from pxr import Sdf, Usd
       stage = Usd.Stage.Open(STAGE_PATH)
-      # 1. Define /City/PropertyWard with type Xform, then /City/PropertyWard/Canal with type Xform.
-      # 2. Create a relationship named feeds on the Canal and target the lamp globe.
+      # 1. Define /City/PropertyWard/Canal with type Xform and keep the returned prim.
+      # 2. Create a relationship named destination on the Canal and target the lamp globe.
       #    CreateRelationship returns the relationship; SetTargets takes a list of paths.
       stage.GetRootLayer().Save()
     language: python
     validator:
       assertions:
-        - prim_type: {path: /City/PropertyWard, value: Xform}
         - prim_type: {path: /City/PropertyWard/Canal, value: Xform}
         - relationship_targets:
-            path: /City/PropertyWard/Canal.feeds
+            path: /City/PropertyWard/Canal.destination
             targets: [/City/PropertyWard/LampGlobe]
     cookbook: docs/stage-setting/properties/relationships.md
     xp: 80
     reward: Copper Binding Wire
     world_target: /City/PropertyWard/Canal
-    recipes: [Usd.Prim.CreateRelationship, Usd.Relationship.SetTargets]
-
-  - id: f2_relationship_bridge
-    title: "Bridge Warden: Relationships and Targets"
-    floor: 1
-    floor_name: Records Clocktower
-    neighborhood: Binding Canal
-    kind: neighborhood_boss
-    prerequisites: [f1_binding_canal]
-    level_required: 3
-    exam_tasks: [create_relationship, target_prim]
-    stats: {insight: 2, resolve: 2}
-    brief: "SYSTEM: The bridge exists, but knows neither bank. Author both connections."
-    starter: |
-      from pathlib import Path
-      from pxr import Gf, Kind, Sdf, Usd, UsdGeom, UsdLux, UsdShade
-
-      stage = Usd.Stage.Open(STAGE_PATH)
-      # This boss opens your accumulated city. Author every graded opinion below.
-      # 1. Define /City/PropertyWard/Bridge with type Xform.
-      # 2. Create /City/PropertyWard/Bridge.destination targeting exactly ['/City/PropertyWard/LampGlobe'].
-      # 3. Create /City/PropertyWard/Bridge.origin targeting exactly ['/City/PropertyWard/Canal'].
-      stage.GetRootLayer().Save()
-    language: python
-    validator:
-      assertions:
-      - prim_type: {path: /City/PropertyWard/Bridge, value: Xform}
-      - relationship_targets:
-          path: /City/PropertyWard/Bridge.destination
-          targets: [/City/PropertyWard/LampGlobe]
-      - relationship_targets:
-          path: /City/PropertyWard/Bridge.origin
-          targets: [/City/PropertyWard/Canal]
-    cookbook: docs/stage-setting/properties/relationships.md
-    xp: 150
-    reward: Silver Binding Cable
-    world_target: /City/PropertyWard/Bridge
-    recipes: [Usd.Prim.CreateRelationship, Usd.Relationship.SetTargets]
+    recipes: [Usd.Stage.DefinePrim, Usd.Prim.CreateRelationship, Usd.Relationship.SetTargets]
 
   - id: f1_clockwork_room
     title: Wind the Clock Face Across Two Time Samples
@@ -103,7 +67,7 @@ quests:
     floor_name: Records Clocktower
     neighborhood: Clockwork Crossing
     kind: room
-    prerequisites: [f2_relationship_bridge]
+    prerequisites: [f1_binding_canal]
     level_required: 4
     exam_tasks: [author_timesamples]
     stats: {craft: 2, insight: 2}
@@ -127,50 +91,13 @@ quests:
     world_target: /City/PropertyWard/Clock
     recipes: [Usd.Attribute.Set, UsdGeom.Cube.GetSizeAttr]
 
-  - id: f1_clockwork_crossing
-    title: "Clockwork Crossing: Timecodes and Time Samples"
-    floor: 1
-    floor_name: Records Clocktower
-    neighborhood: Clockwork Crossing
-    kind: neighborhood_boss
-    prerequisites: [f1_clockwork_room]
-    level_required: 4
-    exam_tasks: [configure_timeline, author_timesamples]
-    stats: {craft: 2, resolve: 2}
-    brief: "SYSTEM: The crossing loops outside time. Bind the city clock from 1 to 48."
-    starter: |
-      from pathlib import Path
-      from pxr import Gf, Kind, Sdf, Usd, UsdGeom, UsdLux, UsdShade
-
-      stage = Usd.Stage.Open(STAGE_PATH)
-      # This boss opens your accumulated city. Author every graded opinion below.
-      # 1. Define /City/PropertyWard/Clock with type Cube.
-      # 2. Set stage startTimeCode to 1.
-      # 3. Set stage endTimeCode to 48.
-      # 4. Set /City/PropertyWard/Clock.size to 1.0 at time 1.
-      # 5. Set /City/PropertyWard/Clock.size to 10.0 at time 48.
-      stage.GetRootLayer().Save()
-    language: python
-    validator:
-      assertions:
-      - prim_type: {path: /City/PropertyWard/Clock, value: Cube}
-      - {start_time: 1}
-      - {end_time: 48}
-      - attribute_equals: {path: /City/PropertyWard/Clock.size, time: 1, value: 1.0}
-      - attribute_equals: {path: /City/PropertyWard/Clock.size, time: 48, value: 10.0}
-    cookbook: docs/stage-setting/timecodes-timesamples.md
-    xp: 160
-    reward: Forty-Eight Tooth Gear
-    world_target: /City/PropertyWard/Clock
-    recipes: [Usd.Stage.SetStartTimeCode, Usd.Stage.SetEndTimeCode, Usd.Attribute.Set]
-
   - id: f1_paths_survey
     title: Survey the Archive With Built Paths
     floor: 1
     floor_name: Records Clocktower
     neighborhood: Archive Stacks
     kind: room
-    prerequisites: [f1_clockwork_crossing]
+    prerequisites: [f1_clockwork_room]
     level_required: 5
     exam_tasks: [build_prim_path, author_at_property_path]
     stats: {insight: 3, lore: 2}
@@ -194,13 +121,60 @@ quests:
     world_target: /City/Archive/Stacks
     recipes: [Sdf.Path, Sdf.Path.AppendChild, Usd.Stage.GetPrimAtPath]
 
+  - id: f1_clockwork_crossing
+    title: "Archive Gatekeeper: Properties, Time, and Paths"
+    floor: 1
+    floor_name: Records Clocktower
+    neighborhood: Archive Stacks
+    kind: neighborhood_boss
+    prerequisites: [f1_paths_survey]
+    level_required: 5
+    exam_tasks: [create_relationship, configure_timeline, author_timesamples, build_prim_path]
+    stats: {craft: 2, insight: 2, resolve: 2}
+    brief: "SYSTEM: Four rooms built the ward and archive. Connect the bridge, wind the clock, and keep the stacks indexed."
+    starter: |
+      from pathlib import Path
+      from pxr import Gf, Kind, Sdf, Usd, UsdGeom, UsdLux, UsdShade
+
+      stage = Usd.Stage.Open(STAGE_PATH)
+      # This boss opens your accumulated city. Author every graded opinion below.
+      # 1. Define /City/PropertyWard/Bridge with type Xform.
+      # 2. Create /City/PropertyWard/Bridge.destination targeting exactly ['/City/PropertyWard/LampGlobe'].
+      # 3. Create /City/PropertyWard/Bridge.origin targeting exactly ['/City/PropertyWard/Canal'].
+      # 4. Keep /City/PropertyWard/Clock typed Cube.
+      # 5. Set stage startTimeCode to 1 and endTimeCode to 48.
+      # 6. Keep /City/PropertyWard/Clock.size at 1.0 at time 1 and 10.0 at time 48.
+      # 7. Keep /City/Archive/Stacks.shelfCount set to 12.
+      stage.GetRootLayer().Save()
+    language: python
+    validator:
+      assertions:
+      - prim_type: {path: /City/PropertyWard/Bridge, value: Xform}
+      - relationship_targets:
+          path: /City/PropertyWard/Bridge.destination
+          targets: [/City/PropertyWard/LampGlobe]
+      - relationship_targets:
+          path: /City/PropertyWard/Bridge.origin
+          targets: [/City/PropertyWard/Canal]
+      - prim_type: {path: /City/PropertyWard/Clock, value: Cube}
+      - {start_time: 1}
+      - {end_time: 48}
+      - attribute_equals: {path: /City/PropertyWard/Clock.size, time: 1, value: 1.0}
+      - attribute_equals: {path: /City/PropertyWard/Clock.size, time: 48, value: 10.0}
+      - attribute_equals: {path: /City/Archive/Stacks.shelfCount, value: 12}
+    cookbook: docs/stage-setting/prim-property-paths.md
+    xp: 200
+    reward: Archive Transit Seal
+    world_target: /City/Archive/Stacks
+    recipes: [Usd.Prim.CreateRelationship, Usd.Relationship.SetTargets, Usd.Stage.SetStartTimeCode, Usd.Stage.SetEndTimeCode, Usd.Attribute.Set, Sdf.Path]
+
   - id: f1_format_foundry
     title: Choose the Foundry's File Format
     floor: 1
     floor_name: Records Clocktower
     neighborhood: Warden Foundry
     kind: room
-    prerequisites: [f1_paths_survey]
+    prerequisites: [f1_clockwork_crossing]
     level_required: 5
     exam_tasks: [choose_file_format]
     stats: {lore: 3, insight: 2}
@@ -237,50 +211,13 @@ quests:
           .usd is deliberately agnostic. That lets a pipeline swap a layer between the
           text and binary encodings without breaking every reference that names it.
 
-  - id: f2_schema_warden
-    title: "Schema Warden: Typed Text in the Foundry"
-    floor: 1
-    floor_name: Records Clocktower
-    neighborhood: Warden Foundry
-    kind: neighborhood_boss
-    prerequisites: [f1_format_foundry]
-    level_required: 6
-    exam_tasks: [define_typed_prim, author_attribute, create_relationship]
-    stats: {craft: 3, resolve: 2}
-    brief: "SYSTEM: The Warden rejects vague forms. Every container typed, every value named, every reference addressed."
-    starter: |
-      from pathlib import Path
-      from pxr import Gf, Kind, Sdf, Usd, UsdGeom, UsdLux, UsdShade
-
-      stage = Usd.Stage.Open(STAGE_PATH)
-      # This boss opens your accumulated city. Author every graded opinion below.
-      # 1. Define /City/Archive/WardenVault with type Xform.
-      # 2. Create a string attribute /City/Archive/WardenVault.formatNote set to 'usda'.
-      # 3. Create /City/Archive/WardenVault.archives targeting exactly ['/City/PropertyWard/Clock'].
-      # 4. Keep /City/Archive/Stacks.shelfCount set to 12.
-      stage.GetRootLayer().Save()
-    language: python
-    validator:
-      assertions:
-      - prim_type: {path: /City/Archive/WardenVault, value: Xform}
-      - attribute_equals: {path: /City/Archive/WardenVault.formatNote, value: usda}
-      - relationship_targets:
-          path: /City/Archive/WardenVault.archives
-          targets: [/City/PropertyWard/Clock]
-      - attribute_equals: {path: /City/Archive/Stacks.shelfCount, value: 12}
-    cookbook: docs/stage-setting/usd-file-formats.md
-    xp: 200
-    reward: Blueprint Sigil
-    world_target: /City/Archive/WardenVault
-    recipes: [Usd.Stage.DefinePrim, Usd.Prim.CreateAttribute, Usd.Prim.CreateRelationship]
-
   - id: f1_module_desk
     title: Draw the Right Module From the Desk
     floor: 1
     floor_name: Records Clocktower
     neighborhood: Module Desk
     kind: room
-    prerequisites: [f2_schema_warden]
+    prerequisites: [f1_format_foundry]
     level_required: 6
     exam_tasks: [identify_usd_modules]
     stats: {lore: 3, insight: 2}

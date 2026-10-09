@@ -72,13 +72,13 @@ def test_usd_check_costs_one_stocked_check_and_shows_successful_graded_usda(
         monkeypatch,
         xp=500,
         level=6,
-        completed_quests=["f1_binding_canal"],
+        completed_quests=["f1_paths_survey"],
     )
-    failed = _run(client, "f2_relationship_bridge", BRIDGE_MISSING_ITS_ORIGIN)
+    failed = _run(client, "f1_clockwork_crossing", BRIDGE_MISSING_ITS_ORIGIN)
     assert failed["success"] is False
-    assert client.get("/api/quests/f2_relationship_bridge").json()["check_armed"] is True
+    assert client.get("/api/quests/f1_clockwork_crossing").json()["check_armed"] is True
 
-    checked = client.post("/api/quests/f2_relationship_bridge/usd-check")
+    checked = client.post("/api/quests/f1_clockwork_crossing/usd-check")
 
     assert checked.status_code == 200
     payload = checked.json()

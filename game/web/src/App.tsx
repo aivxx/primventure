@@ -271,28 +271,45 @@ function floorStatus(rooms: Quest[]): "locked" | "live" | "cleared" {
 }
 
 function dungeonLayout(rooms: Quest[]) {
-  const ordinary = rooms.filter((quest) => !quest.kind.endsWith("boss"));
-  const bosses = rooms.filter((quest) => quest.kind.endsWith("boss"));
-  const rowCount = Math.max(1, Math.ceil(ordinary.length / 3));
-  const height = 175 + rowCount * 112;
-  const columns = [150, 500, 850];
-  const placements = new Map<string, { x: number; y: number; boss: boolean }>();
-  const route: Array<{ x: number; y: number }> = [{ x: 38, y: height - 28 }];
-
-  ordinary.forEach((quest, index) => {
-    const row = Math.floor(index / 3);
-    const slot = index % 3;
-    const x = row % 2 === 0 ? columns[slot] : columns[2 - slot];
-    const y = height - 88 - row * 112;
-    placements.set(quest.id, { x, y, boss: false });
-    route.push({ x, y });
+  const bands: Quest[][] = [];
+  let ordinaryBand: Quest[] = [];
+  rooms.forEach((quest) => {
+    if (quest.kind.endsWith("boss")) {
+      if (ordinaryBand.length) bands.push(ordinaryBand);
+      ordinaryBand = [];
+      bands.push([quest]);
+    } else {
+      ordinaryBand.push(quest);
+      if (ordinaryBand.length === 3) {
+        bands.push(ordinaryBand);
+        ordinaryBand = [];
+      }
+    }
   });
+  if (ordinaryBand.length) bands.push(ordinaryBand);
 
-  bosses.forEach((quest, index) => {
-    const x = bosses.length === 1 ? 500 : 360 + index * 280;
-    const y = 58;
-    placements.set(quest.id, { x, y, boss: true });
-    route.push({ x, y });
+  const height = 175 + Math.max(1, bands.length) * 112;
+  const placements = new Map<string, { x: number; y: number; boss: boolean; roomNumber?: number }>();
+  const route: Array<{ x: number; y: number }> = [{ x: 38, y: height - 28 }];
+  let roomNumber = 0;
+
+  bands.forEach((band, bandIndex) => {
+    const bossBand = band[0].kind.endsWith("boss");
+    const columns = bossBand
+      ? [500]
+      : band.length === 1
+        ? [500]
+        : band.length === 2
+          ? [300, 700]
+          : bandIndex % 2 === 0 ? [150, 500, 850] : [850, 500, 150];
+    const y = height - 88 - bandIndex * 112;
+    band.forEach((quest, index) => {
+      const boss = quest.kind.endsWith("boss");
+      if (!boss) roomNumber += 1;
+      const x = columns[index];
+      placements.set(quest.id, { x, y, boss, roomNumber: boss ? undefined : roomNumber });
+      route.push({ x, y });
+    });
   });
 
   return { height, placements, route };
@@ -1575,7 +1592,9 @@ export default function App() {
   const status = activeQuest ? questStatus(activeQuest) : "locked";
   const visibleUsda = usdaMode === "before" ? usdaView.before_usda : usdaView.after_usda;
   const activeFloorRooms = floors.find(([floor]) => floor === activeQuest?.floor)?.[1] || [];
-  const activeRoomIndex = activeQuest ? activeFloorRooms.findIndex((quest) => quest.id === activeQuest.id) : -1;
+  const activeRoomIndex = activeQuest
+    ? activeFloorRooms.filter((quest) => !quest.kind.endsWith("boss")).findIndex((quest) => quest.id === activeQuest.id)
+    : -1;
   const activeRoomLabel = activeQuest?.kind.endsWith("boss")
     ? "BOSS"
     : `ROOM ${String(Math.max(0, activeRoomIndex) + 1).padStart(2, "0")}`;
@@ -1804,10 +1823,6 @@ export default function App() {
           </div>}
           <div className="dungeon-floor-list">{visibleFloors.map(([floor, rooms]) => {
             const layout = dungeonLayout(rooms);
-            const routeRooms = [
-              ...rooms.filter((quest) => !quest.kind.endsWith("boss")),
-              ...rooms.filter((quest) => quest.kind.endsWith("boss")),
-            ];
             return <section className="dungeon-floor" key={floor}>
               {mapScope === "all" && <header>
                 <div><small>FLOOR {String(floor).padStart(2, "0")}</small><strong>{rooms[0]?.floor_name}</strong></div>
@@ -1817,11 +1832,11 @@ export default function App() {
                 <svg viewBox={`0 0 1000 ${layout.height}`} preserveAspectRatio="none" aria-hidden="true">
                   {layout.route.slice(1).map((point, index) => {
                     const previous = layout.route[index];
-                    const routeStatus = questStatus(routeRooms[index]);
+                    const routeStatus = questStatus(rooms[index]);
                     return <path
                       className={routeStatus === "complete" ? "cleared" : routeStatus === "available" || routeStatus === "boss" ? "current" : "locked"}
                       d={`M ${previous.x} ${previous.y} H ${point.x} V ${point.y}`}
-                      key={routeRooms[index].id}
+                      key={rooms[index].id}
                     />;
                   })}
                 </svg>
@@ -1841,7 +1856,7 @@ export default function App() {
                     aria-label={`${quest.title}, ${statusLabel}`}
                     key={quest.id}
                   >
-                    <span>{placement.boss ? "BOSS HALL" : `ROOM ${String(index + 1).padStart(2, "0")}`}</span>
+                    <span>{placement.boss ? "BOSS HALL" : `ROOM ${String(placement.roomNumber).padStart(2, "0")}`}</span>
                     <strong>{quest.title}</strong>
                   </button>;
                 })}

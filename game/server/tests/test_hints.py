@@ -31,11 +31,11 @@ def _missed_record(tmp_path: Path, monkeypatch) -> tuple[SaveStore, object]:
 
 
 def test_a_hint_before_any_run_fills_in_the_call_for_the_first_check() -> None:
-    quest = QuestStore().get("f2_relationship_bridge")
+    quest = QuestStore().get("f1_clockwork_crossing")
 
     hint = hint_for(quest, PlayerState())
 
-    assert "check 1 of 3" in hint
+    assert "check 1 of 9" in hint
     assert 'stage.DefinePrim("/City/PropertyWard/Bridge", "Xform")' in hint
     assert "docs/stage-setting/prims.md" in hint
     # The other two demands stay for the player to author.

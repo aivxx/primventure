@@ -458,7 +458,7 @@ def test_bosses_open_the_accumulated_city_without_pre_authoring_answers() -> Non
         "AddVariantSet(",
     )
     bosses = [quest for quest in QuestStore().all() if quest.kind.endswith("boss")]
-    assert len(bosses) == 38
+    assert len(bosses) == 36
     for boss in bosses:
         assert "Usd.Stage.Open(STAGE_PATH)" in boss.starter, boss.id
         assert "stage.GetRootLayer().Save()" in boss.starter, boss.id
@@ -769,7 +769,7 @@ def test_expectations_name_the_exact_value_the_validator_wants() -> None:
     assert (
         "/City/PropertyWard/Bridge.destination targets exactly "
         "/City/PropertyWard/LampGlobe"
-    ) in quest_view(quests["f2_relationship_bridge"], PlayerState())["expects"]
+    ) in quest_view(quests["f1_clockwork_crossing"], PlayerState())["expects"]
 
 
 def test_relationship_targets_validate_relationships_not_attributes(tmp_path: Path) -> None:

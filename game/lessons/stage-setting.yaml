@@ -249,9 +249,10 @@ lessons:
         system: >-
           Three values belong on the city record, and two of them belong to no schema at all.
         body: |
-          /City stands as an Xform from the Arrival Hall, the alley's lamp post waits for its
-          glass, and the Departure Gate is where /City/Threshold belongs. The city needs a name,
-          the lamp globe needs a radius of 0.4, and the Threshold needs its district label.
+          /City stands as an Xform from the Arrival Hall, while the Property Ward still needs its
+          district container and lamp globe. The Departure Gate is where /City/Threshold belongs.
+          The city needs a name, the lamp globe needs a radius of 0.4, and the Threshold needs its
+          district label.
 
           None of those values is authored, and they are absent in two different ways. cityName
           and districtName belong to no schema, so nothing has declared them and there is nothing
@@ -281,9 +282,10 @@ lessons:
         because the Registrar reads it aloud. No schema owns a city's name, so this is the generic
         CreateAttribute case. This gives the city a clear name in the ledger.
       f1_lamp_post: >-
-        A Sphere is a typed prim, so its radius arrives already declared and the schema accessor
-        is right there. Define the globe, then set radius to 0.4. The alley is ready for its lamp
-        globe, and this value gives the fixture the required size.
+        Establish /City/PropertyWard as an Xform, then define the Sphere beneath it at
+        /City/PropertyWard/LampGlobe. Its radius arrives already declared through the schema, so
+        use that accessor to set it to 0.4. This creates the district container before adding its
+        first fixture.
 
   - source: docs/stage-setting/stage.md
     title: Stages
@@ -655,10 +657,11 @@ lessons:
           target path explicitly.
         body: |
           Both rooms work in the Property Ward, where the lamp globe already exists as a Sphere at
-          /City/PropertyWard/LampGlobe. The canal room defines the ward and /City/PropertyWard/Canal
-          beneath it, and the bridge that follows defines /City/PropertyWard/Bridge. Each of those
-          new prims needs a link: feeds on the Canal, naming the lamp it supplies, then destination
-          and origin on the Bridge, naming the two banks it spans.
+          /City/PropertyWard/LampGlobe and the ward itself already exists as an Xform. The canal
+          room defines /City/PropertyWard/Canal beneath it, and the bridge that follows defines
+          /City/PropertyWard/Bridge. Each of those new prims needs a link: destination on the Canal,
+          naming the lamp it supplies, then destination and origin on the Bridge, naming the two
+          banks it spans.
 
           None of those properties exists. The canal sits next to the globe with no authored link
           between them, and the bridge names neither bank, so nothing in the layer records which
@@ -666,8 +669,8 @@ lessons:
           because a prim has exactly one parent and the globe already sits elsewhere in the ward.
 
           Author the link with CreateRelationship on the prim that holds it, then hand SetTargets
-          the exact path list: feeds targeting the globe, destination targeting the globe, origin
-          targeting the canal. Two details matter. A relationship has no data type and verifies
+          the exact path list: the Canal's destination targeting the globe, the Bridge's destination
+          targeting the globe, and its origin targeting the canal. Two details matter. A relationship has no data type and verifies
           nothing about its targets, so a mistyped path is written down verbatim and resolves to
           nothing, and SetTargets replaces the whole list rather than adding to it.
         points:
@@ -681,10 +684,10 @@ lessons:
           without duplicating them. They are how USD expresses connection instead of copying.
     apply:
       f1_binding_canal: >-
-        Define /City/PropertyWard as an Xform and /City/PropertyWard/Canal as an Xform beneath it,
-        then create a relationship named feeds on the Canal targeting /City/PropertyWard/LampGlobe.
-        The canal does not carry the lamp, it points at it, which is the entire lesson and also the
-        entire room.
+        The Property Ward already exists from the lamp room. Define /City/PropertyWard/Canal as an
+        Xform beneath it and keep the prim returned by DefinePrim. Create a relationship named
+        destination on that prim targeting /City/PropertyWard/LampGlobe. The canal does not carry the
+        lamp; it points at it.
 
   - source: docs/stage-setting/usd-file-formats.md
     title: USD File Formats
